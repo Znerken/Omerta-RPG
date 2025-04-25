@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { registerBankingRoutes } from "./banking-routes";
 import { registerAdminRoutes } from "./admin-routes";
+import challengeRoutes from "./challenge-routes";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { calculateRequiredXP } from "../shared/gameUtils";
@@ -17,6 +18,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register admin routes
   registerAdminRoutes(app);
+  
+  // Register challenge routes
+  app.use("/api", challengeRoutes);
 
   // Create HTTP server
   const httpServer = createServer(app);

@@ -33,7 +33,7 @@ import {
   challengeProgress,
   challengeRewards
 } from "@shared/schema";
-import { eq, and, desc, gte, sql, asc } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql, asc } from "drizzle-orm";
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import { calculateCrimeSuccessChance } from "@shared/gameUtils";
