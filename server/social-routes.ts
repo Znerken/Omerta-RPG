@@ -72,7 +72,7 @@ export function registerSocialRoutes(app: Express) {
       // Populate sender information
       const requestsWithSenders = await Promise.all(
         pendingRequests.map(async (request) => {
-          const sender = await storage.getUser(request.senderId);
+          const sender = await getUser(request.senderId);
           return {
             ...request,
             sender: sender ? {
@@ -102,7 +102,7 @@ export function registerSocialRoutes(app: Express) {
       // Populate receiver information
       const requestsWithReceivers = await Promise.all(
         sentRequests.map(async (request) => {
-          const receiver = await storage.getUser(request.receiverId);
+          const receiver = await getUser(request.receiverId);
           return {
             ...request,
             receiver: receiver ? {
@@ -260,7 +260,7 @@ export function registerSocialRoutes(app: Express) {
       
       // Skip friend status check if viewing own profile
       if (targetUserId === currentUserId) {
-        const user = await storage.getUser(targetUserId);
+        const user = await getUser(targetUserId);
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
@@ -293,7 +293,7 @@ export function registerSocialRoutes(app: Express) {
         console.error("Error getting user with status:", error);
         
         // Fallback to basic user info without status if there's an error
-        const user = await storage.getUser(targetUserId);
+        const user = await getUser(targetUserId);
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
@@ -331,7 +331,7 @@ export function registerSocialRoutes(app: Express) {
       });
       
       // Check if user exists
-      const targetUser = await storage.getUser(validatedData.receiverId);
+      const targetUser = await getUser(validatedData.receiverId);
       if (!targetUser) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -424,7 +424,7 @@ export function registerSocialRoutes(app: Express) {
         const result = await acceptFriendRequest(requestId);
         
         // Notify the sender that request was accepted
-        const sender = await storage.getUser(friendRequest.senderId);
+        const sender = await getUser(friendRequest.senderId);
         if (sender) {
           notifyUser(friendRequest.senderId, "friend_accepted", {
             userId: req.user.id,
