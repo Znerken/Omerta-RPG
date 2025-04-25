@@ -11,7 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
-import mafiaCharacterImg from "../assets/mafia-character.jpg";
+// Using directly from public folder
+const mafiaCharacterImg = "/mafia-character.jpg";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -504,17 +505,18 @@ export default function AuthPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
         >
-          <div className={`backdrop-mafia rounded-sm p-8 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
-            <div className="h-full flex flex-col lg:flex-row items-center justify-between gap-6">
-              <div className="space-y-8 flex-1">
+          <div className={`backdrop-mafia rounded-sm p-6 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
+            <div className="h-full flex flex-col lg:grid lg:grid-cols-5 lg:gap-4 items-center">
+              {/* Feature descriptions - takes 3 columns */}
+              <div className="col-span-3 space-y-4">
                 <motion.div 
-                  className="mb-8"
+                  className="mb-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.7, duration: 0.5 }}
                 >
                   <motion.h2 
-                    className="text-3xl font-heading mb-4"
+                    className="text-3xl font-heading mb-2"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.4 }}
@@ -522,57 +524,55 @@ export default function AuthPage() {
                     Rise to Power
                   </motion.h2>
                   <motion.p 
-                    className="text-muted-foreground"
+                    className="text-muted-foreground text-sm"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.9, duration: 0.4 }}
                   >
                     Welcome to Mafia Empire, where the streets are yours for the taking.
-                    Build your criminal empire, form powerful alliances, and leave your mark
-                    on the underworld.
                   </motion.p>
                 </motion.div>
                 
-                <div className="space-y-6">
+                <div className="space-y-4">
                   <AnimatedFeature 
                     title="Commit Crimes" 
-                    description="From petty theft to elaborate heists, climb your way up the criminal ladder." 
-                    icon={<TommyGunIcon size="md" />}
+                    description="From petty theft to elaborate heists." 
+                    icon={<TommyGunIcon size="sm" />}
                     delay={1.0}
                   />
                   
                   <AnimatedFeature 
                     title="Form a Gang" 
-                    description="Recruit loyal members and establish a feared criminal organization." 
-                    icon={<FedoraIcon size="md" />}
+                    description="Recruit loyal members to your organization." 
+                    icon={<FedoraIcon size="sm" />}
                     delay={1.2}
                   />
                   
                   <AnimatedFeature 
                     title="Control Territory" 
-                    description="Expand your influence and dominate the city district by district." 
-                    icon={<TommyGunIcon size="md" />}
+                    description="Expand your influence district by district." 
+                    icon={<TommyGunIcon size="sm" />}
                     delay={1.4}
                   />
                   
                   <AnimatedFeature 
                     title="Build an Empire" 
-                    description="Develop businesses, launder money, and become the ultimate crime boss." 
-                    icon={<MoneyBriefcaseIcon size="md" />}
+                    description="Become the ultimate crime boss." 
+                    icon={<MoneyBriefcaseIcon size="sm" />}
                     delay={1.6}
                   />
                 </div>
               </div>
               
-              {/* Mafia character image */}
+              {/* Mafia character image - takes 2 columns */}
               <motion.div 
-                className="flex-1 flex items-center justify-center overflow-hidden hidden lg:block max-w-[300px]"
+                className="col-span-2 flex items-center justify-center hidden lg:flex"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1.0, duration: 0.6 }}
               >
                 <motion.div
-                  className="relative"
+                  className="relative overflow-hidden rounded-md max-h-96"
                   whileHover={{ scale: 1.03, rotate: 1 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
@@ -580,7 +580,7 @@ export default function AuthPage() {
                   <img 
                     src={mafiaCharacterImg} 
                     alt="Mafia Character" 
-                    className="object-cover rounded-md shadow-xl w-full"
+                    className="w-full h-full object-cover shadow-xl max-h-80"
                   />
                 </motion.div>
               </motion.div>
