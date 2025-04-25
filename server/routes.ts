@@ -47,11 +47,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket server for real-time updates
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
   
+  // Track client connections by user ID
+  const clients = new Map<number, Set<WebSocket>>();
+  
   // WebSocket handling
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+    console.log('WebSocket connection established');
+    
+    // Parse user ID from query string
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const userId = parseInt(url.searchParams.get('userId') || '0', 10);
+    
+    if (!userId) {
+      console.log('No userId provided for WebSocket connection');
+      return ws.close(1008, 'Invalid userId');
+    }
+    
+    // Add this client to the map for this user
+    if (!clients.has(userId)) {
+      clients.set(userId, new Set());
+    }
+    clients.get(userId)?.add(ws);
+    
+    console.log(`User ${userId} connected via WebSocket. Active connections: ${clients.get(userId)?.size}`);
+    
+    // Send initial notification of unread messages count
+    storage.getUnreadMessages(userId).then(messages => {
+      if (messages.length > 0) {
+        ws.send(JSON.stringify({
+          type: 'unreadMessages',
+          data: { count: messages.length }
+        }));
+      }
+    }).catch(err => {
+      console.error('Error sending initial unread count:', err);
+    });
+    
+    // Handle client messages
     ws.on('message', (message) => {
-      // Handle WebSocket messages
-      console.log('Received: %s', message);
+      try {
+        const data = JSON.parse(message.toString());
+        console.log(`Received message from user ${userId}:`, data);
+        
+        // Handle specific client actions
+        if (data.type === 'markRead' && data.messageId) {
+          storage.markMessageAsRead(data.messageId)
+            .then(success => {
+              if (success) {
+                // Re-fetch unread count and notify client
+                return storage.getUnreadMessages(userId);
+              }
+              return [];
+            })
+            .then(unreadMessages => {
+              ws.send(JSON.stringify({
+                type: 'unreadMessages',
+                data: { count: unreadMessages.length }
+              }));
+            })
+            .catch(err => {
+              console.error('Error handling markRead:', err);
+            });
+        }
+      } catch (err) {
+        console.error('Error parsing WebSocket message:', err);
+      }
+    });
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      console.log(`WebSocket connection closed for user ${userId}`);
+      clients.get(userId)?.delete(ws);
+      
+      // Clean up empty user entries
+      if (clients.get(userId)?.size === 0) {
+        clients.delete(userId);
+      }
     });
   });
   
@@ -61,6 +132,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     wss.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({ type, data }));
+      }
+    });
+  }
+  
+  // Send a notification to a specific user
+  function notifyUser(userId: number, type: string, data: any) {
+    if (!clients.has(userId)) {
+      console.log(`No active connections for user ${userId}`);
+      return;
+    }
+    
+    const userClients = clients.get(userId)!;
+    const message = JSON.stringify({ type, data });
+    
+    userClients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
       }
     });
   }
@@ -753,6 +841,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Message API Routes
+  app.get("/api/messages/unread", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const userId = req.user.id;
+      const unreadMessages = await storage.getUnreadMessages(userId);
+      res.json(unreadMessages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch unread messages" });
+    }
+  });
+  
+  app.post("/api/messages/read/all", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const userId = req.user.id;
+      const success = await storage.markAllMessagesAsRead(userId);
+      
+      if (success) {
+        // Send WebSocket notification about updated unread count (which is now 0)
+        notifyUser(userId, "unreadMessages", { count: 0 });
+        res.json({ success: true, message: "All messages marked as read" });
+      } else {
+        res.status(500).json({ message: "Failed to mark messages as read" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark messages as read" });
+    }
+  });
+  
+  app.post("/api/messages/:id/read", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const messageId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      const success = await storage.markMessageAsRead(messageId);
+      
+      if (success) {
+        // Get the new unread count and notify via WebSocket
+        const unreadMessages = await storage.getUnreadMessages(userId);
+        notifyUser(userId, "unreadMessages", { count: unreadMessages.length });
+        
+        res.json({ success: true, message: "Message marked as read" });
+      } else {
+        res.status(500).json({ message: "Failed to mark message as read" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+
   app.get("/api/messages", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
     
@@ -847,12 +989,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content
       });
       
-      // If it's a personal message, notify the receiver
-      if (type === "personal") {
-        broadcast("newMessage", {
+      // Notify the receiver based on message type
+      if (type === "personal" && receiverId) {
+        // Send notification to specific user
+        notifyUser(receiverId, "newMessage", {
           messageId: message.id,
           senderId,
-          receiverId
+          senderName: req.user.username,
+          receiverId,
+          type: "personal",
+          content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
+        });
+        
+        // Also update unread count
+        const unreadMessages = await storage.getUnreadMessages(receiverId);
+        notifyUser(receiverId, "unreadMessages", {
+          count: unreadMessages.length
+        });
+      } else if (type === "gang" && gangId) {
+        // Get all gang members to notify them individually
+        try {
+          const gangWithMembers = await storage.getGangWithDetails(gangId);
+          if (gangWithMembers && gangWithMembers.members) {
+            for (const member of gangWithMembers.members) {
+              if (member.id !== senderId) { // Don't notify the sender
+                notifyUser(member.id, "newGangMessage", {
+                  messageId: message.id,
+                  senderId,
+                  senderName: req.user.username,
+                  gangId,
+                  gangName: gangWithMembers.name,
+                  type: "gang",
+                  content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error notifying gang members:", err);
+        }
+      } else if (type === "global") {
+        // Broadcast to everyone
+        broadcast("globalMessage", {
+          messageId: message.id,
+          senderId,
+          senderName: req.user.username,
+          type: "global",
+          content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
         });
       }
       
