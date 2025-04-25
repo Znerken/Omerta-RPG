@@ -35,7 +35,9 @@ import {
   Factory,
   Search,
   Plus,
-  Minus
+  Minus,
+  Clock,
+  BadgePercent
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -977,39 +979,104 @@ function LabsTab() {
                       const progress = isCompleted ? 100 : Math.min(100, Math.round((elapsed / totalDuration) * 100));
                       
                       return (
-                        <Card key={production.id} className={isCompleted ? "border-2 border-green-500" : ""}>
-                          <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-lg">{production.drug.name} x{production.quantity}</CardTitle>
-                              <Badge variant={isCompleted ? "success" : "secondary"}>
-                                {isCompleted ? "Ready for Collection" : "In Progress"}
+                        <Card 
+                          key={production.id} 
+                          className={`overflow-hidden bg-black/40 relative ${isCompleted ? "border-2 border-green-500" : "border-primary/30"}`}
+                        >
+                          {/* Background effect */}
+                          <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent opacity-50"></div>
+                          
+                          {/* Completion indicator */}
+                          {isCompleted && (
+                            <div className="absolute top-3 right-3 rounded-full bg-green-500/20 p-1.5 z-20">
+                              <Badge variant="success" className="px-2 py-0">
+                                Ready
                               </Badge>
                             </div>
-                          </CardHeader>
+                          )}
                           
-                          <CardContent>
-                            <div className="space-y-4">
-                              <div className="flex justify-between text-sm">
-                                <span>Success Rate</span>
-                                <span className="font-medium">{production.successRate}%</span>
+                          <CardHeader className="relative z-10 pb-2">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-2 rounded-full">
+                                <FlaskConical className="h-6 w-6 text-primary" />
                               </div>
-                              
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span>Progress</span>
-                                  <span>{progress}%</span>
-                                </div>
-                                <Progress value={progress} />
-                              </div>
-                              
-                              <div className="text-sm">
-                                <span className="text-muted-foreground">
+                              <div>
+                                <CardTitle className="text-lg bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent">
+                                  {production.drug.name} <span className="text-sm font-normal text-white">x{production.quantity}</span>
+                                </CardTitle>
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3 mr-1.5" />
                                   {isCompleted ? 
                                     "Completed on " + format(completesAt, "MMM d, h:mm a") :
                                     "Completes on " + format(completesAt, "MMM d, h:mm a")
                                   }
-                                </span>
+                                </div>
                               </div>
+                            </div>
+                          </CardHeader>
+                          
+                          <CardContent className="relative z-10 pt-0">
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div className="flex items-center gap-2 bg-black/30 p-2 rounded">
+                                  <div className="p-1 rounded-full bg-amber-500/20">
+                                    <BadgePercent className="h-3.5 w-3.5 text-amber-400" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-muted-foreground">Success Rate</span>
+                                    <span className="font-medium">{production.successRate}%</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 bg-black/30 p-2 rounded">
+                                  <div className="p-1 rounded-full bg-blue-500/20">
+                                    <Package className="h-3.5 w-3.5 text-blue-400" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-muted-foreground">Quantity</span>
+                                    <span className="font-medium">{production.quantity} units</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="flex items-center">
+                                    <Activity className="h-4 w-4 mr-1.5 text-primary/70" />
+                                    <span>Progress</span>
+                                  </span>
+                                  <span className="font-medium">{progress}%</span>
+                                </div>
+                                <div className="relative h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-primary/20">
+                                  <div 
+                                    className={`absolute top-0 left-0 h-full rounded-full ${
+                                      isCompleted ? 'bg-green-500' : 'bg-gradient-to-r from-primary to-primary/80'
+                                    }`}
+                                    style={{ width: `${progress}%` }}
+                                  >
+                                    {/* Animated shimmer effect when in progress */}
+                                    {!isCompleted && (
+                                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {isCompleted && (
+                                <div className="pt-1">
+                                  <Button 
+                                    className="w-full bg-gradient-to-r from-green-500/80 to-green-600/90 hover:from-green-500 hover:to-green-600 border-0 text-white"
+                                    size="sm"
+                                    onClick={() => collectProductionMutation.mutate()}
+                                    disabled={collectProductionMutation.isPending}
+                                  >
+                                    {collectProductionMutation.isPending ? (
+                                      <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> Collecting...</>
+                                    ) : (
+                                      <>Collect Production</>
+                                    )}
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -1017,9 +1084,18 @@ function LabsTab() {
                     })}
                   </div>
                 ) : (
-                  <Card className="border border-dashed">
-                    <CardContent className="pt-6 text-center">
-                      <p className="text-muted-foreground">No active production in this lab</p>
+                  <Card className="border-2 border-dashed border-primary/20 bg-black/40 overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50"></div>
+                    <CardContent className="pt-10 pb-10 text-center relative z-10">
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        <div className="rounded-full bg-black/50 p-4 border border-primary/30">
+                          <FlaskConical className="h-10 w-10 text-primary/60" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold mb-1">No Active Production</h3>
+                          <p className="text-muted-foreground">Start producing drugs using the form above</p>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 )}
