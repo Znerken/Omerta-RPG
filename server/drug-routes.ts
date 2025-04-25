@@ -514,7 +514,8 @@ export function registerDrugRoutes(app: Express) {
       }
       
       // Calculate production time based on drug complexity, lab level and production modifier
-      const baseTimeHours = 2; // Base production time in hours
+      // Reduced from 2 hours to much more reasonable times for better gameplay
+      const baseTimeMinutes = 5; // Base production time in minutes (reduced from hours)
       const timeReductionPerLevel = 0.1; // 10% reduction per lab level
       const levelMultiplier = Math.max(0.5, 1 - (lab.level * timeReductionPerLevel)); // At least 50% of base time
       
@@ -522,10 +523,14 @@ export function registerDrugRoutes(app: Express) {
       const locationModifier = lab.productionModifier || 0;
       const locationTimeMultiplier = Math.max(0.7, 1 - (locationModifier / 100)); // Location can reduce time by up to 30%
       
-      const totalTimeMultiplier = levelMultiplier * locationTimeMultiplier;
-      const productionTimeHours = baseTimeHours * totalTimeMultiplier * productionData.quantity;
+      // Apply drug complexity - higher risk drugs take longer to produce
+      const complexityMultiplier = 1 + (drug.riskLevel * 0.1); // Each risk level adds 10% time
+      
+      const totalTimeMultiplier = levelMultiplier * locationTimeMultiplier * complexityMultiplier;
+      const productionTimeMinutes = baseTimeMinutes * totalTimeMultiplier * productionData.quantity;
+      
       const completesAt = new Date();
-      completesAt.setHours(completesAt.getHours() + productionTimeHours);
+      completesAt.setMinutes(completesAt.getMinutes() + productionTimeMinutes);
       
       // Calculate success rate based on lab security, drug risk, and location risk modifier
       const baseSuccessRate = 90; // Base 90% success rate
@@ -546,7 +551,7 @@ export function registerDrugRoutes(app: Express) {
         production,
         message: `Started production of ${productionData.quantity}x ${drug.name}`,
         completesAt,
-        estimated_time_hours: productionTimeHours.toFixed(1),
+        estimated_time_minutes: productionTimeMinutes.toFixed(1),
         success_rate: `${successRate}%`,
       });
     } catch (error) {
