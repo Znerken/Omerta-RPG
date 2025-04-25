@@ -247,12 +247,12 @@ export function FriendsList() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-10 w-10 border border-primary/20">
-                              <AvatarImage src={request.avatar} alt={request.username} />
-                              <AvatarFallback>{request.username.charAt(0).toUpperCase()}</AvatarFallback>
+                              <AvatarImage src={request.sender?.avatar} alt={request.sender?.username} />
+                              <AvatarFallback>{request.sender?.username ? request.sender.username.charAt(0).toUpperCase() : '?'}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <h4 className="text-sm font-medium">{request.username}</h4>
-                              <p className="text-xs text-muted-foreground">Level {request.level || 1}</p>
+                              <h4 className="text-sm font-medium">{request.sender?.username}</h4>
+                              <p className="text-xs text-muted-foreground">Level {request.sender?.level || 1}</p>
                             </div>
                           </div>
                         </div>
@@ -320,12 +320,12 @@ export function FriendsList() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-10 w-10 border border-primary/20">
-                              <AvatarImage src={request.avatar} alt={request.username} />
-                              <AvatarFallback>{request.username.charAt(0).toUpperCase()}</AvatarFallback>
+                              <AvatarImage src={request.receiver?.avatar} alt={request.receiver?.username} />
+                              <AvatarFallback>{request.receiver?.username ? request.receiver.username.charAt(0).toUpperCase() : '?'}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <h4 className="text-sm font-medium">{request.username}</h4>
-                              <p className="text-xs text-muted-foreground">Level {request.level || 1}</p>
+                              <h4 className="text-sm font-medium">{request.receiver?.username}</h4>
+                              <p className="text-xs text-muted-foreground">Level {request.receiver?.level || 1}</p>
                             </div>
                           </div>
                         </div>
