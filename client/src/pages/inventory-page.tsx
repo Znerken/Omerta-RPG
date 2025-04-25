@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { InventoryItem } from "@/components/inventory/InventoryItem";
 import { useToast } from "@/hooks/use-toast";
+import { useNotification } from "@/hooks/use-notification";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { PageHeader } from "@/components/ui/page-header";
@@ -22,6 +23,7 @@ import {
 
 export default function InventoryPage() {
   const { toast } = useToast();
+  const { addNotification } = useNotification();
   const queryClient = useQueryClient();
 
   const { data: inventory, isLoading: inventoryLoading } = useQuery({
@@ -42,17 +44,50 @@ export default function InventoryPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Item Purchased",
-        description: data.message,
+      const title = "Item Purchased";
+      const message = data.message || `You purchased ${data.item?.name || 'an item'} for ${formatCurrency(data.price || 0)}.`;
+      
+      // Add to notification system
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "success",
+        read: false,
+        timestamp: new Date(),
+        data: { 
+          itemId: data.item?.id,
+          itemName: data.item?.name,
+          price: data.price,
+          itemType: data.item?.type
+        }
       });
+      
+      toast({
+        title: title,
+        description: message,
+      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
     },
     onError: (error) => {
+      const title = "Purchase Failed";
+      const message = error.message || "Failed to purchase the item. Please try again.";
+      
+      // Add error notification
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+      
       toast({
-        title: "Purchase Failed",
-        description: error.message,
+        title: title,
+        description: message,
         variant: "destructive",
       });
     },
@@ -64,16 +99,56 @@ export default function InventoryPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: data.equipped ? "Item Equipped" : "Item Unequipped",
-        description: data.message,
+      const title = data.equipped ? "Item Equipped" : "Item Unequipped";
+      const message = data.message || `You ${data.equipped ? 'equipped' : 'unequipped'} ${data.item?.name || 'an item'}.`;
+      
+      // Add to notification system
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "info",
+        read: false,
+        timestamp: new Date(),
+        data: { 
+          itemId: data.item?.id,
+          itemName: data.item?.name,
+          equipped: data.equipped,
+          itemType: data.item?.type,
+          bonuses: {
+            strength: data.item?.strengthBonus || 0,
+            stealth: data.item?.stealthBonus || 0,
+            charisma: data.item?.charismaBonus || 0,
+            intelligence: data.item?.intelligenceBonus || 0,
+            crimeSuccess: data.item?.crimeSuccessBonus || 0
+          }
+        }
       });
+      
+      toast({
+        title: title,
+        description: message,
+      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
     },
     onError: (error) => {
+      const title = "Failed to Equip Item";
+      const message = error.message || "There was a problem equipping the item. Please try again.";
+      
+      // Add error notification
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+      
       toast({
-        title: "Failed to Equip Item",
-        description: error.message,
+        title: title,
+        description: message,
         variant: "destructive",
       });
     },
