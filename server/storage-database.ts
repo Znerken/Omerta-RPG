@@ -1196,6 +1196,48 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       return undefined;
     }
   }
+
+  // Social Methods - Friends
+  async getUserFriends(userId: number): Promise<UserWithStatus[]> {
+    return getUserFriends(userId);
+  }
+
+  async getFriendRequest(userId: number, friendId: number, requestId?: number): Promise<UserFriend | undefined> {
+    return getFriendRequest(userId, friendId, requestId);
+  }
+
+  async sendFriendRequest(userId: number, friendId: number): Promise<UserFriend> {
+    return sendFriendRequest(userId, friendId);
+  }
+
+  async updateFriendRequest(id: number, status: string): Promise<UserFriend | undefined> {
+    return updateFriendRequest(id, status);
+  }
+
+  async removeFriend(userId: number, friendId: number): Promise<boolean> {
+    return removeFriend(userId, friendId);
+  }
+
+  // Social Methods - Status
+  async getUserStatus(userId: number): Promise<UserStatus | undefined> {
+    return getUserStatus(userId);
+  }
+
+  async getUserWithStatus(userId: number, currentUserId: number): Promise<UserWithStatus | undefined> {
+    return getUserWithStatus(userId, currentUserId);
+  }
+
+  async createUserStatus(status: InsertUserStatus): Promise<UserStatus> {
+    return createUserStatus(status);
+  }
+
+  async updateUserStatus(userId: number, status: Partial<UserStatus>): Promise<UserStatus | undefined> {
+    return updateUserStatus(userId, status);
+  }
+
+  async getOnlineUsers(limit: number = 50): Promise<UserWithStatus[]> {
+    return getOnlineUsers(limit);
+  }
 }
 
 // Export a singleton instance
