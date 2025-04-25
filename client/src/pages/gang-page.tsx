@@ -46,10 +46,9 @@ export default function GangPage() {
   });
   
   // Check if user has a gang 
-  const userGangId = userProfile?.gangMembership?.gangId;
-  const userGang = userProfile?.gangMembership?.gang;
-  const userGangRank = userProfile?.gangMembership?.rank;
-  const isInGang = !!userGangId;
+  const userGangId = userProfile?.gang?.id;
+  const isInGang = !!userProfile?.gang;
+  const userGangRank = userProfile?.gangRank;
   
   // For users in a gang, fetch detailed data with territories, wars, and missions
   const { data: gangDetails, isLoading: gangDetailsLoading } = useQuery({
@@ -250,14 +249,14 @@ export default function GangPage() {
       <PageHeader 
         title="Gangs" 
         icon={<Users className="h-5 w-5" />}
-        description={isInGang ? `Member of ${userGang?.name || "a gang"}` : "Join forces with other criminals"}
+        description={isInGang ? `Member of ${userProfile?.gang?.name || "a gang"}` : "Join forces with other criminals"}
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           {isInGang ? (
             // User is in a gang
             <GangCard 
-              gang={userGang} 
+              gang={userProfile.gang} 
               isUserInGang={true} 
               userRank={userGangRank} 
             />
