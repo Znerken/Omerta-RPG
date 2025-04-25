@@ -25,6 +25,8 @@ export const NotificationList: React.FC = () => {
         return <DollarSign className="h-4 w-4 text-green-500" />;
       case "friend_request":
         return <UserPlus className="h-4 w-4 text-indigo-500" />;
+      case "friend_accepted":
+        return <Check className="h-4 w-4 text-indigo-500" />;
       case "friend_status":
         return <Users className="h-4 w-4 text-blue-500" />;
       default:

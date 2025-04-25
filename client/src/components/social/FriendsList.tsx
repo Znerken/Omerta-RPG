@@ -175,55 +175,7 @@ export function FriendsList() {
                 <div className="space-y-1">
                   {filteredFriends?.map(friend => (
                     <React.Fragment key={friend.id}>
-                      <div className="flex items-center justify-between py-2">
-                        <div className="flex items-center space-x-3">
-                          <div className="relative">
-                            <Avatar>
-                              <AvatarImage src={friend.avatar || undefined} />
-                              <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                            <span className={`absolute w-3 h-3 right-0 bottom-0 border rounded-full ${
-                              friend.status?.status === "online" ? "bg-green-500 border-green-400" :
-                              friend.status?.status === "away" ? "bg-yellow-500 border-yellow-400" :
-                              friend.status?.status === "busy" ? "bg-red-500 border-red-400" :
-                              "bg-gray-400 border-gray-400"
-                            }`}></span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">{friend.username}</p>
-                            <p className="text-xs text-muted-foreground capitalize">
-                              {friend.status?.status || "offline"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 rounded-full"
-                            onClick={() => {
-                              // Navigate to messages with this user
-                              // This would typically use router navigation
-                              window.location.href = `/messages?userId=${friend.id}`;
-                            }}
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50/10"
-                            onClick={() => removeFriendMutation.mutate(friend.id)}
-                            disabled={removeFriendMutation.isPending}
-                          >
-                            {removeFriendMutation.isPending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <UserMinus className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-                      </div>
+                      <FriendIndicator friend={friend} />
                       <Separator />
                     </React.Fragment>
                   ))}

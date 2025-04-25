@@ -99,6 +99,23 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
           queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
         }
         
+        // Handle friend removed notifications
+        else if (data.type === "friend_removed") {
+          addNotification(
+            "Friend Removed", 
+            `${data.username} has removed you from their friends list`, 
+            "warning",
+            {
+              userId: data.userId,
+              username: data.username,
+              avatar: data.avatar
+            }
+          );
+          
+          // Invalidate friends list query to refresh UI
+          queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+        }
+        
         // Handle unread messages count updates
         else if (data.type === "unreadMessages") {
           // Handled elsewhere, no notification needed
