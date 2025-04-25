@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { InventoryItem } from "@/components/inventory/InventoryItem";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 import { 
   ShoppingBag, 
   Info, 
@@ -100,7 +100,12 @@ export default function InventoryPage() {
   const storeConsumables = storeItems?.filter((item: any) => item.type === "consumable") || [];
 
   return (
-    <MainLayout title="Inventory & Store">
+    <>
+      <PageHeader 
+        title="Inventory & Store" 
+        icon={<ShoppingBag className="h-5 w-5" />}
+        description="Equip items to boost your stats and improve your chances of success"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs defaultValue="inventory">
@@ -783,6 +788,6 @@ export default function InventoryPage() {
           </Card>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }
