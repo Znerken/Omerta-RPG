@@ -3,6 +3,7 @@ import { toast, useToast } from "@/hooks/use-toast";
 import { Check, Ban, AlertCircle, DollarSign, Bell, UserPlus, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Notification, NotificationType } from "@/types";
+import { queryClient } from "@/lib/queryClient";
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -34,9 +35,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       return;
     }
     
-    // Create WebSocket connection
+    // Create WebSocket connection with user ID for authentication
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const wsUrl = `${protocol}//${window.location.host}/ws?userId=${user.id}`;
     const newSocket = new WebSocket(wsUrl);
     
     newSocket.onopen = () => {
@@ -46,6 +47,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     newSocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data);
         
         // Handle friend request notifications
         if (data.type === "friend_request") {
@@ -62,8 +64,25 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
           );
         }
         
+        // Handle friend request accepted notifications
+        else if (data.type === "friend_accepted") {
+          addNotification(
+            "Friend Request Accepted", 
+            `${data.username} accepted your friend request`, 
+            "friend_accepted",
+            {
+              userId: data.userId,
+              username: data.username,
+              avatar: data.avatar
+            }
+          );
+          
+          // Invalidate friends list query to refresh UI
+          queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+        }
+        
         // Handle friend status updates
-        else if (data.type === "friend_status") {
+        else if (data.type === "friendStatusChanged") {
           addNotification(
             "Friend Status Update", 
             `${data.username} is now ${data.status}`, 
@@ -71,10 +90,35 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             {
               userId: data.userId,
               username: data.username,
-              avatar: data.avatar,
               status: data.status
             }
           );
+          
+          // Invalidate friends list query to refresh UI with new status
+          queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+        }
+        
+        // Handle unread messages count updates
+        else if (data.type === "unreadMessages") {
+          // Handled elsewhere, no notification needed
+        }
+        
+        // Handle new message notifications
+        else if (data.type === "new_message") {
+          addNotification(
+            "New Message", 
+            `${data.senderName}: ${data.preview}`, 
+            "message",
+            {
+              messageId: data.messageId,
+              senderId: data.senderId,
+              senderName: data.senderName,
+              timestamp: data.timestamp
+            }
+          );
+          
+          // Invalidate unread messages count
+          queryClient.invalidateQueries({ queryKey: ["/api/messages/unread"] });
         }
       } catch (error) {
         console.error("Error processing WebSocket message:", error);
