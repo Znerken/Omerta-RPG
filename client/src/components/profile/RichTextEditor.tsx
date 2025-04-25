@@ -350,165 +350,205 @@ export function RichTextEditor({ value, onChange, className, placeholder }: Rich
     handleInsert(cardHtml);
   };
   
-  // Load Billie Eilish themed profile template
-  const insertBillieTemplate = () => {
-    // Reading file content from the file we just created
-    const billieHtml = `<!-- This is a Billie Eilish styled profile showcase -->
-<div style="background-color: #000000; color: #ffffff; padding: 20px; font-family: Arial, sans-serif;">
-  <!-- Header Section with Neon Title -->
+  // Generate a random profile template
+  const generateRandomProfile = () => {
+    // Array of theme configurations
+    const themes = [
+      // Neon Noir Theme
+      {
+        name: "Neon Noir",
+        background: "#000000",
+        text: "#ffffff",
+        accent1: "#ff0099",
+        accent2: "#00ffcc",
+        headerStyle: "text-transform: uppercase; letter-spacing: 3px; background: linear-gradient(90deg, #ff0099, #00ffcc); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 10px rgba(255, 0, 153, 0.5);",
+        cardBackground: "#111111",
+        tagline: "SHADOW OPERATOR • MASTER OF DECEPTION • FEARED BY MANY",
+        quote: "The city streets tell stories of my legend. Those who cross me don't live to tell theirs."
+      },
+      // Vintage Mafia Theme
+      {
+        name: "Vintage Mafia",
+        background: "#1a1207",
+        text: "#e8d9c0",
+        accent1: "#c0963c",
+        accent2: "#6b4226",
+        headerStyle: "font-family: 'Georgia', serif; border-bottom: 2px solid #c0963c; color: #c0963c; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);",
+        cardBackground: "#221a0f",
+        tagline: "CAPO DI TUTTI CAPI • RESPECT EARNED • LOYALTY DEMANDED",
+        quote: "Family is everything. Loyalty is forever. Betrayal is fatal."
+      },
+      // High-Tech Hacker Theme
+      {
+        name: "Digital Underground",
+        background: "#0a0e17",
+        text: "#e4f0fb",
+        accent1: "#0dff92",
+        accent2: "#0099ff",
+        headerStyle: "font-family: 'Courier New', monospace; color: #0dff92; text-shadow: 0 0 5px rgba(13, 255, 146, 0.8); border-bottom: 1px solid rgba(13, 255, 146, 0.5);",
+        cardBackground: "#121a29",
+        tagline: "ELITE HACKER • DIGITAL PHANTOM • SYSTEM BREAKER",
+        quote: "Behind every secure system is a backdoor waiting to be found. I find them all."
+      },
+      // Blood Syndicate Theme
+      {
+        name: "Blood Syndicate",
+        background: "#1a0505",
+        text: "#f0e3e3",
+        accent1: "#b91c1c",
+        accent2: "#7f1d1d",
+        headerStyle: "color: #b91c1c; text-transform: uppercase; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); border-bottom: 2px solid #b91c1c;",
+        cardBackground: "#2a0a0a",
+        tagline: "BLOOD BROTHER • ENFORCER • SHADOW EXECUTIONER",
+        quote: "Respect is written in blood. My ledger has many pages, and they're all red."
+      },
+      // Luxury Kingpin Theme
+      {
+        name: "Luxury Kingpin",
+        background: "#0f172a",
+        text: "#faf5ff",
+        accent1: "#fbbf24",
+        accent2: "#9333ea",
+        headerStyle: "font-family: 'Arial', sans-serif; color: #fbbf24; font-weight: bold; text-shadow: 1px 1px 10px rgba(251, 191, 36, 0.3); border-bottom: 1px solid #fbbf24;",
+        cardBackground: "#1e293b",
+        tagline: "EMPIRE BUILDER • WEALTH MAGNET • UNTOUCHABLE",
+        quote: "Others chase money. I print it. Others seek power. I embody it."
+      }
+    ];
+    
+    // Select a random theme
+    const theme = themes[Math.floor(Math.random() * themes.length)];
+    
+    // Profile statistics - generate random percentages
+    const stats = [
+      { name: "STRENGTH", value: Math.floor(Math.random() * 40) + 60 },
+      { name: "INTELLIGENCE", value: Math.floor(Math.random() * 40) + 60 },
+      { name: "STEALTH", value: Math.floor(Math.random() * 40) + 60 },
+      { name: "INFLUENCE", value: Math.floor(Math.random() * 40) + 60 }
+    ];
+    
+    // Generate random achievements
+    const achievements = [
+      ["MASTER STRATEGIST", "Orchestrated the perfect heist with zero casualties"],
+      ["SHADOW NETWORK", "Built an information network spanning three cities"],
+      ["ESCAPE ARTIST", "Never been caught despite numerous close calls"],
+      ["WEALTH ACCUMULATOR", "Amassed a fortune that rivals small nations"],
+      ["RESPECTED LEADER", "Commands loyalty through respect, not fear"],
+      ["RUTHLESS TACTICIAN", "Known for brutal efficiency in all operations"]
+    ];
+    
+    // Pick 3 random achievements
+    const selectedAchievements = [];
+    while(selectedAchievements.length < 3) {
+      const achievement = achievements[Math.floor(Math.random() * achievements.length)];
+      if (!selectedAchievements.some(a => a[0] === achievement[0])) {
+        selectedAchievements.push(achievement);
+      }
+    }
+    
+    // Create the HTML template
+    const profileHtml = `
+<!-- ${theme.name} Theme Profile -->
+<div style="background-color: ${theme.background}; color: ${theme.text}; padding: 20px; font-family: Arial, sans-serif; border-radius: 10px;">
+  
+  <!-- Profile Guidelines - Will not appear in preview mode -->
+  <div style="background-color: rgba(0,0,0,0.7); border: 1px dashed #ffffff50; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
+    <h3 style="color: white; margin-top: 0;">HOW TO CUSTOMIZE YOUR PROFILE</h3>
+    <p style="color: #ccc; margin-bottom: 5px; font-size: 0.9em;">Look for the highlighted instructions throughout this template. You can:</p>
+    <ul style="color: #ccc; font-size: 0.9em;">
+      <li>Replace the placeholder image with your own</li>
+      <li>Edit your personal quote and tagline</li>
+      <li>Modify your stats to show your criminal specialties</li>
+      <li>Customize your achievements to reflect your criminal career</li>
+      <li>Change colors and styling using the editor toolbar above</li>
+    </ul>
+    <p style="color: #ccc; font-size: 0.9em;">Delete this entire instruction box when you're done customizing!</p>
+  </div>
+  <!-- Header Section -->
   <div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="font-size: 3em; margin: 0; text-transform: uppercase; letter-spacing: 5px; 
-               background: linear-gradient(90deg, #39ff14, #00ffff); 
-               -webkit-background-clip: text; background-clip: text; 
-               -webkit-text-fill-color: transparent; 
-               text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);">
+    <h1 style="font-size: 2.5em; margin: 0; ${theme.headerStyle}">
       EXTORTIONIST
     </h1>
-    <p style="margin-top: 5px; color: #888888; font-style: italic;">BILLIE EILISH VIBES</p>
+    <p style="margin-top: 5px; color: ${theme.text}; opacity: 0.7; font-style: italic;">${theme.name.toUpperCase()} PROFILE</p>
   </div>
 
   <!-- Main Grid Layout -->
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-    <!-- Left Column - Main Image and Brief Bio -->
-    <div style="background-color: #111111; padding: 20px; border-radius: 10px; position: relative;">
-      <img src="https://www.rollingstone.com/wp-content/uploads/2022/12/billie-eilish-birthday.jpg" 
-           style="width: 100%; border-radius: 10px; border: 3px solid #39ff14;" alt="Billie Eilish">
+    <!-- Left Column - Bio and Quote -->
+    <div style="background-color: ${theme.cardBackground}; padding: 20px; border-radius: 10px; position: relative; border: 1px solid rgba(${theme.accent1.replace('#', '')}, 0.3);">
+      <!-- Profile image placeholder -->
+      <div style="width: 100%; height: 200px; background: linear-gradient(45deg, ${theme.accent1}, ${theme.accent2}); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; position: relative; overflow: hidden;">
+        <div style="background-color: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 5px; text-align: center;">
+          <span style="color: white; font-weight: bold; letter-spacing: 2px; display: block; margin-bottom: 5px;">ADD YOUR IMAGE HERE</span>
+          <span style="color: #cccccc; font-size: 0.8em; display: block;">Replace this entire div with an img tag:<br>&lt;img src="your-image-url-here" style="width: 100%; border-radius: 10px;" /&gt;</span>
+        </div>
+      </div>
       
       <div style="margin-top: 15px; position: relative; z-index: 1;">
-        <p style="font-size: 1.1em; line-height: 1.5; color: #cccccc;">
-          "In the criminal underworld, respect isn't given, it's earned. And I've earned every bit of mine."
+        <p style="font-size: 1.1em; line-height: 1.5; color: ${theme.text}; font-style: italic; position: relative;">
+          "${theme.quote}"
+          <span style="position: absolute; top: -20px; right: 0; font-size: 0.7em; background-color: rgba(0,0,0,0.7); padding: 3px 6px; border-radius: 3px; color: #fff; font-style: normal;">EDIT THIS QUOTE</span>
         </p>
-        <div style="width: 50px; height: 2px; background: linear-gradient(90deg, #39ff14, #00ffff); margin: 10px 0;"></div>
-        <p style="color: #888888;">
-          LEVEL 11 BOSS • RESPECTED CRIMINAL • FEARED BY MANY
+        <div style="width: 50px; height: 2px; background: linear-gradient(90deg, ${theme.accent1}, ${theme.accent2}); margin: 10px 0;"></div>
+        <p style="color: ${theme.text}; opacity: 0.7; position: relative;">
+          ${theme.tagline}
+          <span style="position: absolute; top: -20px; right: 0; font-size: 0.7em; background-color: rgba(0,0,0,0.7); padding: 3px 6px; border-radius: 3px; color: #fff;">CUSTOMIZE THIS TAGLINE</span>
         </p>
       </div>
     </div>
     
-    <!-- Right Column - Stats and Additional Images -->
+    <!-- Right Column - Stats and Info -->
     <div>
       <!-- Stats Box -->
-      <div style="background-color: #111111; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-        <h2 style="color: #39ff14; margin-top: 0; border-bottom: 1px solid #333333; padding-bottom: 10px;">CRIMINAL STATS</h2>
+      <div style="background-color: ${theme.cardBackground}; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(${theme.accent2.replace('#', '')}, 0.3);">
+        <h2 style="color: ${theme.accent1}; margin-top: 0; border-bottom: 1px solid ${theme.accent2}; padding-bottom: 10px; position: relative;">
+          CRIMINAL STATS
+          <span style="position: absolute; top: 0; right: 0; font-size: 0.7em; background-color: rgba(0,0,0,0.7); padding: 3px 6px; border-radius: 3px; color: #fff;">CUSTOMIZE THESE STATS</span>
+        </h2>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+          ${stats.map(stat => `
           <div>
-            <h3 style="color: #00ffff; margin-bottom: 5px;">STRENGTH</h3>
-            <div style="height: 8px; background-color: #222222; border-radius: 4px; position: relative; overflow: hidden;">
-              <div style="position: absolute; top: 0; left: 0; height: 100%; width: 75%; background: linear-gradient(90deg, #39ff14, #00ffff);"></div>
+            <h3 style="color: ${theme.accent2}; margin-bottom: 5px; font-size: 0.9em;">${stat.name}</h3>
+            <div style="height: 8px; background-color: rgba(255,255,255,0.1); border-radius: 4px; position: relative; overflow: hidden;">
+              <div style="position: absolute; top: 0; left: 0; height: 100%; width: ${stat.value}%; background: linear-gradient(90deg, ${theme.accent1}, ${theme.accent2});"></div>
             </div>
+            <div style="display: flex; justify-content: flex-end; font-size: 0.8em; margin-top: 2px; opacity: 0.7;">${stat.value}%</div>
           </div>
-          
-          <div>
-            <h3 style="color: #00ffff; margin-bottom: 5px;">STEALTH</h3>
-            <div style="height: 8px; background-color: #222222; border-radius: 4px; position: relative; overflow: hidden;">
-              <div style="position: absolute; top: 0; left: 0; height: 100%; width: 90%; background: linear-gradient(90deg, #39ff14, #00ffff);"></div>
-            </div>
-          </div>
-          
-          <div>
-            <h3 style="color: #00ffff; margin-bottom: 5px;">INTELLIGENCE</h3>
-            <div style="height: 8px; background-color: #222222; border-radius: 4px; position: relative; overflow: hidden;">
-              <div style="position: absolute; top: 0; left: 0; height: 100%; width: 82%; background: linear-gradient(90deg, #39ff14, #00ffff);"></div>
-            </div>
-          </div>
-          
-          <div>
-            <h3 style="color: #00ffff; margin-bottom: 5px;">CHARISMA</h3>
-            <div style="height: 8px; background-color: #222222; border-radius: 4px; position: relative; overflow: hidden;">
-              <div style="position: absolute; top: 0; left: 0; height: 100%; width: 95%; background: linear-gradient(90deg, #39ff14, #00ffff);"></div>
-            </div>
-          </div>
+          `).join('')}
         </div>
-      </div>
-      
-      <!-- Gallery Box -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <img src="https://hips.hearstapps.com/hmg-prod/images/gettyimages-1646083712.jpg" 
-             style="width: 100%; height: 120px; object-fit: cover; border-radius: 5px; border: 2px solid #111111;" alt="Billie Eilish">
-        <img src="https://media.allure.com/photos/63ffe87d855887adaadcf07c/1:1/w_2000,h_2000,c_limit/billie%20eilish%20red%20carpet%20beauty%20evolution.jpg" 
-             style="width: 100%; height: 120px; object-fit: cover; border-radius: 5px; border: 2px solid #111111;" alt="Billie Eilish">
+        <div style="font-size: 0.7em; margin-top: 10px; color: rgba(255,255,255,0.5); text-align: center; padding: 5px; background-color: rgba(0,0,0,0.2); border-radius: 4px;">
+          Edit the stats by changing each stat name and percentage value. You can also add or remove stats as needed.
+        </div>
       </div>
     </div>
   </div>
   
   <!-- Accomplishments Section -->
-  <div style="margin-top: 30px; background-color: #111111; padding: 20px; border-radius: 10px;">
-    <h2 style="color: #39ff14; margin-top: 0; border-bottom: 1px solid #333333; padding-bottom: 10px;">NOTABLE ACHIEVEMENTS</h2>
+  <div style="margin-top: 20px; background-color: ${theme.cardBackground}; padding: 20px; border-radius: 10px; border: 1px solid rgba(${theme.accent1.replace('#', '')}, 0.3);">
+    <h2 style="color: ${theme.accent1}; margin-top: 0; border-bottom: 1px solid ${theme.accent2}; padding-bottom: 10px; position: relative;">
+      NOTABLE ACHIEVEMENTS
+      <span style="position: absolute; top: 0; right: 0; font-size: 0.7em; background-color: rgba(0,0,0,0.7); padding: 3px 6px; border-radius: 3px; color: #fff;">EDIT THESE ACHIEVEMENTS</span>
+    </h2>
     
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px;">
-      <!-- Achievement Card 1 -->
-      <div style="background-color: #0a0a0a; padding: 15px; border-radius: 5px; border-left: 3px solid #39ff14;">
-        <h3 style="color: #00ffff; margin-top: 0; margin-bottom: 5px;">BANK HEIST MASTERMIND</h3>
-        <p style="color: #888888; margin: 0; font-size: 0.9em;">Orchestrated the biggest bank robbery in city history</p>
+      ${selectedAchievements.map(achievement => `
+      <!-- Achievement Card -->
+      <div style="background-color: rgba(0,0,0,0.2); padding: 15px; border-radius: 5px; border-left: 3px solid ${theme.accent1};">
+        <h3 style="color: ${theme.accent2}; margin-top: 0; margin-bottom: 5px; font-size: 0.9em;">${achievement[0]}</h3>
+        <p style="color: ${theme.text}; opacity: 0.7; margin: 0; font-size: 0.8em;">${achievement[1]}</p>
       </div>
-      
-      <!-- Achievement Card 2 -->
-      <div style="background-color: #0a0a0a; padding: 15px; border-radius: 5px; border-left: 3px solid #39ff14;">
-        <h3 style="color: #00ffff; margin-top: 0; margin-bottom: 5px;">UNDERWORLD KINGPIN</h3>
-        <p style="color: #888888; margin: 0; font-size: 0.9em;">Became the most feared crime boss in three districts</p>
-      </div>
-      
-      <!-- Achievement Card 3 -->
-      <div style="background-color: #0a0a0a; padding: 15px; border-radius: 5px; border-left: 3px solid #39ff14;">
-        <h3 style="color: #00ffff; margin-top: 0; margin-bottom: 5px;">GHOST</h3>
-        <p style="color: #888888; margin: 0; font-size: 0.9em;">Never caught by police despite 50+ major crimes</p>
-      </div>
+      `).join('')}
     </div>
   </div>
   
-  <!-- Music Section - Billie Eilish Themed -->
-  <div style="margin-top: 30px; background-color: #111111; padding: 20px; border-radius: 10px;">
-    <h2 style="color: #39ff14; margin-top: 0; border-bottom: 1px solid #333333; padding-bottom: 10px;">PLAYLIST</h2>
-    
-    <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 20px;">
-      <!-- Song Card 1 -->
-      <div style="background-color: #0a0a0a; padding: 10px; border-radius: 5px; display: flex; align-items: center;">
-        <div style="width: 40px; height: 40px; background: linear-gradient(45deg, #39ff14, #00ffff); border-radius: 5px; margin-right: 15px; display: flex; align-items: center; justify-content: center;">
-          <span style="font-weight: bold; color: #000000;">▶</span>
-        </div>
-        <div>
-          <h4 style="margin: 0; color: #ffffff;">bad guy</h4>
-          <p style="margin: 0; color: #888888; font-size: 0.8em;">BILLIE EILISH</p>
-        </div>
-        <div style="margin-left: auto; color: #888888;">3:14</div>
-      </div>
-      
-      <!-- Song Card 2 -->
-      <div style="background-color: #0a0a0a; padding: 10px; border-radius: 5px; display: flex; align-items: center;">
-        <div style="width: 40px; height: 40px; background: linear-gradient(45deg, #39ff14, #00ffff); border-radius: 5px; margin-right: 15px; display: flex; align-items: center; justify-content: center;">
-          <span style="font-weight: bold; color: #000000;">▶</span>
-        </div>
-        <div>
-          <h4 style="margin: 0; color: #ffffff;">you should see me in a crown</h4>
-          <p style="margin: 0; color: #888888; font-size: 0.8em;">BILLIE EILISH</p>
-        </div>
-        <div style="margin-left: auto; color: #888888;">2:59</div>
-      </div>
-      
-      <!-- Song Card 3 -->
-      <div style="background-color: #0a0a0a; padding: 10px; border-radius: 5px; display: flex; align-items: center;">
-        <div style="width: 40px; height: 40px; background: linear-gradient(45deg, #39ff14, #00ffff); border-radius: 5px; margin-right: 15px; display: flex; align-items: center; justify-content: center;">
-          <span style="font-weight: bold; color: #000000;">▶</span>
-        </div>
-        <div>
-          <h4 style="margin: 0; color: #ffffff;">Ocean Eyes</h4>
-          <p style="margin: 0; color: #888888; font-size: 0.8em;">BILLIE EILISH</p>
-        </div>
-        <div style="margin-left: auto; color: #888888;">3:20</div>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Footer with signature -->
-  <div style="margin-top: 30px; text-align: center; padding: 20px 0;">
-    <img src="https://i.pinimg.com/originals/bc/fa/36/bcfa3671a47cf2d878f7eda1be86bf05.png" 
-         style="height: 60px; margin-bottom: 10px;" alt="Billie Eilish signature">
-    <p style="color: #888888; font-size: 0.8em; margin: 0;">© EXTORTIONIST 2025. ALL RIGHTS RESERVED.</p>
+  <!-- Footer Section -->
+  <div style="margin-top: 30px; text-align: center; padding: 20px 0; border-top: 1px solid rgba(255,255,255,0.1);">
+    <p style="color: ${theme.text}; opacity: 0.5; font-size: 0.8em; margin: 0;">© EXTORTIONIST 2025 • ${theme.name.toUpperCase()} PROFILE</p>
   </div>
 </div>`;
     
-    handleInsert(billieHtml);
+    handleInsert(profileHtml);
   };
 
   return (
@@ -779,14 +819,14 @@ export function RichTextEditor({ value, onChange, className, placeholder }: Rich
           variant="outline"
           size="sm"
           className="ml-1"
-          title="Billie Eilish Theme"
-          onClick={insertBillieTemplate}
+          title="Generate Random Profile Design"
+          onClick={generateRandomProfile}
           style={{ 
-            background: 'linear-gradient(90deg, rgba(57, 255, 20, 0.2), rgba(0, 255, 255, 0.2))',
-            border: '1px solid rgba(57, 255, 20, 0.5)'
+            background: 'linear-gradient(90deg, rgba(138, 43, 226, 0.2), rgba(255, 100, 100, 0.2))',
+            border: '1px solid rgba(138, 43, 226, 0.5)'
           }}
         >
-          Billie Eilish Profile
+          Randomize Profile Design
         </Button>
         
         <Separator orientation="vertical" className="mx-1 h-6 my-1" />
