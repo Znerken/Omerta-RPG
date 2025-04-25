@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { users, userStatus, userFriends, friendRequests } from "@shared/schema";
-import { eq, and, or, desc, asc, isNull, ne } from "drizzle-orm";
+import { eq, and, or, desc, asc, isNull, ne, sql } from "drizzle-orm";
 import { UserWithStatus, UserStatus, UserFriend, FriendRequest, InsertUserStatus, InsertFriendRequest, InsertUserFriend, User } from "@shared/schema";
 
 // Get user by ID
