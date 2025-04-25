@@ -226,7 +226,6 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createUser(insertUser: InsertUser): Promise<User> {
-    const now = new Date();
     const [user] = await db
       .insert(users)
       .values({
@@ -235,12 +234,8 @@ export class DatabaseStorage implements IStorage {
         cash: 1000,
         respect: 0,
         xp: 0,
-        nextLevelXp: 100,
-        createdAt: now,
-        updatedAt: now,
-        lastActive: now,
-        jailUntil: null,
-        avatar: null
+        isAdmin: false,
+        isJailed: false,
       })
       .returning();
     
@@ -251,10 +246,10 @@ export class DatabaseStorage implements IStorage {
       stealth: 10,
       charisma: 10,
       intelligence: 10,
-      strengthCooldown: null,
-      stealthCooldown: null,
-      charismaCooldown: null,
-      intelligenceCooldown: null
+      strengthTrainingCooldown: null,
+      stealthTrainingCooldown: null,
+      charismaTrainingCooldown: null,
+      intelligenceTrainingCooldown: null
     });
     
     return user;
