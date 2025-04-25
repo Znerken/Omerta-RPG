@@ -66,6 +66,15 @@ function AppRouter() {
         )}
       </Route>
       
+      <Route path="/profile/:userId">
+        {({ params }) => (
+          <ProtectedRoute 
+            path={`/profile/${params.userId}`} 
+            component={() => <ProtectedPage component={() => <ProfilePage userId={parseInt(params.userId)} />} />} 
+          />
+        )}
+      </Route>
+      
       <Route path="/crimes">
         {() => (
           <ProtectedRoute path="/crimes" component={() => <ProtectedPage component={CrimesPage} />} />

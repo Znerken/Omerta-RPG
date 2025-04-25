@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -34,21 +34,232 @@ import {
   PenTool,
   Palette,
   Save,
-  Trash2
+  Trash2,
+  UserPlus,
+  UserMinus,
+  UserCheck
 } from "lucide-react";
 import { formatCurrency, getInitials, calculateLevelProgress } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
-export default function ProfilePage() {
-  const { data: userProfile, isLoading: profileLoading } = useQuery({
-    queryKey: ["/api/user/profile"],
+interface ProfilePageProps {
+  userId?: number;
+}
+
+// Friend action button component for other users' profiles
+function FriendActionButton({ profile }: { profile: any }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  // Check if already friends or have pending request
+  const isFriend = profile.isFriend;
+  const friendStatus = profile.friendStatus;
+  const friendRequest = profile.friendRequest;
+  
+  // Mutation for sending friend request
+  const sendFriendRequestMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/social/friends/request", { friendId: profile.id });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Friend request sent",
+        description: `Request sent to ${profile.username}`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error sending request",
+        description: error.message || "Failed to send friend request",
+        variant: "destructive",
+      });
+    },
   });
   
+  // Mutation for accepting friend request
+  const acceptFriendRequestMutation = useMutation({
+    mutationFn: async () => {
+      if (!friendRequest) return;
+      return apiRequest("POST", `/api/social/friends/request/${friendRequest.id}/accept`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Friend request accepted",
+        description: `You are now friends with ${profile.username}`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error accepting request",
+        description: error.message || "Failed to accept friend request",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation for rejecting friend request
+  const rejectFriendRequestMutation = useMutation({
+    mutationFn: async () => {
+      if (!friendRequest) return;
+      return apiRequest("POST", `/api/social/friends/request/${friendRequest.id}/reject`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Friend request rejected",
+        description: `Request from ${profile.username} has been rejected`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error rejecting request",
+        description: error.message || "Failed to reject friend request",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Mutation for removing friend
+  const removeFriendMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", `/api/social/friends/${profile.id}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Friend removed",
+        description: `${profile.username} has been removed from your friends`,
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error removing friend",
+        description: error.message || "Failed to remove friend",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Render button based on relationship status
+  if (isFriend) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => removeFriendMutation.mutate()}
+        disabled={removeFriendMutation.isPending}
+        className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
+      >
+        {removeFriendMutation.isPending ? (
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        ) : (
+          <UserMinus className="h-4 w-4 text-red-400" />
+        )}
+        Remove Friend
+      </Button>
+    );
+  }
+  
+  if (friendStatus === "pending" && !friendRequest) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled
+        className="flex items-center gap-1 bg-black/50 backdrop-blur-sm"
+      >
+        <Clock className="h-4 w-4 text-yellow-400" />
+        Request Pending
+      </Button>
+    );
+  }
+  
+  if (friendRequest) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="text-sm text-muted-foreground text-center mb-1">
+          Friend Request
+        </div>
+        <Button
+          size="sm"
+          onClick={() => acceptFriendRequestMutation.mutate()}
+          disabled={acceptFriendRequestMutation.isPending || rejectFriendRequestMutation.isPending}
+          className="flex items-center gap-1"
+        >
+          {acceptFriendRequestMutation.isPending ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          ) : (
+            <UserCheck className="h-4 w-4" />
+          )}
+          Accept
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => rejectFriendRequestMutation.mutate()}
+          disabled={acceptFriendRequestMutation.isPending || rejectFriendRequestMutation.isPending}
+          className="flex items-center gap-1"
+        >
+          {rejectFriendRequestMutation.isPending ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          ) : (
+            <UserMinus className="h-4 w-4" />
+          )}
+          Reject
+        </Button>
+      </div>
+    );
+  }
+  
+  // Default: No relationship yet, show add friend button
+  return (
+    <Button
+      size="sm"
+      onClick={() => sendFriendRequestMutation.mutate()}
+      disabled={sendFriendRequestMutation.isPending}
+      className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
+    >
+      {sendFriendRequestMutation.isPending ? (
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      ) : (
+        <UserPlus className="h-4 w-4" />
+      )}
+      Add Friend
+    </Button>
+  );
+}
+
+export default function ProfilePage({ userId }: ProfilePageProps) {
+  const { user: currentUser } = useAuth();
+  const isViewingOwnProfile = !userId || (currentUser && userId === currentUser.id);
+  
+  // Fetch user profile based on whether we're viewing own profile or another user's
+  const { data: userProfile, isLoading: profileLoading } = useQuery({
+    queryKey: isViewingOwnProfile ? ["/api/user/profile"] : [`/api/social/users/${userId}`],
+    queryFn: async () => {
+      if (isViewingOwnProfile) {
+        const response = await apiRequest("GET", "/api/user/profile");
+        return await response.json();
+      } else {
+        const response = await apiRequest("GET", `/api/social/users/${userId}`);
+        return await response.json();
+      }
+    }
+  });
+  
+  // Only fetch crime history for own profile
   const { data: crimeHistory, isLoading: historyLoading } = useQuery({
     queryKey: ["/api/crimes"],
+    enabled: isViewingOwnProfile,
   });
 
   // Initialize all state variables at the top
@@ -202,7 +413,11 @@ export default function ProfilePage() {
   if (profileLoading || historyLoading) {
     return (
       <>
-        <PageHeader title="Your Profile" icon={<User className="h-5 w-5" />} description="Loading profile data..." />
+        <PageHeader 
+          title={isViewingOwnProfile ? "Your Profile" : "User Profile"} 
+          icon={<User className="h-5 w-5" />} 
+          description="Loading profile data..." 
+        />
         <div className="grid place-items-center h-64">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
         </div>
@@ -213,10 +428,19 @@ export default function ProfilePage() {
   if (!userProfile) {
     return (
       <>
-        <PageHeader title="Profile" icon={<User className="h-5 w-5" />} description="Profile not found" />
+        <PageHeader 
+          title="Profile" 
+          icon={<User className="h-5 w-5" />} 
+          description="Profile not found" 
+        />
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold mb-4">Profile not available</h2>
-          <p className="text-muted-foreground">There was an error loading your profile data. Please try again later.</p>
+          <p className="text-muted-foreground">
+            {isViewingOwnProfile 
+              ? "There was an error loading your profile data. Please try again later."
+              : "This user's profile could not be found or is no longer available."
+            }
+          </p>
         </div>
       </>
     );
@@ -282,44 +506,52 @@ export default function ProfilePage() {
 
   return (
     <div className={`profile-page ${profileTheme}`}>
-      {/* Dynamic Edit Button - Always visible floating at top right */}
+      {/* Dynamic Action Button - Always visible floating at top right */}
       <div className="fixed top-20 right-6 z-50">
-        {isEditing ? (
-          <div className="flex flex-col gap-2">
-            <Button
-              size="sm"
-              onClick={handleSaveProfile}
-              className="flex items-center gap-1"
-              disabled={updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending}
-            >
-              {(updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending) ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" /> Save Changes
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(false)}
-              className="flex items-center gap-1"
-            >
-              <Trash2 className="h-4 w-4" /> Cancel
-            </Button>
-          </div>
+        {isViewingOwnProfile ? (
+          // Own profile - Show edit buttons
+          <>
+            {isEditing ? (
+              <div className="flex flex-col gap-2">
+                <Button
+                  size="sm"
+                  onClick={handleSaveProfile}
+                  className="flex items-center gap-1"
+                  disabled={updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending}
+                >
+                  {(updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending) ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" /> Save Changes
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(false)}
+                  className="flex items-center gap-1"
+                >
+                  <Trash2 className="h-4 w-4" /> Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
+              >
+                <FileEdit className="h-4 w-4" /> Edit Profile
+              </Button>
+            )}
+          </>
         ) : (
-          <Button
-            size="sm"
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
-          >
-            <FileEdit className="h-4 w-4" /> Edit Profile
-          </Button>
+          // Other user's profile - Show friend actions
+          <FriendActionButton profile={userProfile} />
         )}
       </div>
       
