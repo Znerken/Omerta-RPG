@@ -98,6 +98,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // User profile endpoint with gang membership
+  app.get("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const userId = req.user.id;
+      const userWithStats = await storage.getUserWithStats(userId);
+      const gangMember = await storage.getGangMember(userId);
+      
+      // Format response with all user data including explicit gang membership
+      const profileData = {
+        ...userWithStats,
+        gangMember: gangMember || null
+      };
+      
+      res.json(profileData);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ message: "Failed to fetch user profile" });
+    }
+  });
+  
   // Crime API Routes
   app.get("/api/crimes", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });

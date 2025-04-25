@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { GangCard } from "@/components/gang/GangCard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -8,11 +8,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
-import { Progress } from "@/components/ui/progress";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useNotification } from "@/hooks/use-notification";
@@ -20,9 +18,25 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
-import { formatCurrency, getInitials, formatDate } from "@/lib/utils";
-import { Loader2, Users, Plus, Skull, DollarSign, MapPin, Shield, Swords, Target, Medal, Briefcase, Award, ArrowUp } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { 
+  Loader2, 
+  Users, 
+  Plus, 
+  Skull, 
+  DollarSign, 
+  AlertTriangle, 
+  Shield, 
+  Award, 
+  Crown, 
+  UserCheck,
+  Trophy,
+  ExternalLink,
+  ArrowRight,
+  Info
+} from "lucide-react";
 
+// Gang creation form schema
 const createGangSchema = z.object({
   name: z.string().min(3, "Gang name must be at least 3 characters").max(20, "Gang name must be at most 20 characters"),
   tag: z.string().min(2, "Gang tag must be at least 2 characters").max(5, "Gang tag must be at most 5 characters"),
@@ -37,40 +51,33 @@ export default function GangPage() {
   const { addNotification } = useNotification();
   const queryClient = useQueryClient();
 
-  const { data: userProfile, isLoading: profileLoading } = useQuery({
+  // Fetch current user data
+  const { data: user, isLoading: userLoading, isError: userError, refetch: refetchUser } = useQuery({
     queryKey: ["/api/user"],
   });
 
-  const { data: gangsList, isLoading: gangsLoading } = useQuery({
+  // Fetch all gangs for the leaderboard
+  const { data: gangsList, isLoading: gangsLoading, isError: gangsError } = useQuery({
     queryKey: ["/api/gangs"],
   });
   
-  // Check if user has a gang 
-  const userGangId = userProfile?.gang?.id;
-  const isInGang = !!userProfile?.gang;
-  const userGangRank = userProfile?.gangRank;
+  // Fetch the gang member information directly from backend
+  const { data: gangMember, isLoading: gangMemberLoading } = useQuery({
+    queryKey: ["/api/user/profile"],
+    select: (data) => {
+      // Return the member information via the gangMember property (if exists)
+      return data?.gangMember;
+    }
+  });
   
-  // For users in a gang, fetch detailed data with territories, wars, and missions
+  // Fetch gang details if user is in a gang
+  const userGangId = gangMember?.gang?.id;
   const { data: gangDetails, isLoading: gangDetailsLoading } = useQuery({
     queryKey: ["/api/gangs", userGangId],
-    enabled: !!userGangId,
-  });
-  
-  const { data: gangTerritories, isLoading: territoriesLoading } = useQuery({
-    queryKey: ["/api/gangs/territories"],
-    enabled: !!userGangId,
-  });
-  
-  const { data: activeWars, isLoading: warsLoading } = useQuery({
-    queryKey: ["/api/gangs/wars/active"],
-    enabled: !!userGangId,
-  });
-  
-  const { data: activeMissions, isLoading: missionsLoading } = useQuery({
-    queryKey: ["/api/gangs/missions/active"],
-    enabled: !!userGangId,
+    enabled: !!userGangId, // Only run this query if user has a gang
   });
 
+  // Create form for gang creation
   const form = useForm<CreateGangValues>({
     resolver: zodResolver(createGangSchema),
     defaultValues: {
@@ -80,154 +87,86 @@ export default function GangPage() {
     },
   });
 
+  // Create gang mutation
   const createGangMutation = useMutation({
     mutationFn: async (data: CreateGangValues) => {
       const res = await apiRequest("POST", "/api/gangs", data);
       return await res.json();
     },
     onSuccess: (data) => {
-      const title = "Gang Created";
-      const message = "Your gang has been successfully created!";
-      
-      // Add to notification system
-      addNotification({
-        id: Date.now().toString(),
-        title: title,
-        message: message,
-        type: "success",
-        read: false,
-        timestamp: new Date(),
-        data: {
-          gangId: data?.id,
-          gangName: data?.name,
-          gangTag: data?.tag,
-          isOwner: true,
-          action: "create"
-        }
-      });
-      
       toast({
-        title: title,
-        description: message,
+        title: "Gang Created",
+        description: "Your gang has been successfully created!",
       });
       
+      // Invalidate relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/gangs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      
+      // Close dialog and reset form
       setIsCreateDialogOpen(false);
       form.reset();
     },
     onError: (error) => {
-      const title = "Failed to Create Gang";
-      const message = error.message || "There was an error creating your gang. Please try again.";
-      
-      // Add error notification
-      addNotification({
-        id: Date.now().toString(),
-        title: title,
-        message: message,
-        type: "error",
-        read: false,
-        timestamp: new Date()
-      });
-      
       toast({
-        title: title,
-        description: message,
+        title: "Failed to Create Gang",
+        description: error.message || "There was an error creating your gang. Please try again.",
         variant: "destructive",
       });
     },
   });
 
+  // Join gang mutation
   const joinGangMutation = useMutation({
     mutationFn: async (gangId: number) => {
       const res = await apiRequest("POST", `/api/gangs/${gangId}/join`);
       return await res.json();
     },
     onSuccess: (data) => {
-      const title = "Gang Joined";
-      const message = data.message || "You've successfully joined the gang.";
-      
-      // Add success notification
-      addNotification({
-        id: Date.now().toString(),
-        title: title,
-        message: message,
-        type: "success",
-        read: false,
-        timestamp: new Date(),
-        data: {
-          gangId: data?.gangId,
-          gangName: data?.gangName || "Unknown gang",
-          gangTag: data?.gangTag,
-          isOwner: false,
-          action: "join"
-        }
-      });
-      
       toast({
-        title: title,
-        description: message,
+        title: "Gang Joined",
+        description: data.message || "You've successfully joined the gang.",
       });
       
+      // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: ["/api/gangs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
     },
     onError: (error) => {
-      const title = "Failed to Join Gang";
-      const message = error.message || "There was an error joining the gang. Please try again.";
-      
-      // Add error notification
-      addNotification({
-        id: Date.now().toString(),
-        title: title,
-        message: message,
-        type: "error",
-        read: false,
-        timestamp: new Date()
-      });
-      
       toast({
-        title: title,
-        description: message,
+        title: "Failed to Join Gang",
+        description: error.message || "There was an error joining the gang. Please try again.",
         variant: "destructive",
       });
     },
   });
 
+  // Handle form submission for gang creation
   const onCreateGangSubmit = (data: CreateGangValues) => {
     createGangMutation.mutate(data);
   };
 
+  // Handle joining a gang
   const handleJoinGang = (gangId: number) => {
     joinGangMutation.mutate(gangId);
   };
-  
-  // Handlers for territory control and gang wars
-  const startTerritoryAttack = (territoryId: number) => {
-    // Implement attack on territory
-    toast({
-      title: "Territory Attack",
-      description: "Your gang is preparing to attack this territory...",
-    });
-  };
-  
-  const startGangWar = (enemyGangId: number) => {
-    // Implement gang war
-    toast({
-      title: "Gang War Initiated",
-      description: "Your gang has declared war! Prepare for battle...",
-    });
-  };
-  
-  const acceptMission = (missionId: number) => {
-    // Accept mission
-    toast({
-      title: "Mission Accepted",
-      description: "Your gang has accepted this mission. Good luck!",
-    });
-  };
 
-  if (profileLoading || gangsLoading) {
+  // Check if user is in a gang
+  const isInGang = !!gangMember;
+  
+  // Get user's gang rank if they're in a gang
+  const userGangRank = gangMember?.rank || "Member";
+  
+  // Use either the detailed gang info or the basic info from user's profile
+  const userGang = gangDetails || (gangMember?.gang ?? null);
+  
+  // Check if still loading
+  const isLoading = userLoading || gangsLoading || gangMemberLoading;
+  
+  // If still loading, show loading state
+  if (isLoading) {
     return (
       <>
         <PageHeader 
@@ -236,427 +175,501 @@ export default function GangPage() {
           description="Join forces with other criminals"
         />
         <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-gray-400">Loading gang data...</p>
+          </div>
         </div>
       </>
     );
   }
-
-  // Variables already defined above
+  
+  // If error loading data, show error state
+  if (userError || gangsError) {
+    return (
+      <>
+        <PageHeader 
+          title="Gangs" 
+          icon={<Users className="h-5 w-5" />}
+          description="Join forces with other criminals"
+        />
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            Failed to load gang data. Please try again later.
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-2" 
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/gangs"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+              }}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </>
+    );
+  }
 
   return (
     <>
       <PageHeader 
         title="Gangs" 
         icon={<Users className="h-5 w-5" />}
-        description={isInGang ? `Member of ${userProfile?.gang?.name || "a gang"}` : "Join forces with other criminals"}
+        description={isInGang 
+          ? `Member of ${userGang?.name || "a gang"}` 
+          : "Join forces with other criminals"
+        }
       />
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {isInGang ? (
-            // User is in a gang
+      
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+        {/* Left Column - Main Gang Content */}
+        <div className="lg:col-span-5">
+          {isInGang && userGang ? (
+            // If user is in a gang, show the gang card with details
             <GangCard 
-              gang={userProfile.gang} 
+              gang={userGang} 
               isUserInGang={true} 
-              userRank={userGangRank} 
+              userRank={userGangRank}
+              userId={user?.id} 
             />
           ) : (
-            // User is not in any gang
-            <Card className="bg-dark-surface mb-6">
+            // If user is not in a gang, show create/join options
+            <Card className="bg-dark-surface border-gray-800 overflow-hidden relative mb-6">
+              {/* Gradient top border */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600"></div>
+              
               <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Join or Create a Gang
+                <CardTitle className="flex items-center text-2xl gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                  Join the Criminal Underworld
                 </CardTitle>
-                <CardDescription>
-                  Gangs offer protection, resources, and community. Join an existing gang or start your own.
+                <CardDescription className="text-gray-400">
+                  Gangs offer protection, resources, and opportunities in the criminal world. 
+                  Join an existing gang or start your own criminal empire.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button className="bg-primary hover:bg-primary/80">
-                        <Plus className="h-4 w-4 mr-2" />
+              
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Create Gang Card */}
+                  <Card className="bg-gray-900/50 border border-gray-800 hover:border-primary/50 hover:bg-gray-900/80 transition-all">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-heading flex items-center gap-2">
+                        <Plus className="h-5 w-5 text-primary" />
                         Create a Gang
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-gray-400">
+                      Form your own criminal organization and lead it to power and glory.
+                    </CardContent>
+                    <CardFooter>
+                      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button className="w-full bg-gradient-to-r from-blue-600 to-primary hover:from-blue-700 hover:to-primary/90">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Create Gang
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-dark-surface border-gray-800">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl font-heading">Create a New Gang</DialogTitle>
+                            <DialogDescription className="text-gray-400">
+                              Form your own criminal organization and build your empire.
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onCreateGangSubmit)} className="space-y-4">
+                              {/* Gang Name Field */}
+                              <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Gang Name</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        placeholder="Enter your gang name" 
+                                        className="bg-gray-900/50 border-gray-700" 
+                                        {...field} 
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              {/* Gang Tag Field */}
+                              <FormField
+                                control={form.control}
+                                name="tag"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Gang Tag (2-5 characters)</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        placeholder="ABC" 
+                                        maxLength={5}
+                                        className="bg-gray-900/50 border-gray-700" 
+                                        {...field} 
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              {/* Description Field */}
+                              <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Description (Optional)</FormLabel>
+                                    <FormControl>
+                                      <Textarea 
+                                        placeholder="Tell us about your gang" 
+                                        className="bg-gray-900/50 border-gray-700" 
+                                        {...field} 
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <DialogFooter className="pt-4">
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  onClick={() => setIsCreateDialogOpen(false)}
+                                  className="border-gray-700"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button 
+                                  type="submit" 
+                                  className="bg-gradient-to-r from-blue-600 to-primary hover:from-blue-700 hover:to-primary/90"
+                                  disabled={createGangMutation.isPending}
+                                >
+                                  {createGangMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
+                                    </>
+                                  ) : (
+                                    "Create Gang"
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </form>
+                          </Form>
+                        </DialogContent>
+                      </Dialog>
+                    </CardFooter>
+                  </Card>
+                  
+                  {/* Join Gang Card */}
+                  <Card className="bg-gray-900/50 border border-gray-800 hover:border-primary/50 hover:bg-gray-900/80 transition-all">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-heading flex items-center gap-2">
+                        <UserCheck className="h-5 w-5 text-green-500" />
+                        Join a Gang
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-gray-400">
+                      Team up with established criminals and climb the ranks of an existing organization.
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-green-700 to-green-600 hover:from-green-800 hover:to-green-700"
+                        asChild
+                      >
+                        <a href="#gangs-list">
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          Browse Gangs
+                        </a>
                       </Button>
-                    </DialogTrigger>
-                    <DialogContent className="bg-dark-surface border-gray-700">
-                      <DialogHeader>
-                        <DialogTitle>Create a New Gang</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                          Form your own criminal organization and build your empire.
-                        </DialogDescription>
-                      </DialogHeader>
-                      
-                      <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onCreateGangSubmit)} className="space-y-4">
-                          <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Gang Name</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    placeholder="Enter your gang name" 
-                                    className="bg-dark-lighter border-gray-700" 
-                                    {...field} 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="tag"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Gang Tag (2-5 characters)</FormLabel>
-                                <FormControl>
-                                  <Input 
-                                    placeholder="RS" 
-                                    maxLength={5}
-                                    className="bg-dark-lighter border-gray-700" 
-                                    {...field} 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Description (Optional)</FormLabel>
-                                <FormControl>
-                                  <Textarea 
-                                    placeholder="Tell us about your gang" 
-                                    className="bg-dark-lighter border-gray-700" 
-                                    {...field} 
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          
-                          <DialogFooter className="pt-4">
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              onClick={() => setIsCreateDialogOpen(false)}
-                              className="bg-dark-lighter"
-                            >
-                              Cancel
-                            </Button>
-                            <Button 
-                              type="submit" 
-                              className="bg-primary hover:bg-primary/80"
-                              disabled={createGangMutation.isPending}
-                            >
-                              {createGangMutation.isPending ? (
-                                <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...
-                                </>
-                              ) : (
-                                "Create Gang"
-                              )}
-                            </Button>
-                          </DialogFooter>
-                        </form>
-                      </Form>
-                    </DialogContent>
-                  </Dialog>
+                    </CardFooter>
+                  </Card>
+                  
+                  {/* Benefits Card */}
+                  <Card className="bg-gray-900/50 border border-gray-800 hover:border-primary/50 hover:bg-gray-900/80 transition-all">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-heading flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-amber-500" />
+                        Gang Benefits
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-sm text-gray-400">
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>Protection from rival criminals</li>
+                        <li>Access to exclusive missions</li>
+                        <li>Territory control and income</li>
+                        <li>Gang bank for shared resources</li>
+                      </ul>
+                    </CardContent>
+                    <CardFooter>
+                      <Button 
+                        variant="outline" 
+                        className="w-full border-amber-800/50 text-amber-500 hover:bg-amber-950/20"
+                      >
+                        <Info className="h-4 w-4 mr-2" />
+                        Learn More
+                      </Button>
+                    </CardFooter>
+                  </Card>
                 </div>
+                
+                {/* Info Alert */}
+                <Alert className="bg-gray-900/50 border-gray-800">
+                  <Info className="h-4 w-4 text-blue-500" />
+                  <AlertTitle className="text-blue-500">Looking for members?</AlertTitle>
+                  <AlertDescription className="text-gray-400">
+                    Once you create or join a gang, you'll be able to invite other players, participate in gang wars, and control territories.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
           )}
 
-          <Card className="bg-dark-surface mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Skull className="h-5 w-5 mr-2" />
-                Gang Leaderboard
-              </CardTitle>
-              <CardDescription>
-                The most powerful criminal organizations in the city
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader className="bg-dark-lighter">
-                  <TableRow>
-                    <TableHead className="text-left text-sm font-medium text-gray-400">Rank</TableHead>
-                    <TableHead className="text-left text-sm font-medium text-gray-400">Gang</TableHead>
-                    <TableHead className="text-left text-sm font-medium text-gray-400">Members</TableHead>
-                    <TableHead className="text-left text-sm font-medium text-gray-400">Bank</TableHead>
-                    {!isInGang && <TableHead className="text-right text-sm font-medium text-gray-400">Action</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y divide-gray-800">
-                  {gangsList && gangsList.map((gang: any, index: number) => (
-                    <TableRow key={gang.id} className="hover:bg-dark-lighter">
-                      <TableCell className="py-3 px-4 font-mono font-bold text-secondary">#{index + 1}</TableCell>
-                      <TableCell className="py-3 px-4">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center mr-2">
-                            <span className="text-sm font-heading">{gang.tag}</span>
-                          </div>
-                          <span>{gang.name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-3 px-4">
-                        <Badge variant="outline" className="bg-dark-lighter">
-                          {/* This would be populated with actual data in a real app */}
-                          {Math.floor(Math.random() * 10) + 1} Members
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-3 px-4 font-mono">{formatCurrency(gang.bankBalance)}</TableCell>
-                      {!isInGang && (
-                        <TableCell className="py-3 px-4 text-right">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="bg-dark-lighter hover:bg-dark-lighter/80"
-                            onClick={() => handleJoinGang(gang.id)}
-                            disabled={joinGangMutation.isPending}
-                          >
-                            {joinGangMutation.isPending ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              "Join"
-                            )}
-                          </Button>
-                        </TableCell>
-                      )}
+          {/* Gang Leaderboard */}
+          <div id="gangs-list">
+            <Card className="bg-dark-surface border-gray-800 overflow-hidden relative mt-6">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600"></div>
+              
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl gap-2">
+                  <Skull className="h-5 w-5 text-amber-500" />
+                  Gang Leaderboard
+                </CardTitle>
+                <CardDescription>
+                  The most powerful criminal organizations in the city
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent>
+                <Table>
+                  <TableHeader className="bg-gray-900/50">
+                    <TableRow>
+                      <TableHead className="text-left text-sm font-medium text-gray-400">Rank</TableHead>
+                      <TableHead className="text-left text-sm font-medium text-gray-400">Gang</TableHead>
+                      <TableHead className="text-left text-sm font-medium text-gray-400">Respect</TableHead>
+                      <TableHead className="text-left text-sm font-medium text-gray-400">Bank</TableHead>
+                      {!isInGang && <TableHead className="text-right text-sm font-medium text-gray-400">Action</TableHead>}
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-gray-800">
+                    {gangsList && gangsList.length > 0 ? (
+                      gangsList.map((gang: any, index: number) => (
+                        <TableRow key={gang.id} className="hover:bg-gray-900/50">
+                          <TableCell className="py-3 px-4 font-mono font-bold text-amber-500">#{index + 1}</TableCell>
+                          <TableCell className="py-3 px-4">
+                            <div className="flex items-center">
+                              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-primary to-purple-700 flex items-center justify-center mr-3">
+                                <span className="text-sm font-heading text-white">{gang.tag}</span>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium">{gang.name}</div>
+                                <div className="text-xs text-gray-500">Level {gang.level || 1}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
+                            <Badge variant="outline" className="bg-gray-900/50 text-amber-400 border-amber-800/30">
+                              <Trophy className="h-3 w-3 mr-1" /> {gang.respect || 0}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-3 px-4">
+                            <Badge variant="outline" className="bg-gray-900/50 text-green-400 border-green-800/30">
+                              <DollarSign className="h-3 w-3 mr-1" /> {formatCurrency(gang.bankBalance)}
+                            </Badge>
+                          </TableCell>
+                          {!isInGang && (
+                            <TableCell className="py-3 px-4 text-right">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-primary/30 hover:bg-primary/10 hover:text-white text-primary"
+                                onClick={() => handleJoinGang(gang.id)}
+                                disabled={joinGangMutation.isPending && joinGangMutation.variables === gang.id}
+                              >
+                                {joinGangMutation.isPending && joinGangMutation.variables === gang.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <UserCheck className="h-3.5 w-3.5 mr-1.5" /> Join
+                                  </>
+                                )}
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={isInGang ? 4 : 5} className="text-center py-6 text-gray-500">
+                          No gangs found. Be the first to create one!
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="bg-dark-surface">
+        
+        {/* Right Column - Sidebar Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Gang Info Card */}
+          <Card className="bg-dark-surface border-gray-800 overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-blue-600"></div>
+            
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <DollarSign className="h-5 w-5 mr-2" />
-                Gang Benefits
+              <CardTitle className="flex items-center text-xl">
+                <Shield className="h-5 w-5 mr-2 text-blue-500" />
+                Gang System
               </CardTitle>
             </CardHeader>
+            
             <CardContent className="space-y-4">
-              <div className="bg-dark-lighter p-3 rounded-lg">
-                <h3 className="font-medium mb-1">Shared Resources</h3>
-                <p className="text-sm text-gray-400">
-                  Gang members can pool money in the gang bank for shared investments.
+              <div className="text-sm text-gray-400">
+                <p className="mb-2">
+                  Gangs are powerful criminal organizations that compete for territory, respect, and wealth.
                 </p>
               </div>
               
-              <div className="bg-dark-lighter p-3 rounded-lg">
-                <h3 className="font-medium mb-1">Protection</h3>
-                <p className="text-sm text-gray-400">
-                  Gang members can help each other and provide backup during conflicts.
-                </p>
+              <Separator className="bg-gray-800 my-4" />
+              
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium flex items-center">
+                  <Crown className="h-4 w-4 mr-2 text-amber-500" /> 
+                  Gang Hierarchy
+                </h4>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between bg-gray-900/30 rounded p-2">
+                    <div className="flex items-center">
+                      <Badge className="bg-amber-900/20 border-amber-800/30 text-amber-400 mr-2">Leader</Badge>
+                    </div>
+                    <span className="text-gray-400">Full control of gang</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between bg-gray-900/30 rounded p-2">
+                    <div className="flex items-center">
+                      <Badge className="bg-purple-900/20 border-purple-800/30 text-purple-400 mr-2">Underboss</Badge>
+                    </div>
+                    <span className="text-gray-400">Access to bank & wars</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between bg-gray-900/30 rounded p-2">
+                    <div className="flex items-center">
+                      <Badge className="bg-blue-900/20 border-blue-800/30 text-blue-400 mr-2">Capo</Badge>
+                    </div>
+                    <span className="text-gray-400">Can lead missions</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between bg-gray-900/30 rounded p-2">
+                    <div className="flex items-center">
+                      <Badge className="bg-gray-800/50 border-gray-700/30 text-gray-400 mr-2">Member</Badge>
+                    </div>
+                    <span className="text-gray-400">Basic privileges</span>
+                  </div>
+                </div>
               </div>
               
-              <div className="bg-dark-lighter p-3 rounded-lg">
-                <h3 className="font-medium mb-1">Reputation</h3>
-                <p className="text-sm text-gray-400">
-                  Being part of a feared gang increases your street respect.
-                </p>
-              </div>
-              
-              <div className="bg-dark-lighter p-3 rounded-lg">
-                <h3 className="font-medium mb-1">Gang Hideout</h3>
-                <p className="text-sm text-gray-400">
-                  Access to secure locations and special gang-only features.
-                </p>
-              </div>
+              <Button className="w-full" variant="outline" asChild>
+                <a href="https://mafia-noir.netlify.app/wiki/gangs" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Gang System Wiki
+                </a>
+              </Button>
             </CardContent>
           </Card>
-
+          
+          {/* Territories Info Card (if user in gang) */}
           {isInGang && (
-            <>
-              <Card className="bg-dark-surface mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    Gang Members
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {/* This would be populated with actual data in a real app */}
-                    {[
-                      { id: 1, username: "DonBosco", rank: "Leader" },
-                      { id: 2, username: "LuckyJoe", rank: "Officer" },
-                      { id: 3, username: "ShadowHunter", rank: "Member" },
-                      { id: 4, username: "BigBoss", rank: "Member" },
-                      { id: 5, username: "NightRider", rank: "Member" }
-                    ].map(member => (
-                      <div key={member.id} className="flex items-center justify-between bg-dark-lighter p-2 rounded-lg">
-                        <div className="flex items-center">
-                          <Avatar className="h-8 w-8 mr-2 bg-primary">
-                            <AvatarFallback>{getInitials(member.username)}</AvatarFallback>
-                          </Avatar>
-                          <span>{member.username}</span>
-                        </div>
-                        <Badge 
-                          variant="outline" 
-                          className={`
-                            ${member.rank === 'Leader' 
-                              ? 'bg-primary bg-opacity-20 text-primary' 
-                              : member.rank === 'Officer'
-                              ? 'bg-blue-600 bg-opacity-20 text-blue-400'
-                              : 'bg-gray-600 bg-opacity-20 text-gray-400'
-                            }
-                          `}
-                        >
-                          {member.rank}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-                {userGangRank === "Leader" && (
-                  <CardFooter>
-                    <Button variant="outline" className="w-full bg-dark-lighter hover:bg-dark-lighter/80">
-                      Manage Members
-                    </Button>
-                  </CardFooter>
-                )}
-              </Card>
+            <Card className="bg-dark-surface border-gray-800 overflow-hidden relative">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-600 to-red-500"></div>
               
-              <Card className="bg-dark-surface">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <MapPin className="h-5 w-5 mr-2" />
-                    Gang Activities
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="territories" className="w-full">
-                    <TabsList className="grid grid-cols-3 mb-4">
-                      <TabsTrigger value="territories">Territories</TabsTrigger>
-                      <TabsTrigger value="wars">Gang Wars</TabsTrigger>
-                      <TabsTrigger value="missions">Missions</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="territories" className="space-y-4">
-                      {gangTerritories && gangTerritories.length > 0 ? (
-                        <div className="space-y-3">
-                          {gangTerritories.map((territory: any) => (
-                            <div key={territory.id} className="bg-dark-lighter rounded-lg p-3">
-                              <div className="flex justify-between items-center mb-2">
-                                <h3 className="font-medium">{territory.name}</h3>
-                                <Badge>{territory.controlLevel}% Control</Badge>
-                              </div>
-                              <Progress value={territory.controlLevel} className="h-2 bg-gray-800" />
-                              <div className="flex justify-between text-xs text-gray-400 mt-2">
-                                <span>Income: {formatCurrency(territory.income)} / day</span>
-                                <span>Since: {formatDate(new Date(territory.capturedAt))}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-dark-lighter rounded-lg p-4 text-center">
-                          <MapPin className="h-10 w-10 mx-auto mb-2 text-gray-500" />
-                          <h3 className="text-lg font-medium mb-1">No Territories</h3>
-                          <p className="text-sm text-gray-400 mb-4">Your gang doesn't control any territories yet.</p>
-                          <Button className="bg-primary hover:bg-primary/80">
-                            Find Territories to Attack
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="wars" className="space-y-4">
-                      {activeWars && activeWars.length > 0 ? (
-                        <div className="space-y-3">
-                          {activeWars.map((war: any) => (
-                            <div key={war.id} className="bg-dark-lighter rounded-lg p-3">
-                              <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center">
-                                  <Swords className="h-5 w-5 mr-2 text-red-500" />
-                                  <span>War vs {war.enemyGang.name}</span>
-                                </div>
-                                <Badge variant="destructive">Active</Badge>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 mt-3">
-                                <div className="text-center p-2 bg-dark-surface rounded">
-                                  <div className="text-xl font-mono font-bold">{war.ourScore}</div>
-                                  <div className="text-xs text-gray-400">Our Score</div>
-                                </div>
-                                <div className="text-center p-2 bg-dark-surface rounded">
-                                  <div className="text-xl font-mono font-bold">{war.enemyScore}</div>
-                                  <div className="text-xs text-gray-400">Enemy Score</div>
-                                </div>
-                              </div>
-                              <div className="text-xs text-gray-400 mt-3">
-                                Started: {formatDate(new Date(war.startedAt))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-dark-lighter rounded-lg p-4 text-center">
-                          <Swords className="h-10 w-10 mx-auto mb-2 text-gray-500" />
-                          <h3 className="text-lg font-medium mb-1">No Active Wars</h3>
-                          <p className="text-sm text-gray-400 mb-4">Your gang is not currently at war with anyone.</p>
-                          <Button className="bg-primary hover:bg-primary/80" onClick={() => startGangWar(0)}>
-                            Declare War
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-                    
-                    <TabsContent value="missions" className="space-y-4">
-                      {activeMissions && activeMissions.length > 0 ? (
-                        <div className="space-y-3">
-                          {activeMissions.map((mission: any) => (
-                            <div key={mission.id} className="bg-dark-lighter rounded-lg p-3">
-                              <div className="flex justify-between items-center mb-2">
-                                <div className="flex items-center">
-                                  <Target className="h-5 w-5 mr-2 text-primary" />
-                                  <span>{mission.name}</span>
-                                </div>
-                                <Badge>In Progress</Badge>
-                              </div>
-                              <p className="text-sm text-gray-400 mb-2">{mission.description}</p>
-                              <Progress value={mission.progress} className="h-2 bg-gray-800" />
-                              <div className="flex justify-between text-xs text-gray-400 mt-2">
-                                <span>Reward: {formatCurrency(mission.reward)}</span>
-                                <span>Expires: {formatDate(new Date(mission.expiresAt))}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-dark-lighter rounded-lg p-4 text-center">
-                          <Target className="h-10 w-10 mx-auto mb-2 text-gray-500" />
-                          <h3 className="text-lg font-medium mb-1">No Active Missions</h3>
-                          <p className="text-sm text-gray-400 mb-4">Your gang has no active missions.</p>
-                          <Button className="bg-primary hover:bg-primary/80" onClick={() => acceptMission(0)}>
-                            Find Missions
-                          </Button>
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-lg">
+                  <Award className="h-5 w-5 mr-2 text-red-500" />
+                  Gang Status
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-400">Your Rank</div>
+                    <Badge className={getRankColorClass(userGangRank)}>
+                      {getRankIcon(userGangRank)}
+                      {userGangRank}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-400">Gang Level</div>
+                    <span className="text-amber-500 font-medium">{userGang?.level || 1}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-400">Territories</div>
+                    <span className="text-gray-300 font-medium">0 / 10</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-400">Active Wars</div>
+                    <span className="text-gray-300 font-medium">0</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-gray-400">Bank Balance</div>
+                    <span className="text-green-500 font-medium">{formatCurrency(userGang?.bankBalance || 0)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
     </>
   );
+}
+
+// Helper functions
+function getRankColorClass(rank: string): string {
+  switch (rank) {
+    case "Leader":
+      return "bg-amber-900/20 border-amber-800/30 text-amber-400";
+    case "Underboss":
+      return "bg-purple-900/20 border-purple-800/30 text-purple-400";
+    case "Capo":
+      return "bg-blue-900/20 border-blue-800/30 text-blue-400";
+    default:
+      return "bg-gray-800/50 border-gray-700/30 text-gray-400";
+  }
+}
+
+function getRankIcon(rank: string) {
+  switch (rank) {
+    case "Leader":
+      return <Crown className="h-3.5 w-3.5 mr-1.5" />;
+    case "Underboss":
+      return <Shield className="h-3.5 w-3.5 mr-1.5" />;
+    case "Capo":
+      return <Award className="h-3.5 w-3.5 mr-1.5" />;
+    default:
+      return <Users className="h-3.5 w-3.5 mr-1.5" />;
+  }
 }
