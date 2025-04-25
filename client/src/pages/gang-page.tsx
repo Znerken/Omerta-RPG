@@ -82,16 +82,18 @@ export default function GangPage() {
   }, [userProfile]);
   
   // Get gang membership information from multiple fields to be resilient
+  // Also check if user has gangId set directly
   const gangMember = userProfile?.gangMember;
-  const inGang = userProfile?.inGang || false;
+  const inGang = userProfile?.inGang || !!userProfile?.gangId || false;
   const gang = userProfile?.gang;
   const gangRank = userProfile?.gangRank || "Member";
   
-  // Fetch gang details if user is in a gang
-  const userGangId = gang?.id;
+  // Fetch gang details if user is in a gang, first try using gang from profile, 
+  // then fall back to direct user.gangId
+  const userGangId = gang?.id || userProfile?.gangId;
   const { data: gangDetails, isLoading: gangDetailsLoading } = useQuery({
     queryKey: ["/api/gangs", userGangId],
-    enabled: !!userGangId, // Only run this query if user has a gang
+    enabled: !!userGangId, // Only run this query if user has a gang ID
   });
 
   // Create form for gang creation

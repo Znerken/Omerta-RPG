@@ -726,17 +726,31 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
   
   // Gang Member methods
   async getGangMember(userId: number): Promise<(GangMember & { gang: Gang }) | undefined> {
-    const [gangMember] = await db
-      .select()
-      .from(gangMembers)
-      .where(eq(gangMembers.userId, userId));
-    
-    if (!gangMember) return undefined;
-    
-    const gang = await this.getGang(gangMember.gangId);
-    if (!gang) return undefined;
-    
-    return { ...gangMember, gang };
+    try {
+      // Get the gang member record 
+      const [gangMember] = await db
+        .select()
+        .from(gangMembers)
+        .where(eq(gangMembers.userId, userId));
+      
+      if (!gangMember) {
+        console.log("No gang member found for user:", userId);
+        return undefined;
+      }
+      
+      // Get the gang separately
+      const gang = await this.getGang(gangMember.gangId);
+      if (!gang) {
+        console.log("Gang not found for gang member:", gangMember);
+        return undefined;
+      }
+      
+      console.log("FOUND GANG MEMBER:", { ...gangMember, gang });
+      return { ...gangMember, gang };
+    } catch (error) {
+      console.error("Error in getGangMember:", error);
+      return undefined;
+    }
   }
   
   async addGangMember(insertMember: InsertGangMember): Promise<GangMember> {
