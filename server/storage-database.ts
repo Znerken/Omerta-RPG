@@ -968,4 +968,164 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       .orderBy(desc(challengeRewards.awardedAt))
       .limit(limit);
   }
+
+  // Achievement methods
+  async getAllAchievements(): Promise<Achievement[]> {
+    return await db.select().from(achievements);
+  }
+  
+  async getAchievement(id: number): Promise<Achievement | undefined> {
+    const [achievement] = await db
+      .select()
+      .from(achievements)
+      .where(eq(achievements.id, id));
+    return achievement;
+  }
+  
+  async getAchievementsByCategory(category: string): Promise<Achievement[]> {
+    return await db
+      .select()
+      .from(achievements)
+      .where(eq(achievements.category, category));
+  }
+  
+  async getUserAchievements(userId: number): Promise<UserAchievement[]> {
+    return await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId));
+  }
+  
+  async getUnviewedAchievements(userId: number): Promise<UserAchievement[]> {
+    return await db
+      .select()
+      .from(userAchievements)
+      .where(
+        and(
+          eq(userAchievements.userId, userId),
+          eq(userAchievements.viewed, false)
+        )
+      );
+  }
+  
+  async getAchievementsWithUnlocked(userId: number): Promise<AchievementWithUnlocked[]> {
+    // Get all achievements
+    const allAchievements = await this.getAllAchievements();
+    
+    // Get user's unlocked achievements
+    const userUnlockedAchievements = await db
+      .select()
+      .from(userAchievements)
+      .where(eq(userAchievements.userId, userId));
+    
+    // Map achievements with unlocked status
+    return allAchievements.map(achievement => {
+      const unlocked = userUnlockedAchievements.find(
+        ua => ua.achievementId === achievement.id
+      );
+      
+      return {
+        ...achievement,
+        unlocked: !!unlocked,
+        unlockedAt: unlocked?.unlockedAt || undefined,
+        viewed: unlocked?.viewed || false
+      };
+    });
+  }
+  
+  async unlockAchievement(userId: number, achievementId: number): Promise<UserAchievement | undefined> {
+    // Check if achievement exists
+    const achievement = await this.getAchievement(achievementId);
+    if (!achievement) return undefined;
+    
+    // Check if user has already unlocked this achievement
+    const [existingUnlock] = await db
+      .select()
+      .from(userAchievements)
+      .where(
+        and(
+          eq(userAchievements.userId, userId),
+          eq(userAchievements.achievementId, achievementId)
+        )
+      );
+    
+    if (existingUnlock) return existingUnlock; // Already unlocked
+    
+    // Create new achievement unlock
+    const [userAchievement] = await db
+      .insert(userAchievements)
+      .values({
+        userId,
+        achievementId,
+        viewed: false
+      })
+      .returning();
+    
+    // Award user with rewards
+    if (achievement.cashReward > 0) {
+      await this.updateUser(userId, {
+        cash: sql`${users.cash} + ${achievement.cashReward}`
+      });
+    }
+    
+    if (achievement.xpReward > 0) {
+      await this.updateUser(userId, {
+        xp: sql`${users.xp} + ${achievement.xpReward}`
+      });
+    }
+    
+    if (achievement.respectReward > 0) {
+      await this.updateUser(userId, {
+        respect: sql`${users.respect} + ${achievement.respectReward}`
+      });
+    }
+    
+    return userAchievement;
+  }
+  
+  async markAchievementAsViewed(userId: number, achievementId: number): Promise<UserAchievement | undefined> {
+    const [userAchievement] = await db
+      .update(userAchievements)
+      .set({ viewed: true })
+      .where(
+        and(
+          eq(userAchievements.userId, userId),
+          eq(userAchievements.achievementId, achievementId)
+        )
+      )
+      .returning();
+    
+    return userAchievement;
+  }
+  
+  async checkAndTriggerAchievements(userId: number, type: string, value: number): Promise<Achievement[]> {
+    // Get achievements that match the requirement type and value doesn't exceed the requirement value
+    const eligibleAchievements = await db
+      .select()
+      .from(achievements)
+      .where(
+        and(
+          eq(achievements.requirementType, type),
+          lte(achievements.requirementValue, value)
+        )
+      );
+    
+    // Get user's already unlocked achievements
+    const userAchievements = await this.getUserAchievements(userId);
+    const unlockedAchievementIds = userAchievements.map(ua => ua.achievementId);
+    
+    // Filter eligible achievements that haven't been unlocked yet
+    const achievementsToUnlock = eligibleAchievements.filter(
+      achievement => !unlockedAchievementIds.includes(achievement.id)
+    );
+    
+    // Unlock achievements
+    const newlyUnlocked: Achievement[] = [];
+    for (const achievement of achievementsToUnlock) {
+      await this.unlockAchievement(userId, achievement.id);
+      newlyUnlocked.push(achievement);
+    }
+    
+    return newlyUnlocked;
+  }
 }
