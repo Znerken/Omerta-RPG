@@ -542,6 +542,18 @@ function InventoryTab() {
 
 function LabsTab() {
   const [activeLab, setActiveLab] = useState<number | null>(null);
+  // Add refresh counter for auto-updating the UI
+  const [refreshTimer, setRefreshTimer] = useState(0);
+  
+  // Set up regular refresh interval for timers and animations
+  useEffect(() => {
+    // Update every second to refresh timers
+    const interval = setInterval(() => {
+      setRefreshTimer(prev => prev + 1);
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
   
   const { data: userLabs, isLoading: labsLoading } = useQuery<Lab[]>({
     queryKey: ['/api/user/drug-labs'],
@@ -1257,17 +1269,28 @@ function LabsTab() {
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold">Active Productions</h3>
                 
+                {/* refreshTimer is used here to trigger re-renders */}
                 {productions && productions.length > 0 ? (
                   <div className="space-y-4">
                     {productions.filter(p => p && !p.isCompleted && p.drug).map((production) => {
-                      // Use our custom real-time timer hook
-                      const {
-                        hours: hoursRemaining,
-                        minutes: minutesRemaining,
-                        seconds: secondsRemaining,
-                        progress,
-                        isCompleted
-                      } = useProductionTimer(production.completesAt, production.startedAt);
+                      // Manual calculation with refreshTimer to ensure values update every second
+                      // The refreshTimer state triggers re-renders when it changes
+                      const _ = refreshTimer; // use refreshTimer to trigger re-renders
+                      const now = new Date();
+                      const completesAt = new Date(production.completesAt);
+                      const startedAt = new Date(production.startedAt);
+                      const isCompleted = now >= completesAt;
+                      
+                      // Calculate remaining time
+                      const msRemaining = Math.max(0, completesAt.getTime() - now.getTime());
+                      const hoursRemaining = Math.floor(msRemaining / (1000 * 60 * 60));
+                      const minutesRemaining = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                      const secondsRemaining = Math.floor((msRemaining % (1000 * 60)) / 1000);
+                      
+                      // Calculate progress percentage
+                      const totalDuration = completesAt.getTime() - startedAt.getTime();
+                      const elapsed = now.getTime() - startedAt.getTime();
+                      const progress = Math.min(100, Math.round((elapsed / totalDuration) * 100));
                       
                       // Format countdown with real-time updates
                       const countdown = isCompleted 
