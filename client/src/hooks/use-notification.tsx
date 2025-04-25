@@ -82,7 +82,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
         
         // Handle friend status updates
-        else if (data.type === "friendStatusChanged") {
+        else if (data.type === "friend_status") {
           addNotification(
             "Friend Status Update", 
             `${data.username} is now ${data.status}`, 
@@ -90,6 +90,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             {
               userId: data.userId,
               username: data.username,
+              avatar: data.avatar,
               status: data.status
             }
           );

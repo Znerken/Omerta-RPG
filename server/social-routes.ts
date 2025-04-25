@@ -239,16 +239,16 @@ export function registerSocialRoutes(app: Express) {
         const acceptedRequest = await storage.updateFriendRequest(reverseRequest.id, "accepted");
         
         // Notify both users about the new friendship
-        notifyUser(validatedData.userId, "friendRequestAccepted", {
-          requestId: reverseRequest.id,
-          friendId: validatedData.friendId,
-          friendName: targetUser.username
+        notifyUser(validatedData.userId, "friend_accepted", {
+          userId: validatedData.friendId,
+          username: targetUser.username,
+          avatar: targetUser.avatar
         });
         
-        notifyUser(validatedData.friendId, "friendRequestAccepted", {
-          requestId: reverseRequest.id,
-          friendId: validatedData.userId,
-          friendName: req.user.username
+        notifyUser(validatedData.friendId, "friend_accepted", {
+          userId: validatedData.userId,
+          username: req.user.username,
+          avatar: req.user.avatar
         });
         
         return res.status(200).json({
@@ -261,10 +261,13 @@ export function registerSocialRoutes(app: Express) {
       const friendRequest = await storage.sendFriendRequest(validatedData.userId, validatedData.friendId);
       
       // Notify the target user
-      notifyUser(validatedData.friendId, "friendRequest", {
+      notifyUser(validatedData.friendId, "friend_request", {
         requestId: friendRequest.id,
-        fromUserId: validatedData.userId,
-        fromUsername: req.user.username
+        from: {
+          id: validatedData.userId,
+          username: req.user.username,
+          avatar: req.user.avatar
+        }
       });
       
       res.status(201).json(friendRequest);
@@ -309,10 +312,10 @@ export function registerSocialRoutes(app: Express) {
       if (status === "accepted") {
         const sender = await storage.getUser(friendRequest.userId);
         if (sender) {
-          notifyUser(friendRequest.userId, "friendRequestAccepted", {
-            requestId,
-            friendId: req.user.id,
-            friendName: req.user.username
+          notifyUser(friendRequest.userId, "friend_accepted", {
+            userId: req.user.id,
+            username: req.user.username,
+            avatar: req.user.avatar
           });
         }
       }
@@ -339,9 +342,10 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Notify the removed friend
-      notifyUser(friendId, "friendRemoved", {
+      notifyUser(friendId, "friend_removed", {
         userId: req.user.id,
-        username: req.user.username
+        username: req.user.username,
+        avatar: req.user.avatar
       });
       
       res.json({ success: true });
@@ -388,9 +392,10 @@ export function registerSocialRoutes(app: Express) {
       
       // Notify friends of status change
       friends.forEach(friend => {
-        notifyUser(friend.id, "friendStatusChanged", {
+        notifyUser(friend.id, "friend_status", {
           userId: req.user.id,
           username: req.user.username,
+          avatar: req.user.avatar,
           status
         });
       });
