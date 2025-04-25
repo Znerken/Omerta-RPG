@@ -98,6 +98,68 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       throw new Error("User creation failed: " + (error instanceof Error ? error.message : String(error)));
     }
   }
+  
+  // Admin methods
+  async getAllUsers(page: number = 1, limit: number = 20, search?: string): Promise<User[]> {
+    try {
+      const offset = (page - 1) * limit;
+      
+      let query = db.select().from(users);
+      
+      // Add search filter if provided
+      if (search) {
+        query = query.where(
+          sql`LOWER(${users.username}) LIKE LOWER(${'%' + search + '%'}) OR LOWER(${users.email}) LIKE LOWER(${'%' + search + '%'})`
+        );
+      }
+      
+      // Add pagination
+      query = query.limit(limit).offset(offset).orderBy(desc(users.id));
+      
+      return await query;
+    } catch (error) {
+      console.error("Error in getAllUsers:", error);
+      return [];
+    }
+  }
+  
+  async getUserCount(search?: string): Promise<number> {
+    try {
+      let query = db.select({
+        count: sql<number>`count(*)`
+      }).from(users);
+      
+      // Add search filter if provided
+      if (search) {
+        query = query.where(
+          sql`LOWER(${users.username}) LIKE LOWER(${'%' + search + '%'}) OR LOWER(${users.email}) LIKE LOWER(${'%' + search + '%'})`
+        );
+      }
+      
+      const result = await query;
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error("Error in getUserCount:", error);
+      return 0;
+    }
+  }
+  
+  async getActiveUserCount(hoursAgo: number = 24): Promise<number> {
+    try {
+      const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+      
+      const result = await db.select({
+        count: sql<number>`count(*)`
+      })
+      .from(users)
+      .where(gte(users.lastLogin, cutoffTime));
+      
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error("Error in getActiveUserCount:", error);
+      return 0;
+    }
+  }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
@@ -183,22 +245,48 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
         
       console.log(`[DEBUG] Direct database query for gangMembers:`, directMember);
       
-      // Now try through the method
+      // If user is in a gang based on direct query
+      if (directMember) {
+        // Get the gang details
+        const [gangData] = await db
+          .select()
+          .from(gangs)
+          .where(eq(gangs.id, directMember.gangId));
+          
+        // Return user with gang info
+        console.log(`[DEBUG] User is in gang (direct query), returning user with gang info`);
+        return {
+          ...user,
+          inGang: true,
+          gangId: directMember.gangId,
+          gang: gangData,
+          gangRank: directMember.rank,
+          gangMember: directMember
+        };
+      }
+      
+      // Now try through the method as a fallback
       const gangMember = await this.getGangMember(userId);
       console.log(`[DEBUG] getGangMember result:`, gangMember);
       
       if (!gangMember) {
         console.log(`[DEBUG] User with ID ${userId} is not in a gang`);
         // Return user without gang info
-        return user;
+        return {
+          ...user,
+          inGang: false
+        };
       }
       
       // Return user with gang info
-      console.log(`[DEBUG] User is in gang, returning user with gang info`);
+      console.log(`[DEBUG] User is in gang via getGangMember, returning user with gang info`);
       return {
         ...user,
+        inGang: true,
+        gangId: gangMember.gangId,
         gang: gangMember.gang,
-        gangRank: gangMember.rank
+        gangRank: gangMember.rank,
+        gangMember: gangMember
       };
     } catch (error) {
       console.error("Error in getUserWithGang:", error);
