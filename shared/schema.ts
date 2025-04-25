@@ -232,14 +232,22 @@ export const messages = pgTable("messages", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
-// Friends system
+// Friend Request System
+export const friendRequests = pgTable("friend_requests", {
+  id: serial("id").primaryKey(),
+  senderId: integer("sender_id").notNull().references(() => users.id),
+  receiverId: integer("receiver_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // pending, accepted, rejected
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Friendships (established relationships)
 export const userFriends = pgTable("user_friends", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   friendId: integer("friend_id").notNull().references(() => users.id),
-  status: text("status").notNull().default("pending"), // pending, accepted, rejected, blocked
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Online status tracking
@@ -340,6 +348,11 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
 export const insertUserFriendSchema = createInsertSchema(userFriends).pick({
   userId: true,
   friendId: true,
+});
+
+export const insertFriendRequestSchema = createInsertSchema(friendRequests).pick({
+  senderId: true,
+  receiverId: true,
   status: true,
 });
 
@@ -351,8 +364,10 @@ export const insertUserStatusSchema = createInsertSchema(userStatus).pick({
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertUserFriend = z.infer<typeof insertUserFriendSchema>;
+export type InsertFriendRequest = z.infer<typeof insertFriendRequestSchema>;
 export type InsertUserStatus = z.infer<typeof insertUserStatusSchema>;
 export type UserFriend = typeof userFriends.$inferSelect;
+export type FriendRequest = typeof friendRequests.$inferSelect;
 export type UserStatus = typeof userStatus.$inferSelect;
 
 // Define types
@@ -412,7 +427,7 @@ export type UserWithStatus = User & {
   status: UserStatus;
   isFriend: boolean;
   friendStatus?: string;
-  friendRequest?: UserFriend;
+  friendRequest?: FriendRequest;
 };
 
 export type CrimeWithHistory = Crime & {
