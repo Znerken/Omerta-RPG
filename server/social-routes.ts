@@ -1,6 +1,8 @@
 import { Express } from "express";
 import { storage } from "./storage";
-import { insertUserFriendSchema, insertUserStatusSchema } from "@shared/schema";
+import { db } from "./db";
+import { eq, and, or } from "drizzle-orm";
+import { insertUserFriendSchema, insertUserStatusSchema, userFriends } from "@shared/schema";
 import { z } from "zod";
 
 // Get reference to the notifyUser function from routes.ts
@@ -347,6 +349,10 @@ export function registerSocialRoutes(app: Express) {
       const users = await storage.getAllUsers(1, 10, searchQuery);
       const currentUserId = req.user.id;
       
+      if (!users || users.length === 0) {
+        return res.json([]);
+      }
+      
       // For each user, check if they are already a friend
       const resultsWithFriendStatus = await Promise.all(users.map(async (user) => {
         // Skip self in results
@@ -354,28 +360,44 @@ export function registerSocialRoutes(app: Express) {
           return null;
         }
         
+        let friendStatus = null;
+        let isFriend = false;
+        
+        // Get friendship info if available
         try {
-          // Check friendship status
-          const userWithStatus = await storage.getUserWithStatus(user.id, currentUserId);
+          // Try to get friendship directly
+          const friendship = await db
+            .select()
+            .from(userFriends)
+            .where(
+              or(
+                and(
+                  eq(userFriends.userId, currentUserId),
+                  eq(userFriends.friendId, user.id)
+                ),
+                and(
+                  eq(userFriends.userId, user.id),
+                  eq(userFriends.friendId, currentUserId)
+                )
+              )
+            ).limit(1);
           
-          return {
-            id: user.id,
-            username: user.username,
-            avatar: user.avatar,
-            isFriend: userWithStatus?.isFriend || false,
-            friendStatus: userWithStatus?.friendStatus || null
-          };
+          if (friendship && friendship.length > 0) {
+            isFriend = friendship[0].status === "accepted";
+            friendStatus = friendship[0].status;
+          }
         } catch (error) {
-          console.error(`Error getting status for user ${user.id}:`, error);
-          // Return basic user info without status if there's an error
-          return {
-            id: user.id,
-            username: user.username,
-            avatar: user.avatar,
-            isFriend: false,
-            friendStatus: null
-          };
+          console.error(`Error getting friendship status for user ${user.id}:`, error);
         }
+        
+        // Return user with friendship info
+        return {
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          isFriend: isFriend,
+          friendStatus: friendStatus
+        };
       }));
       
       // Filter out null results (self)
