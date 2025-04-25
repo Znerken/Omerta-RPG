@@ -403,3 +403,219 @@ export type AchievementWithUnlocked = Achievement & {
   unlockedAt?: Date, 
   viewed: boolean 
 };
+
+// ========== Drug System Tables ==========
+// Drug Schema
+export const drugs = pgTable("drugs", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  basePrice: integer("base_price").notNull(),
+  riskLevel: integer("risk_level").notNull().default(1), // 1-10 scale
+  addictionRate: integer("addiction_rate").notNull().default(0), // 0-100%
+  strengthBonus: integer("strength_bonus").default(0),
+  stealthBonus: integer("stealth_bonus").default(0),
+  charismaBonus: integer("charisma_bonus").default(0),
+  intelligenceBonus: integer("intelligence_bonus").default(0),
+  cashGainBonus: integer("cash_gain_bonus").default(0),
+  durationHours: integer("duration_hours").notNull(),
+  sideEffects: text("side_effects"),
+  image: text("image"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDrugSchema = createInsertSchema(drugs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Drug Ingredient Schema
+export const drugIngredients = pgTable("drug_ingredients", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  price: integer("price").notNull(),
+  rarity: integer("rarity").notNull().default(1), // 1-10 scale
+  image: text("image"),
+});
+
+export const insertDrugIngredientSchema = createInsertSchema(drugIngredients).omit({
+  id: true,
+});
+
+// Drug Recipe Schema
+export const drugRecipes = pgTable("drug_recipes", {
+  id: serial("id").primaryKey(),
+  drugId: integer("drug_id").notNull().references(() => drugs.id),
+  ingredientId: integer("ingredient_id").notNull().references(() => drugIngredients.id),
+  quantity: integer("quantity").notNull().default(1),
+});
+
+export const insertDrugRecipeSchema = createInsertSchema(drugRecipes).omit({
+  id: true,
+});
+
+// User Drug Inventory Schema
+export const userDrugs = pgTable("user_drugs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  drugId: integer("drug_id").notNull().references(() => drugs.id),
+  quantity: integer("quantity").notNull().default(1),
+  acquiredAt: timestamp("acquired_at").notNull().defaultNow(),
+});
+
+export const insertUserDrugSchema = createInsertSchema(userDrugs).omit({
+  id: true,
+  acquiredAt: true,
+});
+
+// User Ingredient Inventory Schema
+export const userIngredients = pgTable("user_ingredients", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  ingredientId: integer("ingredient_id").notNull().references(() => drugIngredients.id),
+  quantity: integer("quantity").notNull().default(1),
+  acquiredAt: timestamp("acquired_at").notNull().defaultNow(),
+});
+
+export const insertUserIngredientSchema = createInsertSchema(userIngredients).omit({
+  id: true,
+  acquiredAt: true,
+});
+
+// Drug Lab Schema
+export const drugLabs = pgTable("drug_labs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  level: integer("level").notNull().default(1),
+  securityLevel: integer("security_level").notNull().default(1),
+  capacity: integer("capacity").notNull().default(10),
+  costToUpgrade: integer("cost_to_upgrade").notNull(),
+  location: text("location").notNull(),
+  discoveryChance: integer("discovery_chance").notNull().default(5), // percentage
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastRaidedAt: timestamp("last_raided_at"),
+});
+
+export const insertDrugLabSchema = createInsertSchema(drugLabs).omit({
+  id: true,
+  createdAt: true,
+  lastRaidedAt: true,
+});
+
+// Drug Production Schema
+export const drugProduction = pgTable("drug_production", {
+  id: serial("id").primaryKey(),
+  labId: integer("lab_id").notNull().references(() => drugLabs.id),
+  drugId: integer("drug_id").notNull().references(() => drugs.id),
+  quantity: integer("quantity").notNull().default(1),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  completesAt: timestamp("completes_at").notNull(),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  successRate: integer("success_rate").notNull().default(90), // percentage
+});
+
+export const insertDrugProductionSchema = createInsertSchema(drugProduction).omit({
+  id: true,
+  startedAt: true,
+  isCompleted: true,
+});
+
+// Drug Deal Schema
+export const drugDeals = pgTable("drug_deals", {
+  id: serial("id").primaryKey(),
+  sellerId: integer("seller_id").notNull().references(() => users.id),
+  buyerId: integer("buyer_id").references(() => users.id),
+  drugId: integer("drug_id").notNull().references(() => drugs.id),
+  quantity: integer("quantity").notNull().default(1),
+  pricePerUnit: integer("price_per_unit").notNull(),
+  totalPrice: integer("total_price").notNull(),
+  status: text("status").notNull().default("pending"), // pending, completed, failed, cancelled
+  isPublic: boolean("is_public").notNull().default(false),
+  riskLevel: integer("risk_level").notNull().default(1),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertDrugDealSchema = createInsertSchema(drugDeals).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+
+// Drug Addiction Schema
+export const drugAddictions = pgTable("drug_addictions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  drugId: integer("drug_id").notNull().references(() => drugs.id),
+  level: integer("level").notNull().default(1), // 1-10 scale
+  withdrawalEffect: text("withdrawal_effect").notNull(),
+  lastDosage: timestamp("last_dosage").notNull().defaultNow(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertDrugAddictionSchema = createInsertSchema(drugAddictions).omit({
+  id: true,
+  createdAt: true,
+  lastDosage: true,
+});
+
+// Drug Territory Schema
+export const drugTerritories = pgTable("drug_territories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  controlledBy: integer("controlled_by").references(() => gangs.id),
+  profitModifier: integer("profit_modifier").notNull().default(100), // percentage
+  riskModifier: integer("risk_modifier").notNull().default(100), // percentage
+  reputationRequired: integer("reputation_required").notNull().default(0),
+  image: text("image"),
+});
+
+export const insertDrugTerritorySchema = createInsertSchema(drugTerritories).omit({
+  id: true,
+});
+
+// Type definitions
+export type Drug = typeof drugs.$inferSelect;
+export type InsertDrug = z.infer<typeof insertDrugSchema>;
+
+export type DrugIngredient = typeof drugIngredients.$inferSelect;
+export type InsertDrugIngredient = z.infer<typeof insertDrugIngredientSchema>;
+
+export type DrugRecipe = typeof drugRecipes.$inferSelect;
+export type InsertDrugRecipe = z.infer<typeof insertDrugRecipeSchema>;
+
+export type UserDrug = typeof userDrugs.$inferSelect;
+export type InsertUserDrug = z.infer<typeof insertUserDrugSchema>;
+
+export type UserIngredient = typeof userIngredients.$inferSelect;
+export type InsertUserIngredient = z.infer<typeof insertUserIngredientSchema>;
+
+export type DrugLab = typeof drugLabs.$inferSelect;
+export type InsertDrugLab = z.infer<typeof insertDrugLabSchema>;
+
+export type DrugProduction = typeof drugProduction.$inferSelect;
+export type InsertDrugProduction = z.infer<typeof insertDrugProductionSchema>;
+
+export type DrugDeal = typeof drugDeals.$inferSelect;
+export type InsertDrugDeal = z.infer<typeof insertDrugDealSchema>;
+
+export type DrugAddiction = typeof drugAddictions.$inferSelect;
+export type InsertDrugAddiction = z.infer<typeof insertDrugAddictionSchema>;
+
+export type DrugTerritory = typeof drugTerritories.$inferSelect;
+export type InsertDrugTerritory = z.infer<typeof insertDrugTerritorySchema>;
+
+// Custom type for drugs with quantity from user inventory
+export type DrugWithQuantity = Drug & { 
+  quantity: number 
+};
+
+// Custom type for drug with recipes and ingredients
+export type DrugWithRecipe = Drug & {
+  recipes: (DrugRecipe & { 
+    ingredient: DrugIngredient
+  })[]
+};
