@@ -13,24 +13,19 @@ import {
   UserWithStats,
   UserWithGang,
   UserWithFinancials,
-  Achievement,
-  UserAchievement,
-  InsertUserAchievement,
+  UserWithStatus,
+  UserStatus, InsertUserStatus,
+  UserFriend, InsertUserFriend,
+  Achievement, InsertAchievement,
+  UserAchievement, InsertUserAchievement,
   AchievementWithUnlocked,
-  Challenge,
-  ChallengeProgress,
-  ChallengeWithProgress,
-  CrimeWithHistory,
-  CrimeWithHistory,
-  ItemWithDetails,
-  GangWithMembers,
   Challenge, InsertChallenge,
   ChallengeProgress, InsertChallengeProgress,
   ChallengeReward, InsertChallengeReward,
   ChallengeWithProgress,
-  Achievement, InsertAchievement,
-  UserAchievement, InsertUserAchievement,
-  AchievementWithUnlocked,
+  CrimeWithHistory,
+  ItemWithDetails,
+  GangWithMembers,
   users,
   stats,
   crimes,
@@ -44,13 +39,27 @@ import {
   challengeProgress,
   challengeRewards,
   achievements,
-  userAchievements
+  userAchievements,
+  userStatus,
+  userFriends
 } from "@shared/schema";
 import { eq, and, desc, gte, lte, sql, asc, inArray } from "drizzle-orm";
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import { calculateCrimeSuccessChance } from "@shared/gameUtils";
 import { EconomyStorage } from "./storage-economy";
+import {
+  getUserFriends,
+  getFriendRequest,
+  sendFriendRequest,
+  updateFriendRequest,
+  removeFriend,
+  getUserStatus,
+  getUserWithStatus,
+  createUserStatus,
+  updateUserStatus,
+  getOnlineUsers
+} from "./social-database";
 
 const PostgresSessionStore = connectPg(session);
 
