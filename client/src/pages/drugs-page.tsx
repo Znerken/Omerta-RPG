@@ -435,18 +435,29 @@ function InventoryTab() {
         ) : (
           <Card className="border-2 border-dashed border-primary/20 bg-black/40 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50"></div>
+            
+            {/* Add subtle shimmer overlay */}
+            <div className="absolute inset-0 overflow-hidden opacity-30">
+              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer opacity-50"></div>
+            </div>
+            
             <CardContent className="pt-10 pb-10 text-center relative z-10">
               <div className="flex flex-col items-center justify-center gap-4">
-                <div className="rounded-full bg-black/50 p-4 border border-primary/30">
+                <div className="rounded-full bg-black/50 p-4 border border-primary/30 relative">
                   <Beaker className="h-10 w-10 text-primary/60" />
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary/10 to-transparent animate-pulse opacity-50"></div>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-1">Empty Ingredients</h3>
                   <p className="text-muted-foreground">You need to acquire ingredients for drug production.</p>
                 </div>
-                <Button variant="outline" className="mt-2 border-primary/40 text-primary hover:bg-primary/10">
+                <Button 
+                  variant="outline" 
+                  className="mt-2 border-primary/40 text-primary hover:bg-primary/10 relative overflow-hidden group"
+                >
+                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
                   <Search className="mr-2 h-4 w-4" />
-                  Scavenge for Ingredients
+                  <span className="relative z-10">Scavenge for Ingredients</span>
                 </Button>
               </div>
             </CardContent>
@@ -986,6 +997,13 @@ function LabsTab() {
                           {/* Background effect */}
                           <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent opacity-50"></div>
                           
+                          {/* Add subtle shimmer effect to the card when in progress */}
+                          {!isCompleted && (
+                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent z-10 overflow-hidden">
+                              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
+                            </div>
+                          )}
+                          
                           {/* Completion indicator */}
                           {isCompleted && (
                             <div className="absolute top-3 right-3 rounded-full bg-green-500/20 p-1.5 z-20">
@@ -1086,10 +1104,17 @@ function LabsTab() {
                 ) : (
                   <Card className="border-2 border-dashed border-primary/20 bg-black/40 overflow-hidden relative">
                     <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50"></div>
+                    
+                    {/* Add subtle shimmer overlay */}
+                    <div className="absolute inset-0 overflow-hidden opacity-30">
+                      <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-shimmer opacity-50"></div>
+                    </div>
+                    
                     <CardContent className="pt-10 pb-10 text-center relative z-10">
                       <div className="flex flex-col items-center justify-center gap-4">
-                        <div className="rounded-full bg-black/50 p-4 border border-primary/30">
+                        <div className="rounded-full bg-black/50 p-4 border border-primary/30 relative">
                           <FlaskConical className="h-10 w-10 text-primary/60" />
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary/10 to-transparent animate-pulse opacity-50"></div>
                         </div>
                         <div>
                           <h3 className="text-lg font-semibold mb-1">No Active Production</h3>
