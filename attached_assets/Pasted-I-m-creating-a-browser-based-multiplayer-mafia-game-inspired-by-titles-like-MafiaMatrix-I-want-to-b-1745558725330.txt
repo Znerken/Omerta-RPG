@@ -1,0 +1,115 @@
+I'm creating a browser-based multiplayer mafia game inspired by titles like MafiaMatrix. I want to build a clean and optimized MVP (Minimum Viable Product) first, using modern tools and modular architecture. Please help me set up the backend and frontend foundation, including the core systems listed below.
+
+🧱 Build This Core MVP Feature Set:
+1. User System
+Register/Login (username, password, email)
+
+Session management (login persistence, logout)
+
+Password hashing + validation
+
+Simple admin panel for managing users
+
+2. Player Profile Page
+Show: username, level, XP, reputation, cash, inventory
+
+Optional: avatar and bio
+
+3. Crime System
+Players perform crimes with varying difficulty
+
+Crimes have success/fail chance based on player stats
+
+Rewards: cash, XP
+
+Include cooldowns (e.g. can only do one crime per minute)
+
+Show recent crime history on profile
+
+4. Stats & Progression
+Stats: Strength, Stealth, Charisma, Intelligence
+
+Level system (XP-based)
+
+Stat training page with cooldowns
+
+5. Jail System
+Crimes can result in jail time (random chance)
+
+Timer counts down real-time
+
+Simple escape option (50/50 chance, cooldown)
+
+Jail chat for inmates to interact
+
+6. Gangs / Factions
+Create/join gang
+
+Gang name, tag, description, logo (optional for now)
+
+Gang bank (shared funds)
+
+Gang ranks: Leader, Officer, Member
+
+Gang-only chatroom or message board
+
+7. Inventory & Items
+Items: weapons, tools, protection gear
+
+Items can be equipped or consumed
+
+Each item affects gameplay (e.g. +10% escape chance)
+
+8. Messaging System
+Player-to-player messages
+
+Global chat, Gang chat, Jail chat
+
+System notifications (crime success, jail, item received)
+
+9. Cooldown System
+Crime cooldown
+
+Training cooldown
+
+Escape attempt cooldown
+
+Use cron jobs or background timers
+
+10. Economy
+In-game cash as core currency
+
+Earn from crimes, spend on training, items, bribes
+
+Gang bank deposit/withdraw
+
+11. Leaderboards
+Daily/weekly: Top players by XP, cash, crimes
+
+Top gangs by earnings or rep
+
+12. Bonus Feature (Optional if Easy):
+Daily login reward claim system
+
+⚙️ Tech Stack Suggestions (Open to Better Ones):
+Frontend: React or basic HTML/CSS (if simple), with state managed via Redux or React Context
+
+Backend: Node.js with Express
+
+Database: MongoDB or PostgreSQL (whichever integrates faster for relationships)
+
+Auth: JWT or session-based (whichever is easiest to implement securely)
+
+Hosting: Local dev now; deploy on Replit or Vercel later
+
+🔄 Other Requirements:
+Modular architecture so new crimes, items, or missions can easily be added later
+
+Secure all forms and endpoints (avoid exploits, SQL injection, XSS)
+
+Comment code well so I can build on top of it
+
+Use basic responsive design principles (mobile-friendly)
+
+Once the MVP works, I’ll add more advanced features like PvP, black market, real-time events, and undercover/snitch mechanics.
+
