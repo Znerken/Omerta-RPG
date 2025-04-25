@@ -112,20 +112,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gangMember = await storage.getGangMember(userId);
       console.log("Gang Member:", gangMember);
       
-      // Get user profile with gang info
-      const userData = await storage.getUserProfile(userId);
-      if (!userData) {
-        // If no user profile found, return a basic profile with user data
-        return res.json({
-          ...req.user,
-          gangMember: gangMember || null,
-          inGang: !!gangMember,
-          gang: gangMember?.gang || null,
-          gangRank: gangMember?.rank || null
-        });
-      }
+      // Get user with gang info
+      const userWithGang = await storage.getUserWithGang(userId);
       
-      res.json(userData);
+      // Add frontend-specific fields - these are not in the schema 
+      // but the frontend expects them
+      const response = {
+        ...(userWithGang || req.user),
+        inGang: !!gangMember,  // Boolean flag for easy checks
+        gangMember: gangMember || null,  // Complete member record with gang details
+        gangId: gangMember?.gangId || null  // Direct gangId reference
+      };
+      
+      console.log("Sending user profile response with gang data");
+      res.json(response);
     } catch (error) {
       console.error("Error getting user profile:", error);
       res.status(500).json({ message: "Failed to get user profile" });

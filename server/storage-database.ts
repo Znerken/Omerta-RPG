@@ -132,15 +132,14 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       
       const gangMember = await this.getGangMember(userId);
       if (!gangMember) {
-        return { ...user, inGang: false };
+        // Return user without gang info
+        return user;
       }
       
+      // Return user with gang info
       return {
         ...user,
-        inGang: true,
-        gangId: gangMember.gangId,
         gang: gangMember.gang,
-        gangMember,
         gangRank: gangMember.rank
       };
     } catch (error) {
