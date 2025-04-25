@@ -45,9 +45,20 @@ export class CasinoStorage {
 
   // Casino Bets
   async createBet(bet: InsertCasinoBet): Promise<CasinoBet> {
+    console.log('\n==== BEGIN DETAILED DEBUGGING INFO ====');
+    console.log('1. Received bet data:', JSON.stringify(bet, null, 2));
+    
     try {
+      console.log('2. Building SQL query...');
+      
+      // Get information about the database connection
+      const dbTestQuery = await db.execute(sql`SELECT current_database(), version()`);
+      console.log('3. Database information:', JSON.stringify(dbTestQuery, null, 2));
+      
+      console.log('4. Executing main query...');
+      
       // Since our simplified query is working, let's use that approach directly
-      const insertResult = await db.execute(sql`
+      const query = sql`
         INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
         VALUES (
           ${bet.userId}, 
@@ -57,17 +68,58 @@ export class CasinoStorage {
           '{}'::jsonb
         )
         RETURNING *
-      `);
+      `;
       
-      // Check if we have valid results
-      if (!Array.isArray(insertResult) || insertResult.length === 0) {
+      console.log('5. SQL query to execute:', query.sql);
+      console.log('6. Query parameters:', JSON.stringify(query.params, null, 2));
+      
+      const insertResult = await db.execute(query);
+      
+      console.log('7. Insert result data type:', typeof insertResult);
+      console.log('8. Insert result is array?', Array.isArray(insertResult));
+      console.log('9. Full insert result:', JSON.stringify(insertResult, null, 2));
+      
+      // Deep inspection of the result
+      if (insertResult) {
+        console.log('10. Insert result properties:', Object.keys(insertResult));
+        
+        if (insertResult.rows) {
+          console.log('11. Rows data:', JSON.stringify(insertResult.rows, null, 2));
+        }
+      }
+      
+      // Check if we have valid results - based on logging, adapt this condition
+      if (!insertResult || !Array.isArray(insertResult) || insertResult.length === 0) {
+        if (insertResult && insertResult.rows && insertResult.rows.length > 0) {
+          console.log('12. Using rows property instead of direct array');
+          const newBet = insertResult.rows[0];
+          
+          // Transform to match the expected structure
+          const result = {
+            id: newBet.id,
+            userId: newBet.user_id,
+            gameId: newBet.game_id,
+            betAmount: newBet.bet_amount,
+            status: newBet.status,
+            result: newBet.result || {},
+            createdAt: newBet.created_at,
+            settledAt: newBet.settled_at
+          };
+          
+          console.log('13. Success! Returning transformed bet:', JSON.stringify(result, null, 2));
+          console.log('==== END DETAILED DEBUGGING INFO ====\n');
+          return result;
+        }
+        
+        console.log('12. No valid results found');
         throw new Error('Failed to create bet record - no results returned');
       }
       
       const newBet = insertResult[0];
+      console.log('12. Processing first row of result:', JSON.stringify(newBet, null, 2));
       
       // Transform to match the expected structure
-      return {
+      const result = {
         id: newBet.id,
         userId: newBet.user_id,
         gameId: newBet.game_id,
@@ -77,8 +129,54 @@ export class CasinoStorage {
         createdAt: newBet.created_at,
         settledAt: newBet.settled_at
       };
+      
+      console.log('13. Success! Returning transformed bet:', JSON.stringify(result, null, 2));
+      console.log('==== END DETAILED DEBUGGING INFO ====\n');
+      return result;
     } catch (error) {
       console.error('Error creating bet:', error);
+      
+      // Let's try one more approach - direct SQL using Drizzle's SQL tag instead of execute
+      try {
+        console.log('14. Attempting direct SQL insertion with rows property check');
+        const directInsertResult = await db.execute(`
+          INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
+          VALUES (
+            ${bet.userId}, 
+            ${bet.gameId}, 
+            ${bet.betAmount}, 
+            'pending',
+            '{}'::jsonb
+          )
+          RETURNING *
+        `);
+        
+        console.log('15. Direct SQL result:', JSON.stringify(directInsertResult, null, 2));
+        
+        if (directInsertResult && directInsertResult.rows && directInsertResult.rows.length > 0) {
+          const newBet = directInsertResult.rows[0];
+          
+          // Transform to match the expected structure
+          const result = {
+            id: newBet.id,
+            userId: newBet.user_id,
+            gameId: newBet.game_id,
+            betAmount: newBet.bet_amount,
+            status: newBet.status,
+            result: newBet.result || {},
+            createdAt: newBet.created_at,
+            settledAt: newBet.settled_at
+          };
+          
+          console.log('16. Success with direct SQL! Returning transformed bet:', JSON.stringify(result, null, 2));
+          console.log('==== END DETAILED DEBUGGING INFO ====\n');
+          return result;
+        }
+      } catch (directError) {
+        console.error('17. Even direct SQL approach failed:', directError);
+      }
+      
+      console.log('==== END DETAILED DEBUGGING INFO ====\n');
       throw new Error(`Failed to create bet: ${error.message}`);
     }
   }
