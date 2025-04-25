@@ -9,6 +9,7 @@ import { registerDrugRoutes } from "./drug-routes";
 import { registerCasinoRoutes } from "./casino-routes";
 import { registerProfileRoutes } from "./profile-routes";
 import { registerSocialRoutes, setNotifyUserFunction } from "./social-routes";
+import { registerDevRoutes } from "./dev-routes";
 import challengeRoutes from "./challenge-routes";
 import gangRoutes from "./gang-routes";
 import { WebSocketServer } from "ws";
@@ -46,6 +47,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register profile routes
   registerProfileRoutes(app);
+  
+  // Register dev routes for testing
+  registerDevRoutes(app);
   
   // Create HTTP server
   const httpServer = createServer(app);
