@@ -25,6 +25,17 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     switch (message.type) {
       case 'friend_status':
         // Friend status update received - invalidate friend lists
+        console.log('WebSocket message received:', message);
+        
+        // Only show toast notification if we have the username and status
+        if (message.data && message.data.username && message.data.status) {
+          toast({
+            title: 'Friend Status Update',
+            description: `${message.data.username} is now ${message.data.status}`,
+            variant: 'default',
+          });
+        }
+        
         queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] });
         queryClient.invalidateQueries({ queryKey: ['/api/social/online'] });
         break;

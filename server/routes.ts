@@ -136,17 +136,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Notify friends about this user coming online
-      storage.getUserFriends(userId).then(friends => {
-        friends.forEach(friend => {
-          notifyUser(friend.id, "friend_status", {
-            userId,
-            username: req.user?.username || "User", // Use any available user info
-            avatar: req.user?.avatar || null,
-            status: "online"
+      // First get the complete user info to ensure we have accurate data
+      storage.getUser(userId).then(userInfo => {
+        if (!userInfo) {
+          console.error('Could not find user info for status update, userId:', userId);
+          return;
+        }
+        
+        // Then get and notify all friends
+        storage.getUserFriends(userId).then(friends => {
+          friends.forEach(friend => {
+            notifyUser(friend.id, "friend_status", {
+              userId,
+              username: userInfo.username,
+              avatar: userInfo.avatar || null,
+              status: "online"
+            });
           });
+        }).catch(err => {
+          console.error('Error notifying friends of status change:', err);
         });
       }).catch(err => {
-        console.error('Error notifying friends of status change:', err);
+        console.error('Error getting user info for status update:', err);
       });
     }).catch(err => {
       console.error('Error updating user status to online:', err);
@@ -201,15 +212,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             
             // Notify friends about status change
-            storage.getUserFriends(userId).then(friends => {
-              friends.forEach(friend => {
-                notifyUser(friend.id, "friend_status", {
-                  userId,
-                  status: "offline"
+            // First get the user info to ensure accurate data
+            storage.getUser(userId).then(userInfo => {
+              if (!userInfo) {
+                console.error('Could not find user info for offline status update, userId:', userId);
+                return;
+              }
+              
+              // Then notify friends
+              storage.getUserFriends(userId).then(friends => {
+                friends.forEach(friend => {
+                  notifyUser(friend.id, "friend_status", {
+                    userId,
+                    username: userInfo.username,
+                    avatar: userInfo.avatar || null,
+                    status: "offline"
+                  });
                 });
+              }).catch(err => {
+                console.error('Error notifying friends of offline status:', err);
               });
             }).catch(err => {
-              console.error('Error notifying friends of offline status:', err);
+              console.error('Error getting user info for offline status update:', err);
             });
           }
         }).catch(err => {
