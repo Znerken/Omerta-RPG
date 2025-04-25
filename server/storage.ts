@@ -44,7 +44,12 @@ import {
   InsertChallenge,
   InsertChallengeProgress,
   InsertChallengeReward,
-  ChallengeWithProgress
+  ChallengeWithProgress,
+  // Achievement types
+  Achievement,
+  UserAchievement,
+  InsertUserAchievement,
+  AchievementWithUnlocked
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -72,6 +77,12 @@ export interface IStorage {
   updateUser(id: number, user: Partial<User>): Promise<User | undefined>;
   getUserWithStats(id: number): Promise<UserWithStats | undefined>;
   getUserWithGang(id: number): Promise<UserWithGang | undefined>;
+  
+  // User Profile methods
+  getUserProfile(userId: number): Promise<User | undefined>;
+  getAchievementsWithUnlocked(userId: number): Promise<AchievementWithUnlocked[]>;
+  markAchievementAsViewed(userId: number, achievementId: number): Promise<boolean>;
+  getUnviewedAchievements(userId: number): Promise<AchievementWithUnlocked[]>;
   
   // Stats methods
   getStatsByUserId(userId: number): Promise<Stat | undefined>;

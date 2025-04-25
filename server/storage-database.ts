@@ -577,7 +577,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     }
   }
   
-  async markAchievementAsViewed(userId: number, achievementId: number): Promise<UserAchievement | undefined> {
+  async markAchievementAsViewed(userId: number, achievementId: number): Promise<boolean> {
     try {
       // Find the user achievement record
       const [existingAchievement] = await db
@@ -592,7 +592,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       
       if (!existingAchievement) {
         console.log(`Achievement ${achievementId} not found for user ${userId}`);
-        return undefined;
+        return false;
       }
       
       // Update the viewed status
@@ -608,10 +608,10 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
         .returning();
       
       console.log(`Marked achievement ${achievementId} as viewed for user ${userId}`);
-      return updatedAchievement;
+      return !!updatedAchievement;
     } catch (error) {
       console.error("Error in markAchievementAsViewed:", error);
-      return undefined;
+      return false;
     }
   }
   

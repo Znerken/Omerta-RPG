@@ -1,21 +1,28 @@
 import { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { isAuthenticated } from "./middleware/auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { z } from "zod";
+import sanitizeHtml from "sanitize-html";
+import { isAuthenticated } from "./middleware/auth";
+import { fileURLToPath } from "url";
 
-// Configure storage for uploaded files
-const uploadsDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Get directory name in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configure multer for file uploads
+const uploadDir = path.join(__dirname, "../client/public/uploads");
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer storage
 const storage_config = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadsDir);
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -24,220 +31,203 @@ const storage_config = multer.diskStorage({
   },
 });
 
-const upload = multer({
+// Create upload middleware with size limits
+const upload = multer({ 
   storage: storage_config,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    fileSize: 1024 * 1024 * 2, // 2MB max size
   },
-  fileFilter: function (req, file, cb) {
-    const allowedFileTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedFileTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedFileTypes.test(file.mimetype);
+  fileFilter: function(req, file, cb) {
+    // Accept only image files
+    const filetypes = /jpeg|jpg|png|gif|webp/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     
-    if (extname && mimetype) {
+    if (mimetype && extname) {
       return cb(null, true);
-    } else {
-      cb(new Error("Error: Only image files are allowed"));
     }
-  },
+    cb(new Error("Only image files are allowed!"));
+  }
 });
 
-const profileUpdateSchema = z.object({
-  bio: z.string().optional(),
-  htmlProfile: z.string().optional(),
-  profileTheme: z.string().optional(),
-  showAchievements: z.boolean().optional(),
-});
+// HTML sanitizer configuration
+const sanitizeOptions = {
+  allowedTags: [ 
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'p', 'a', 'ul', 'ol',
+    'nl', 'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
+    'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'img', 'span'
+  ],
+  allowedAttributes: {
+    a: [ 'href', 'name', 'target' ],
+    img: [ 'src', 'alt', 'width', 'height' ],
+    div: [ 'style', 'class' ],
+    span: [ 'style', 'class' ],
+    p: [ 'style', 'class' ],
+    h1: [ 'style', 'class' ],
+    h2: [ 'style', 'class' ],
+    h3: [ 'style', 'class' ],
+    h4: [ 'style', 'class' ],
+    h5: [ 'style', 'class' ],
+    h6: [ 'style', 'class' ],
+  },
+  // Restrict URLs to HTTP, HTTPS, and relative paths
+  allowedSchemes: [ 'http', 'https', 'ftp', 'mailto', 'tel' ]
+};
 
 export function registerProfileRoutes(app: Express) {
-  // Get a user's profile
+  // Get user profile
   app.get("/api/user/profile", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const userProfile = await storage.getUserProfile(req.user.id);
-      
-      if (!userProfile) {
-        return res.status(404).json({ message: "User profile not found" });
-      }
-      
-      res.json(userProfile);
+      const userId = req.user.id;
+      const profile = await storage.getUserProfile(userId);
+      res.json(profile);
     } catch (error) {
-      console.error("Failed to fetch user profile:", error);
+      console.error("Error fetching user profile:", error);
       res.status(500).json({ message: "Failed to fetch user profile" });
     }
   });
-  
-  // Get a specific user's profile by ID (public view)
+
+  // Get another user's profile
   app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const userProfile = await storage.getUserProfile(userId);
+      const profile = await storage.getUserProfile(userId);
       
-      if (!userProfile) {
-        return res.status(404).json({ message: "User profile not found" });
+      if (!profile) {
+        return res.status(404).json({ message: "User not found" });
       }
       
-      // Return only public information
-      const publicProfile = {
-        id: userProfile.id,
-        username: userProfile.username,
-        level: userProfile.level,
-        respect: userProfile.respect,
-        avatar: userProfile.avatar,
-        bannerImage: userProfile.bannerImage,
-        bio: userProfile.bio,
-        htmlProfile: userProfile.htmlProfile,
-        profileTheme: userProfile.profileTheme,
-        isJailed: userProfile.isJailed,
-        createdAt: userProfile.createdAt,
-        gangId: userProfile.gangId,
-        showAchievements: userProfile.showAchievements,
-      };
+      // Remove sensitive fields
+      const { password, email, ...publicProfile } = profile;
+      
+      // Only show achievements if user allows it
+      if (!profile.showAchievements) {
+        delete publicProfile.achievements;
+      }
       
       res.json(publicProfile);
     } catch (error) {
-      console.error("Failed to fetch user profile:", error);
-      res.status(500).json({ message: "Failed to fetch user profile" });
+      console.error("Error fetching profile:", error);
+      res.status(500).json({ message: "Failed to fetch profile" });
     }
   });
-  
-  // Update own profile
+
+  // Update user profile
   app.patch("/api/user/profile", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const result = profileUpdateSchema.safeParse(req.body);
+      const userId = req.user.id;
+      const { bio, htmlProfile, profileTheme, showAchievements } = req.body;
       
-      if (!result.success) {
-        return res.status(400).json({ 
-          message: "Invalid request data", 
-          errors: result.error.errors 
-        });
+      // Sanitize HTML content
+      let sanitizedHtml = null;
+      if (htmlProfile) {
+        sanitizedHtml = sanitizeHtml(htmlProfile, sanitizeOptions);
       }
       
-      const updatedProfile = await storage.updateUser(req.user.id, result.data);
+      // Update profile
+      const updatedUser = await storage.updateUser(userId, {
+        bio: bio || null,
+        htmlProfile: sanitizedHtml,
+        profileTheme: profileTheme || null,
+        showAchievements: showAchievements !== undefined ? showAchievements : true
+      });
       
-      if (!updatedProfile) {
-        return res.status(500).json({ message: "Failed to update profile" });
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
       }
       
-      res.json(updatedProfile);
+      res.json(updatedUser);
     } catch (error) {
-      console.error("Failed to update profile:", error);
+      console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
     }
   });
-  
-  // Upload avatar image
+
+  // Upload avatar
   app.post("/api/user/avatar", isAuthenticated, upload.single("avatar"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      // Create relative path to the file
+      const userId = req.user.id;
       const avatarPath = `/uploads/${req.file.filename}`;
       
-      // Update user's avatar in the database
-      const updatedUser = await storage.updateUser(req.user.id, { avatar: avatarPath });
+      // Update user with new avatar
+      const updatedUser = await storage.updateUser(userId, {
+        avatar: avatarPath
+      });
       
       if (!updatedUser) {
-        // If update fails, remove the uploaded file
-        fs.unlinkSync(req.file.path);
-        return res.status(500).json({ message: "Failed to update avatar" });
+        return res.status(404).json({ message: "User not found" });
       }
       
-      res.json({ 
-        success: true, 
-        avatar: avatarPath,
-        message: "Avatar uploaded successfully" 
-      });
+      res.json({ avatar: avatarPath });
     } catch (error) {
-      console.error("Failed to upload avatar:", error);
-      // If an error occurs, make sure to clean up any uploaded file
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
-      
+      console.error("Error uploading avatar:", error);
       res.status(500).json({ message: "Failed to upload avatar" });
     }
   });
-  
-  // Upload banner image
+
+  // Upload banner
   app.post("/api/user/banner", isAuthenticated, upload.single("banner"), async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      // Create relative path to the file
+      const userId = req.user.id;
       const bannerPath = `/uploads/${req.file.filename}`;
       
-      // Update user's banner in the database
-      const updatedUser = await storage.updateUser(req.user.id, { bannerImage: bannerPath });
+      // Update user with new banner
+      const updatedUser = await storage.updateUser(userId, {
+        bannerImage: bannerPath
+      });
       
       if (!updatedUser) {
-        // If update fails, remove the uploaded file
-        fs.unlinkSync(req.file.path);
-        return res.status(500).json({ message: "Failed to update banner" });
+        return res.status(404).json({ message: "User not found" });
       }
       
-      res.json({ 
-        success: true, 
-        bannerImage: bannerPath,
-        message: "Banner uploaded successfully" 
-      });
+      res.json({ bannerImage: bannerPath });
     } catch (error) {
-      console.error("Failed to upload banner:", error);
-      // If an error occurs, make sure to clean up any uploaded file
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
-      
+      console.error("Error uploading banner:", error);
       res.status(500).json({ message: "Failed to upload banner" });
     }
   });
-  
-  // Get user's achievements with unlocked status
+
+  // Get user achievements
   app.get("/api/user/achievements", isAuthenticated, async (req: Request, res: Response) => {
     try {
-      const achievements = await storage.getAchievementsWithUnlocked(req.user.id);
+      const userId = req.user.id;
+      const achievements = await storage.getAchievementsWithUnlocked(userId);
       res.json(achievements);
     } catch (error) {
-      console.error("Failed to fetch achievements:", error);
+      console.error("Error fetching achievements:", error);
       res.status(500).json({ message: "Failed to fetch achievements" });
     }
   });
-  
+
   // Get another user's achievements
   app.get("/api/users/:id/achievements", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
       
-      // Get the user first to check if they show achievements
+      // First check if user allows others to see achievements
       const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // If user has opted out of showing achievements, return a message
       if (user.showAchievements === false) {
-        return res.json({ 
-          hidden: true,
-          message: "This user has chosen to hide their achievements" 
-        });
+        return res.status(403).json({ message: "This user has hidden their achievements" });
       }
       
-      // Get achievements for this user
       const achievements = await storage.getAchievementsWithUnlocked(userId);
-      
-      // Filter out hidden achievements that haven't been unlocked yet
-      const filteredAchievements = achievements.filter(achievement => 
-        !achievement.hidden || achievement.unlocked
-      );
-      
-      res.json(filteredAchievements);
+      res.json(achievements);
     } catch (error) {
-      console.error("Failed to fetch user achievements:", error);
-      res.status(500).json({ message: "Failed to fetch user achievements" });
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ message: "Failed to fetch achievements" });
     }
   });
 }

@@ -7,6 +7,7 @@ import { registerAdminRoutes } from "./admin-routes";
 import { registerAchievementRoutes } from "./achievement-routes";
 import { registerDrugRoutes } from "./drug-routes";
 import { registerCasinoRoutes } from "./casino-routes";
+import { registerProfileRoutes } from "./profile-routes";
 import challengeRoutes from "./challenge-routes";
 import gangRoutes from "./gang-routes";
 import { WebSocketServer } from "ws";
@@ -40,6 +41,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register casino routes
   registerCasinoRoutes(app);
+  
+  // Register profile routes
+  registerProfileRoutes(app);
 
   // Create HTTP server
   const httpServer = createServer(app);

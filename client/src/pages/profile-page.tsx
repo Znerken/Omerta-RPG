@@ -1,11 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ActivityTable } from "@/components/activity/ActivityTable";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { 
   User, 
   DollarSign, 
@@ -19,9 +25,21 @@ import {
   BookOpen, 
   SmilePlus,
   Briefcase,
-  Users
+  Users,
+  Image,
+  FileEdit,
+  Camera,
+  Upload,
+  PenTool,
+  Palette,
+  Save,
+  Trash2
 } from "lucide-react";
 import { formatCurrency, getInitials, calculateLevelProgress } from "@/lib/utils";
+import { useState, useRef, useEffect } from "react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export default function ProfilePage() {
   const { data: userProfile, isLoading: profileLoading } = useQuery({
@@ -112,22 +130,262 @@ export default function ProfilePage() {
   const nextLevelXp = userProfile.nextLevelXP || 100 * Math.pow(level, 2);
   const xpProgress = calculateLevelProgress(xp, nextLevelXp);
 
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
+  const [bio, setBio] = useState(userProfile.bio || "");
+  const [htmlProfile, setHtmlProfile] = useState(userProfile.htmlProfile || "");
+  const [showAchievements, setShowAchievements] = useState(userProfile.showAchievements !== false);
+  const [profileTheme, setProfileTheme] = useState(userProfile.profileTheme || "dark");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(userProfile.avatar || null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(userProfile.bannerImage || null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  // Mutation for updating profile
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profileData: any) => {
+      const res = await apiRequest("PATCH", "/api/user/profile", profileData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update profile",
+        description: error.message || "There was an error updating your profile.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for uploading avatar
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const res = await fetch("/api/user/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      toast({
+        title: "Avatar updated",
+        description: "Your avatar has been updated successfully.",
+      });
+      setAvatarPreview(data.avatar);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to upload avatar",
+        description: error.message || "There was an error uploading your avatar.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for uploading banner
+  const uploadBannerMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("banner", file);
+      const res = await fetch("/api/user/banner", {
+        method: "POST",
+        body: formData,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      toast({
+        title: "Banner updated",
+        description: "Your banner has been updated successfully.",
+      });
+      setBannerPreview(data.bannerImage);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to upload banner",
+        description: error.message || "There was an error uploading your banner.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle avatar file selection
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setAvatarPreview(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle banner file selection
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setBannerFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          setBannerPreview(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Save profile changes
+  const handleSaveProfile = async () => {
+    // Upload images if selected
+    if (avatarFile) {
+      await uploadAvatarMutation.mutateAsync(avatarFile);
+      setAvatarFile(null);
+    }
+
+    if (bannerFile) {
+      await uploadBannerMutation.mutateAsync(bannerFile);
+      setBannerFile(null);
+    }
+
+    // Update profile data
+    await updateProfileMutation.mutateAsync({
+      bio,
+      htmlProfile,
+      showAchievements,
+      profileTheme,
+    });
+  };
+
   return (
     <>
       <PageHeader 
         title="Your Profile" 
         icon={<User className="h-5 w-5" />}
         description="View your character stats and activity"
+        action={
+          isEditing ? (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(false)}
+                className="flex items-center gap-1"
+              >
+                <Trash2 className="h-4 w-4" /> Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveProfile}
+                className="flex items-center gap-1"
+                disabled={updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending}
+              >
+                {(updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending) ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" /> Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1"
+            >
+              <FileEdit className="h-4 w-4" /> Edit Profile
+            </Button>
+          )
+        }
       />
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Summary */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="bg-dark-surface">
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center mb-6">
-                <Avatar className="h-24 w-24 mb-4 bg-primary">
-                  <AvatarFallback className="text-3xl font-heading">{getInitials(username)}</AvatarFallback>
-                </Avatar>
+            <CardContent className="pt-6 relative">
+              {/* Banner Image */}
+              <div 
+                className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-primary/30 to-accent/30 overflow-hidden rounded-t-lg"
+                style={{
+                  backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                {isEditing && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70"
+                    onClick={() => bannerInputRef.current?.click()}
+                  >
+                    <Image className="h-4 w-4" />
+                    <input
+                      type="file"
+                      ref={bannerInputRef}
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={handleBannerChange}
+                    />
+                  </Button>
+                )}
+              </div>
+              
+              <div className="flex flex-col items-center text-center mb-6 mt-16">
+                <div className="relative">
+                  <Avatar className="h-24 w-24 border-4 border-background mb-4 bg-primary">
+                    {avatarPreview ? (
+                      <AvatarImage src={avatarPreview} alt={username} />
+                    ) : (
+                      <AvatarFallback className="text-3xl font-heading">{getInitials(username)}</AvatarFallback>
+                    )}
+                  </Avatar>
+                  
+                  {isEditing && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute bottom-4 right-0 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8"
+                      onClick={() => avatarInputRef.current?.click()}
+                    >
+                      <Camera className="h-4 w-4" />
+                      <input
+                        type="file"
+                        ref={avatarInputRef}
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        className="hidden"
+                        onChange={handleAvatarChange}
+                      />
+                    </Button>
+                  )}
+                </div>
+                
                 <h2 className="text-2xl font-medium mb-1">{username}</h2>
                 <div className="flex items-center text-gray-400">
                   <Medal className="h-4 w-4 mr-1" />
@@ -216,6 +474,135 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Profile Edit Settings */}
+          {isEditing && (
+            <Card className="bg-dark-surface">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <FileEdit className="h-5 w-5 mr-2" /> Profile Settings
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Bio */}
+                  <div>
+                    <Label htmlFor="bio" className="mb-2 block">Bio</Label>
+                    <Textarea 
+                      id="bio" 
+                      value={bio} 
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="Tell others about yourself..."
+                      className="resize-none bg-dark-lighter"
+                    />
+                  </div>
+                  
+                  {/* Profile Theme */}
+                  <div>
+                    <Label htmlFor="theme" className="mb-2 block">Profile Theme</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['dark', 'noir', 'mafia'].map((theme) => (
+                        <Button
+                          key={theme}
+                          type="button"
+                          variant={profileTheme === theme ? "default" : "outline"}
+                          onClick={() => setProfileTheme(theme)}
+                          className={cn(
+                            "h-10 capitalize",
+                            profileTheme === theme && "border-2 border-primary"
+                          )}
+                        >
+                          <Palette className="h-4 w-4 mr-2" />
+                          {theme}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Show Achievements Toggle */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="show-achievements" className="text-sm font-medium">
+                        Show Achievements
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Allow others to see your achievements
+                      </p>
+                    </div>
+                    <Switch
+                      id="show-achievements"
+                      checked={showAchievements}
+                      onCheckedChange={setShowAchievements}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* HTML Profile Editor */}
+          {isEditing && (
+            <Card className="bg-dark-surface">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <PenTool className="h-5 w-5 mr-2" /> HTML Profile
+                </CardTitle>
+                <CardDescription>
+                  Use HTML to customize your profile page
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Textarea 
+                    value={htmlProfile} 
+                    onChange={(e) => setHtmlProfile(e.target.value)}
+                    placeholder="<h1>Welcome to my profile!</h1>"
+                    className="min-h-[200px] font-mono text-sm bg-dark-lighter"
+                  />
+                  <div className="text-xs text-muted-foreground">
+                    <p>Allowed HTML tags: h1, h2, h3, p, div, span, b, i, u, a, ul, ol, li, img, hr</p>
+                    <p>Example: <code>&lt;h1&gt;My Gang&lt;/h1&gt; &lt;p&gt;I've been a member since 2025&lt;/p&gt;</code></p>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="bg-dark-lighter text-xs p-2">
+                <div className="flex w-full flex-col space-y-1">
+                  <div className="flex items-center text-yellow-400">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-4 w-4 mr-1"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10.362 1.093a.75.75 0 00-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925zM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0018 14.25V6.443zm-7.25 12.25v-8.25l-7.25-4v7.807a.75.75 0 00.388.657l6.862 3.786z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span>HTML content is restricted for security reasons</span>
+                  </div>
+                </div>
+              </CardFooter>
+            </Card>
+          )}
+          
+          {/* HTML Profile Display */}
+          {!isEditing && userProfile.htmlProfile && (
+            <Card className="bg-dark-surface">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center">
+                  <PenTool className="h-5 w-5 mr-2" /> Custom Profile
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div 
+                  className="prose prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: userProfile.htmlProfile }}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Achievements */}
           <Card className="bg-dark-surface">

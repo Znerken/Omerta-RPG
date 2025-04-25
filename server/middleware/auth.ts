@@ -1,19 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 
-// Middleware to check if the user is authenticated
+// Middleware to check if user is authenticated
 export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated()) {
     return next();
   }
-  
-  return res.status(401).json({ error: "Unauthorized. You must be logged in." });
+  res.status(401).json({ message: "Unauthorized" });
 }
 
-// Middleware to check if the user is an admin
+// Middleware to check if user is an admin
 export function isAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.user || !req.user.isAdmin) {
-    return res.status(403).json({ error: "Forbidden. Admin access required." });
+  if (req.isAuthenticated() && req.user.isAdmin) {
+    return next();
   }
-  
-  return next();
+  res.status(403).json({ message: "Forbidden - Admin access required" });
 }
