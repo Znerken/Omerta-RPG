@@ -1205,59 +1205,128 @@ function LabsTab() {
                       const elapsed = now.getTime() - new Date(production.startedAt).getTime();
                       const progress = isCompleted ? 100 : Math.min(100, Math.round((elapsed / totalDuration) * 100));
                       
+                      // Calculate remaining time
+                      const msRemaining = Math.max(0, completesAt.getTime() - now.getTime());
+                      const hoursRemaining = Math.floor(msRemaining / (1000 * 60 * 60));
+                      const minutesRemaining = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                      const secondsRemaining = Math.floor((msRemaining % (1000 * 60)) / 1000);
+                      
+                      // Format countdown
+                      const countdown = isCompleted 
+                        ? "Ready for collection!" 
+                        : `${hoursRemaining}h ${minutesRemaining}m ${secondsRemaining}s`;
+                        
+                      // Calculate color and style variables based on progress
+                      const progressColor = isCompleted 
+                        ? 'bg-gradient-to-r from-green-400 to-green-600' 
+                        : progress < 30 
+                          ? 'bg-gradient-to-r from-primary/60 to-primary/80' 
+                          : progress < 70 
+                            ? 'bg-gradient-to-r from-primary/70 to-primary/90' 
+                            : 'bg-gradient-to-r from-primary/80 to-primary';
+                            
+                      // Bubble animation count based on progress
+                      const bubbleCount = Math.max(1, Math.floor(progress / 20));
+                      
                       return (
                         <Card 
                           key={production.id} 
-                          className={`overflow-hidden bg-black/40 relative ${isCompleted ? "border-2 border-green-500" : "border-primary/30"}`}
+                          className={`overflow-hidden bg-black/40 relative ${
+                            isCompleted 
+                              ? "border-2 border-green-500 shadow-lg shadow-green-500/20" 
+                              : "border-primary/30 shadow-md shadow-primary/10"
+                          }`}
                         >
                           {/* Background effect */}
                           <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent opacity-50"></div>
                           
-                          {/* Add subtle shimmer effect to the card when in progress */}
+                          {/* Dynamic laboratory effect - animated test tubes */}
+                          <div className="absolute bottom-0 left-0 w-full h-1/2 overflow-hidden z-0 opacity-40">
+                            {!isCompleted && [...Array(bubbleCount)].map((_, i) => (
+                              <div 
+                                key={i}
+                                className="absolute bottom-0 rounded-full bg-primary/60 w-2 h-2 animate-bubble-rise"
+                                style={{ 
+                                  left: `${10 + Math.random() * 80}%`,
+                                  animationDelay: `${i * 0.8}s`,
+                                  animationDuration: `${3 + Math.random() * 2}s`
+                                }}
+                              />
+                            ))}
+                          </div>
+                          
+                          {/* Add advanced shimmer effect to the card when in progress */}
                           {!isCompleted && (
-                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent z-10 overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent z-10 overflow-hidden">
                               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-shimmer" />
                             </div>
                           )}
                           
-                          {/* Completion indicator */}
+                          {/* Enhanced completion indicator */}
                           {isCompleted && (
-                            <div className="absolute top-3 right-3 rounded-full bg-green-500/20 p-1.5 z-20">
-                              <Badge variant="success" className="px-2 py-0">
-                                Ready
-                              </Badge>
-                            </div>
+                            <>
+                              <div className="absolute top-3 right-3 rounded-full bg-green-500/20 p-1.5 z-20">
+                                <Badge variant="success" className="px-2 py-0 animate-pulse">
+                                  Ready
+                                </Badge>
+                              </div>
+                              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-transparent z-0"></div>
+                            </>
                           )}
                           
                           <CardHeader className="relative z-10 pb-2">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-2 rounded-full">
-                                <FlaskConical className="h-6 w-6 text-primary" />
-                              </div>
-                              <div>
-                                <CardTitle className="text-lg bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent">
-                                  {production.drug?.name || "Unknown Drug"} <span className="text-sm font-normal text-white">x{production.quantity}</span>
-                                </CardTitle>
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                  <Clock className="h-3 w-3 mr-1.5" />
-                                  {isCompleted ? 
-                                    "Completed on " + format(completesAt, "MMM d, h:mm a") :
-                                    "Completes on " + format(completesAt, "MMM d, h:mm a")
-                                  }
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`bg-gradient-to-br ${isCompleted ? 'from-green-400/30 to-green-500/10' : 'from-primary/20 to-primary/5'} p-2 rounded-full relative`}>
+                                  <FlaskConical className={`h-6 w-6 ${isCompleted ? 'text-green-400' : 'text-primary'}`} />
+                                  
+                                  {/* Add pulsing effect */}
+                                  <div className={`absolute inset-0 rounded-full ${isCompleted ? 'bg-green-400/10' : 'bg-primary/10'} animate-ping opacity-75`} />
+                                </div>
+                                <div>
+                                  <CardTitle className={`text-lg ${
+                                    isCompleted 
+                                      ? 'bg-gradient-to-r from-white to-green-400 bg-clip-text text-transparent' 
+                                      : 'bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent'
+                                  }`}>
+                                    {production.drug?.name || "Unknown Drug"} <span className="text-sm font-normal text-white">x{production.quantity}</span>
+                                  </CardTitle>
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3 mr-1.5" />
+                                    {isCompleted ? 
+                                      "Completed on " + format(completesAt, "MMM d, h:mm a") :
+                                      "Completes on " + format(completesAt, "MMM d, h:mm a")
+                                    }
+                                  </div>
                                 </div>
                               </div>
+                              
+                              {/* Risk indicator */}
+                              {!isCompleted && (
+                                <Badge 
+                                  className={`px-2 text-xs ${
+                                    production.drug?.riskLevel <= 3 
+                                      ? 'bg-blue-500/20 text-blue-300 hover:bg-blue-500/30'
+                                      : production.drug?.riskLevel <= 6
+                                        ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30'
+                                        : 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
+                                  }`}
+                                >
+                                  Risk {production.drug?.riskLevel}/10
+                                </Badge>
+                              )}
                             </div>
                           </CardHeader>
                           
                           <CardContent className="relative z-10 pt-0">
                             <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-3 text-xs">
+                              <div className="grid grid-cols-3 gap-2 text-xs">
                                 <div className="flex items-center gap-2 bg-black/30 p-2 rounded">
                                   <div className="p-1 rounded-full bg-amber-500/20">
                                     <BadgePercent className="h-3.5 w-3.5 text-amber-400" />
                                   </div>
                                   <div className="flex flex-col">
-                                    <span className="text-muted-foreground">Success Rate</span>
+                                    <span className="text-muted-foreground">Success</span>
                                     <span className="font-medium">{production.successRate}%</span>
                                   </div>
                                 </div>
@@ -1267,30 +1336,70 @@ function LabsTab() {
                                   </div>
                                   <div className="flex flex-col">
                                     <span className="text-muted-foreground">Quantity</span>
-                                    <span className="font-medium">{production.quantity} units</span>
+                                    <span className="font-medium">{production.quantity}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 bg-black/30 p-2 rounded">
+                                  <div className="p-1 rounded-full bg-green-500/20">
+                                    <DollarSign className="h-3.5 w-3.5 text-green-400" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="text-muted-foreground">Value</span>
+                                    <span className="font-medium">${production.drug?.basePrice * production.quantity}</span>
                                   </div>
                                 </div>
                               </div>
                               
-                              <div className="space-y-1">
+                              {/* Enhanced progress bar with animated countdown */}
+                              <div className="space-y-2">
                                 <div className="flex justify-between items-center text-sm">
-                                  <span className="flex items-center">
-                                    <Activity className="h-4 w-4 mr-1.5 text-primary/70" />
-                                    <span>Progress</span>
+                                  <span className="flex items-center gap-1.5">
+                                    <Activity className={`h-4 w-4 ${isCompleted ? 'text-green-400' : 'text-primary/70'}`} />
+                                    <span>{isCompleted ? 'Completed' : 'In Progress'}</span>
                                   </span>
-                                  <span className="font-medium">{progress}%</span>
+                                  
+                                  {/* Animated countdown timer */}
+                                  <span className={`font-medium text-sm ${isCompleted ? 'text-green-400' : 'text-primary/90'}`}>
+                                    {countdown}
+                                  </span>
                                 </div>
-                                <div className="relative h-2.5 w-full bg-black/40 rounded-full overflow-hidden border border-primary/20">
+                                
+                                {/* Enhanced progress bar with bubbling animation */}
+                                <div className="relative h-3 w-full bg-black/40 rounded-full overflow-hidden border border-primary/20">
+                                  {/* Base progress bar */}
                                   <div 
-                                    className={`absolute top-0 left-0 h-full rounded-full ${
-                                      isCompleted ? 'bg-green-500' : 'bg-gradient-to-r from-primary to-primary/80'
-                                    }`}
+                                    className={`absolute top-0 left-0 h-full rounded-full ${progressColor}`}
                                     style={{ width: `${progress}%` }}
                                   >
                                     {/* Animated shimmer effect when in progress */}
                                     {!isCompleted && (
                                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer" />
                                     )}
+                                    
+                                    {/* Bubble effect in progress bar */}
+                                    {!isCompleted && [...Array(Math.min(5, bubbleCount))].map((_, i) => (
+                                      <div 
+                                        key={i}
+                                        className="absolute bg-white/30 rounded-full w-1.5 h-1.5 animate-bubble-rise-small"
+                                        style={{ 
+                                          left: `${Math.random() * 100}%`,
+                                          bottom: '0%',
+                                          animationDelay: `${i * 0.5}s`,
+                                          animationDuration: `${1 + Math.random() * 1}s`
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
+                                  
+                                  {/* Percentage marker */}
+                                  <div 
+                                    className="absolute text-[8px] font-bold top-0 h-full flex items-center justify-center text-white"
+                                    style={{ 
+                                      left: `${Math.min(Math.max(progress - 4, 0), 92)}%`, 
+                                      opacity: progress > 10 ? 1 : 0 
+                                    }}
+                                  >
+                                    {progress}%
                                   </div>
                                 </div>
                               </div>
@@ -1306,7 +1415,10 @@ function LabsTab() {
                                     {collectProductionMutation.isPending ? (
                                       <><Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> Collecting...</>
                                     ) : (
-                                      <>Collect Production</>
+                                      <>
+                                        <Package className="h-4 w-4 mr-1.5" />
+                                        Collect Production
+                                      </>
                                     )}
                                   </Button>
                                 </div>
