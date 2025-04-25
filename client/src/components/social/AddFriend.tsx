@@ -6,11 +6,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { UserPlus, Loader2, Search, UserCheck, Clock, X } from "lucide-react";
+import { UserPlus, Loader2, Search, UserCheck, Clock, X, User } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { debounce } from "@/lib/utils";
+import { Link } from "wouter";
 
 import { UserWithStatus } from "@/types";
 
@@ -114,13 +115,18 @@ export function AddFriend() {
     return (
       <div key={user.id} className="flex items-center justify-between py-2">
         <div className="flex items-center space-x-3">
-          <Avatar>
-            <AvatarImage src={user.avatar || undefined} />
-            <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="text-sm font-medium">{user.username}</p>
-          </div>
+          <Link to={`/profile/${user.id}`} className="flex items-center hover:opacity-80 transition-opacity">
+            <Avatar>
+              <AvatarImage src={user.avatar || undefined} />
+              <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div className="ml-3">
+              <p className="text-sm font-medium flex items-center">
+                {user.username}
+                <User className="h-3 w-3 ml-1 text-muted-foreground" />
+              </p>
+            </div>
+          </Link>
         </div>
         {actionButton}
       </div>

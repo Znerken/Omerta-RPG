@@ -46,47 +46,118 @@ export const NotificationList: React.FC = () => {
         notification.data) {
       
       if (notification.type === "friend_request") {
-        // Handle friend request - would need a separate component that includes accept/reject buttons
-        // For now, use the default rendering
-        return (
-          <Card key={notification.id} className="mb-2">
-            <CardContent className="p-4">
-              <div className="flex justify-between">
-                <div className="flex items-center">
-                  <UserPlus className="h-4 w-4 text-indigo-500" />
-                  <h4 className="ml-2 text-sm font-medium">Friend Request</h4>
+        // Handle friend request with functional accept/reject buttons
+        const { useMutation, useQueryClient } = require("@tanstack/react-query");
+        const { apiRequest } = require("@/lib/queryClient");
+        const { useToast } = require("@/hooks/use-toast");
+        const { Loader2 } = require("lucide-react");
+        
+        // Create a FriendRequestNotification component inline
+        const FriendRequestNotification = () => {
+          const toast = useToast();
+          const queryClient = useQueryClient();
+          
+          // Accept friend request mutation
+          const acceptRequestMutation = useMutation({
+            mutationFn: async () => {
+              return apiRequest("PUT", `/api/social/friends/request/${notification.data.requestId}`, { status: "accepted" });
+            },
+            onSuccess: () => {
+              toast().toast({
+                title: "Friend request accepted",
+                description: `You are now friends with ${notification.data.username}`
+              });
+              queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
+              markAsRead(notification.id);
+            },
+            onError: (error) => {
+              toast().toast({
+                title: "Error",
+                description: error.message || "Failed to accept friend request",
+                variant: "destructive"
+              });
+            }
+          });
+          
+          // Reject friend request mutation
+          const rejectRequestMutation = useMutation({
+            mutationFn: async () => {
+              return apiRequest("PUT", `/api/social/friends/request/${notification.data.requestId}`, { status: "rejected" });
+            },
+            onSuccess: () => {
+              toast().toast({
+                title: "Friend request rejected",
+                description: "The request has been removed"
+              });
+              queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
+              markAsRead(notification.id);
+            },
+            onError: (error) => {
+              toast().toast({
+                title: "Error",
+                description: error.message || "Failed to reject friend request",
+                variant: "destructive"
+              });
+            }
+          });
+
+          return (
+            <Card key={notification.id} className="mb-2">
+              <CardContent className="p-4">
+                <div className="flex justify-between">
+                  <div className="flex items-center">
+                    <UserPlus className="h-4 w-4 text-indigo-500" />
+                    <h4 className="ml-2 text-sm font-medium">Friend Request</h4>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {format(notification.timestamp, 'HH:mm')}
+                  </div>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  {format(notification.timestamp, 'HH:mm')}
+                <Separator className="my-2" />
+                <div className="flex items-center gap-3 mb-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={notification.data.avatar || undefined} />
+                    <AvatarFallback>{notification.data.username.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <p className="text-sm">{notification.data.username} wants to be your friend</p>
                 </div>
-              </div>
-              <Separator className="my-2" />
-              <div className="flex items-center gap-3 mb-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={notification.data.avatar || undefined} />
-                  <AvatarFallback>{notification.data.username.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <p className="text-sm">{notification.data.username} wants to be your friend</p>
-              </div>
-              <div className="flex space-x-2 mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
-                >
-                  Accept
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
-                >
-                  Reject
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        );
+                <div className="flex space-x-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
+                    onClick={() => acceptRequestMutation.mutate()}
+                    disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
+                  >
+                    {acceptRequestMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                    Accept
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                    onClick={() => rejectRequestMutation.mutate()}
+                    disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
+                  >
+                    {rejectRequestMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <UserMinus className="h-4 w-4 mr-2" />
+                    )}
+                    Reject
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        };
+        
+        return <FriendRequestNotification />;
       }
       
       // For all other friend notifications
