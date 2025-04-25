@@ -50,8 +50,8 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
   const { addNotification } = useNotification();
   const queryClient = useQueryClient();
 
-  const canWithdraw = isUserInGang && (userRank === "Leader" || userRank === "Underboss");
-  const isLeader = isUserInGang && userRank === "Leader";
+  const canWithdraw = isUserInGang && (userRank === "Boss" || userRank === "Underboss");
+  const isLeader = isUserInGang && userRank === "Boss";
   
   // Get user's member object
   const userMember = gang.members?.find(member => member.id === userId);
@@ -378,7 +378,7 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
                 <ActivityItem
                   time="1 day ago"
                   title="Gang Created"
-                  description={`${gang.members?.find(m => m.rank === "Leader")?.username || "Leader"} founded the gang`}
+                  description={`${gang.members?.find(m => m.rank === "Boss")?.username || "Boss"} founded the gang`}
                   icon={<Award className="h-4 w-4 text-amber-400" />}
                 />
               </div>
@@ -462,7 +462,7 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
                             ) : "Withdraw"}
                           </Button>
                         </div>
-                        <p className="text-xs text-gray-400">Only Leaders and Underbosses can withdraw funds</p>
+                        <p className="text-xs text-gray-400">Only Bosses and Underbosses can withdraw funds</p>
                       </div>
                     </>
                   )}
@@ -509,7 +509,7 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
                       <li>Remove your membership immediately</li>
                       <li>Forfeit any contribution rank</li>
                       <li>Remove access to gang resources</li>
-                      {isLeader && <li className="font-bold">As leader, you must promote someone else before leaving</li>}
+                      {isLeader && <li className="font-bold">As boss, you must promote someone else before leaving</li>}
                     </ul>
                   </div>
                 </div>
@@ -547,7 +547,7 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
 // Helper function to get rank colors
 function getRankColor(rank: string) {
   switch (rank) {
-    case "Leader":
+    case "Boss":
       return {
         bg: "bg-gradient-to-br from-amber-500 to-amber-700",
         badge: "bg-amber-900/30 border-amber-700/30 text-amber-400"
@@ -573,7 +573,7 @@ function getRankColor(rank: string) {
 // Helper function to get rank icons
 function getRankIcon(rank: string) {
   switch (rank) {
-    case "Leader":
+    case "Boss":
       return <Crown className="h-3.5 w-3.5 mr-1.5" />;
     case "Underboss":
       return <Shield className="h-3.5 w-3.5 mr-1.5" />;
