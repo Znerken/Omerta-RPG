@@ -49,12 +49,14 @@ export default function DashboardPage() {
 
       {/* User stats */}
       <section className="mb-10">
+        <h2 className="game-section-heading">Your Stats</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Level"
             value={user.level}
             icon={<TrendingUp className="h-6 w-6" />}
             description={`${formatNumber(user.xp || 0)} XP`}
+            className="game-card"
           />
           
           <StatCard
@@ -63,6 +65,7 @@ export default function DashboardPage() {
             icon={<DollarSign className="h-6 w-6" />}
             trend="up"
             trendValue="+12% this week"
+            className="game-card"
           />
           
           <StatCard
@@ -71,6 +74,7 @@ export default function DashboardPage() {
             icon={<FamilyIcon size="md" />}
             trend="neutral"
             trendValue="Stable"
+            className="game-card"
           />
           
           <StatCard
@@ -78,6 +82,7 @@ export default function DashboardPage() {
             value="7"
             icon={<Activity className="h-6 w-6" />}
             description="Completed today"
+            className="game-card"
           />
         </div>
       </section>
@@ -127,7 +132,7 @@ export default function DashboardPage() {
       {/* Criminal Stats */}
       <section className="mb-12">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-heading">Your Criminal Skills</h2>
+          <h2 className="game-section-heading">Your Criminal Skills</h2>
           <Link href="/training">
             <Button variant="outline" size="sm">Train Skills</Button>
           </Link>
@@ -141,6 +146,7 @@ export default function DashboardPage() {
             description="Brute force and physical power"
             color="bg-red-600"
             cooldown={user?.stats?.strengthTrainingCooldown}
+            className="game-card"
           />
           
           <SkillCard 
@@ -150,6 +156,7 @@ export default function DashboardPage() {
             description="Moving unseen and unheard"
             color="bg-green-600"
             cooldown={user?.stats?.stealthTrainingCooldown}
+            className="game-card"
           />
           
           <SkillCard 
@@ -159,6 +166,7 @@ export default function DashboardPage() {
             description="Persuasion and social influence"
             color="bg-blue-600"
             cooldown={user?.stats?.charismaTrainingCooldown}
+            className="game-card"
           />
           
           <SkillCard 
@@ -168,6 +176,7 @@ export default function DashboardPage() {
             description="Planning and problem solving"
             color="bg-yellow-600"
             cooldown={user?.stats?.intelligenceTrainingCooldown}
+            className="game-card"
           />
         </div>
       </section>
@@ -175,7 +184,7 @@ export default function DashboardPage() {
       {/* Available Crimes */}
       <section className="mb-12">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-heading">Available Crimes</h2>
+          <h2 className="game-section-heading">Available Crimes</h2>
           <Link href="/crimes">
             <Button variant="outline" size="sm">View All Crimes</Button>
           </Link>
@@ -199,6 +208,7 @@ export default function DashboardPage() {
                 successChance={crime.successChance || calculateSuccessChance(crime, user?.stats)}
                 cooldown={formatTime(crime.cooldown)}
                 jailRisk={crime.jailRisk}
+                className="game-card"
               />
             ))
           ) : (
@@ -240,7 +250,8 @@ function SkillCard({
   maxValue, 
   color = "bg-primary", 
   description,
-  cooldown
+  cooldown,
+  className
 }: { 
   title: string; 
   value: number; 
@@ -248,20 +259,21 @@ function SkillCard({
   color?: string; 
   description: string;
   cooldown?: string | Date | null;
+  className?: string;
 }) {
   const progress = Math.min(100, Math.floor((value / maxValue) * 100));
   const cooldownDate = cooldown ? new Date(cooldown) : null;
   const isOnCooldown = cooldownDate && cooldownDate > new Date();
   
   return (
-    <Card className="card-mafia overflow-hidden">
+    <Card className={cn("card-mafia overflow-hidden", className)}>
       <div className="p-5">
         <div className="mb-2 flex justify-between items-center">
           <h3 className="font-heading text-lg">{title}</h3>
           <span className="font-mono text-lg">{value}</span>
         </div>
         
-        <div className="w-full bg-muted rounded-full h-2 mb-3">
+        <div className="w-full bg-muted rounded-full h-2 mb-3 progress-bar-animated">
           <div
             className={cn("h-2 rounded-full", color)}
             style={{ width: `${progress}%` }}
@@ -271,8 +283,7 @@ function SkillCard({
         <p className="text-xs text-muted-foreground mb-2">{description}</p>
         
         {isOnCooldown && (
-          <div className="flex items-center text-xs text-yellow-500 mt-1">
-            <Clock className="h-3 w-3 mr-1" />
+          <div className="flex items-center text-xs status-cooldown mt-1">
             <span>Cooldown: {formatCooldown(cooldownDate)}</span>
           </div>
         )}
@@ -288,7 +299,8 @@ function CrimeCard({
   xpReward, 
   successChance, 
   cooldown,
-  jailRisk 
+  jailRisk,
+  className
 }: { 
   name: string; 
   description: string; 
@@ -297,9 +309,10 @@ function CrimeCard({
   successChance: number; 
   cooldown: string;
   jailRisk: number;
+  className?: string;
 }) {
   return (
-    <Card className="card-mafia overflow-hidden">
+    <Card className={cn("card-mafia overflow-hidden", className)}>
       <div className="p-5">
         <div className="flex justify-between items-start mb-3">
           <h3 className="font-heading text-lg">{name}</h3>
@@ -319,12 +332,10 @@ function CrimeCard({
             <TrendingUp className="h-3 w-3 mr-1" />
             <span>{xpReward}</span>
           </div>
-          <div className="flex items-center">
-            <Clock className="h-3 w-3 mr-1" />
+          <div className="flex items-center status-cooldown">
             <span>Cooldown: {cooldown}</span>
           </div>
-          <div className="flex items-center">
-            <DiceIcon size="sm" color="muted" />
+          <div className="flex items-center status-danger">
             <span>Risk: {jailRisk}%</span>
           </div>
         </div>
@@ -334,7 +345,7 @@ function CrimeCard({
             <span>Success Chance</span>
             <span className={getSuccessChanceColor(successChance)}>{successChance}%</span>
           </div>
-          <div className="w-full bg-muted rounded-full h-1.5">
+          <div className="w-full bg-muted rounded-full h-1.5 progress-bar-animated">
             <div
               className={cn("h-1.5 rounded-full", getSuccessChanceBarColor(successChance))}
               style={{ width: `${successChance}%` }}
@@ -343,7 +354,7 @@ function CrimeCard({
         </div>
         
         <div className="mt-4">
-          <Button className="w-full">Execute</Button>
+          <Button className="w-full hover:shadow-glow">Execute</Button>
         </div>
       </div>
     </Card>

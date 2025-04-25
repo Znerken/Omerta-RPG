@@ -6,7 +6,7 @@ import { registerBankingRoutes } from "./banking-routes";
 import { registerAdminRoutes } from "./admin-routes";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
-import { calculateLevelXP } from "../shared/gameUtils";
+import { calculateRequiredXP } from "../shared/gameUtils";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // sets up /api/register, /api/login, /api/logout, /api/user
@@ -35,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Broadcast to all connected clients
   function broadcast(type: string, data: any) {
     wss.clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
+      if (client.readyState === 1) { // WebSocket.OPEN
         client.send(JSON.stringify({ type, data }));
       }
     });
@@ -54,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get next level XP requirement
       const currentLevel = userWithStats!.level;
-      const requiredXP = calculateLevelXP(currentLevel);
+      const requiredXP = calculateRequiredXP(currentLevel);
       
       // Format response
       const dashboardData = {

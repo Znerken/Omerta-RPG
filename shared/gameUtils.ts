@@ -2,7 +2,7 @@
  * Calculate required XP for the next level
  * Uses a simple formula: 100 * level^2
  */
-export function calculateLevelXP(level: number): number {
+export function calculateRequiredXP(level: number): number {
   return 100 * Math.pow(level, 2);
 }
 

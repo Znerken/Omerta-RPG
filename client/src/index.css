@@ -191,3 +191,126 @@ h1, h2, h3, h4, h5, h6 {
 .badge-associate {
   @apply px-2 py-0.5 text-xs font-medium rounded-sm bg-gray-500/20 text-gray-400 border border-gray-500/40;
 }
+
+/* Game-like UI elements */
+.game-card {
+  @apply card-mafia relative overflow-hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.game-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.6);
+}
+
+.game-card::after {
+  content: '';
+  @apply absolute inset-0 rounded-sm;
+  box-shadow: inset 0 0 20px rgba(var(--primary), 0.15);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.game-card:hover::after {
+  opacity: 1;
+}
+
+/* Progress bar with animation */
+.progress-bar-animated {
+  @apply relative overflow-hidden;
+}
+
+.progress-bar-animated::after {
+  content: '';
+  @apply absolute top-0 bottom-0 left-0 right-0 bg-white/10;
+  animation: progress-bar-shine 2s linear infinite;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+}
+
+@keyframes progress-bar-shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Notification badge animation */
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--primary), 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(var(--primary), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--primary), 0);
+  }
+}
+
+.pulse-badge {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Game section heading with decorative elements */
+.game-section-heading {
+  @apply font-heading text-2xl mb-6 relative inline-block;
+}
+
+.game-section-heading::before,
+.game-section-heading::after {
+  content: '';
+  @apply absolute h-0.5;
+  background: linear-gradient(to right, transparent, hsl(var(--primary)), transparent);
+}
+
+.game-section-heading::before {
+  @apply left-0 right-0 -bottom-2;
+}
+
+.game-section-heading::after {
+  @apply left-1/4 right-1/4 -bottom-4;
+}
+
+/* Status indicator blinking effect */
+@keyframes status-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.status-active {
+  @apply inline-flex items-center;
+}
+
+.status-active::before {
+  content: '';
+  @apply w-2 h-2 rounded-full bg-green-500 mr-2;
+  animation: status-blink 2s ease-in-out infinite;
+}
+
+.status-cooldown {
+  @apply inline-flex items-center;
+}
+
+.status-cooldown::before {
+  content: '';
+  @apply w-2 h-2 rounded-full bg-yellow-500 mr-2;
+  animation: status-blink 1.5s ease-in-out infinite;
+}
+
+.status-danger {
+  @apply inline-flex items-center;
+}
+
+.status-danger::before {
+  content: '';
+  @apply w-2 h-2 rounded-full bg-red-500 mr-2;
+  animation: status-blink 0.8s ease-in-out infinite;
+}
