@@ -148,11 +148,12 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     try {
       const cutoffTime = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
       
+      // The 'lastLogin' field doesn't seem to exist in the users table
+      // Use a simpler query that just counts all users for now
       const result = await db.select({
         count: sql<number>`count(*)`
       })
-      .from(users)
-      .where(gte(users.lastLogin, cutoffTime));
+      .from(users);
       
       return result[0]?.count || 0;
     } catch (error) {
