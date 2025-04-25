@@ -41,14 +41,17 @@ const navItems = [
   { name: "Achievements", path: "/achievements", icon: <Award className="h-5 w-5 mr-3" /> },
   { name: "Training", path: "/training", icon: <Dumbbell className="h-5 w-5 mr-3" /> },
   { name: "Gang", path: "/gang", icon: <Users className="h-5 w-5 mr-3" /> },
-  { name: "Friends", path: "/friends", icon: <UserPlus className="h-5 w-5 mr-3" /> },
   { name: "Drugs", path: "/drugs", icon: <Pill className="h-5 w-5 mr-3" /> },
   { name: "Jail", path: "/jail", icon: <Lock className="h-5 w-5 mr-3" /> },
   { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5 mr-3" /> },
   { name: "Banking", path: "/banking", icon: <MoneyBriefcaseIcon className="h-5 w-5 mr-3" /> },
   { name: "Casino", path: "/casino", icon: <DollarSign className="h-5 w-5 mr-3" /> },
-  { name: "Messages", path: "/messages", icon: <MailIcon className="h-5 w-5 mr-3" /> },
   { name: "Leaderboard", path: "/leaderboard", icon: <Trophy className="h-5 w-5 mr-3" /> },
+];
+
+const socialNavItems = [
+  { name: "Friends", path: "/friends", icon: <UserPlus className="h-5 w-5 mr-3" /> },
+  { name: "Messages", path: "/messages", icon: <MailIcon className="h-5 w-5 mr-3" /> },
 ];
 
 export function MafiaLayout({ children }: { children: React.ReactNode }) {
@@ -84,7 +87,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
   
   return (
     <div className="flex h-screen bg-background text-foreground">
-      {/* Sidebar */}
+      {/* Left Sidebar - Main Navigation */}
       <aside className="hidden md:flex md:w-64 flex-col border-r border-border h-screen sticky top-0">
         <div className="flex-1 px-6 py-6 overflow-y-auto">
           <div className="mb-8">
@@ -137,16 +140,6 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
                       {unviewedCount}
                     </Badge>
                   )}
-                  
-                  {/* Display badge for unread messages */}
-                  {item.path === "/messages" && unreadCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
-                    >
-                      {unreadCount}
-                    </Badge>
-                  )}
                 </div>
               </Link>
             ))}
@@ -190,7 +183,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-30 bg-background/95 pt-16">
           <nav className="px-4 py-4 space-y-2">
-            {filteredNavItems.map((item) => (
+            {[...filteredNavItems, ...socialNavItems].map((item) => (
               <Link key={item.path} href={item.path}>
                 <div
                   className={cn(
@@ -244,6 +237,52 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      {/* Right Sidebar - Social */}
+      <aside className="hidden md:flex md:w-64 flex-col border-l border-border h-screen sticky top-0">
+        <div className="flex-1 px-4 py-6 overflow-y-auto">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold mb-4 text-primary">Social</h2>
+            <nav className="space-y-1">
+              {socialNavItems.map((item) => (
+                <Link key={item.path} href={item.path}>
+                  <div
+                    className={cn(
+                      "group flex items-center px-3 py-2 text-sm font-medium rounded-sm transition-colors cursor-pointer",
+                      location === item.path
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    {item.icon}
+                    {item.name}
+                    
+                    {/* Display badge for unread messages */}
+                    {item.path === "/messages" && unreadCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                      >
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </nav>
+          </div>
+          
+          {/* Online Friends Section (Placeholder) */}
+          <div className="mt-8">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Online Friends</h3>
+            <div className="p-4 border border-border rounded-md bg-card/50">
+              <p className="text-sm text-center text-muted-foreground py-6">
+                Visit the Friends page to add friends
+              </p>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
