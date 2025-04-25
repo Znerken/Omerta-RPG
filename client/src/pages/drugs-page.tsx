@@ -750,11 +750,11 @@ function LabsTab() {
     setProductionQuantity(1);
   };
   
-  // Make sure productions is defined before we try to filter it
+  // Use our pure utility function to check completion status
   const completedProductions = productions ? productions.filter(p => {
-    if (!p || !p.completesAt || !p.drug) return false;
-    const completesAt = new Date(p.completesAt);
-    return !p.isCompleted && completesAt <= new Date();
+    if (!p || !p.completesAt || !p.drug || !p.startedAt) return false;
+    const { isCompleted } = calculateProductionTimer(p.completesAt, p.startedAt);
+    return !p.isCompleted && isCompleted; // Not marked as completed in database but actually completed by time
   }) : [];
   
   useEffect(() => {
@@ -1247,29 +1247,12 @@ function LabsTab() {
                 {productions && productions.length > 0 ? (
                   <div className="space-y-4">
                     {productions.filter(p => p && !p.isCompleted && p.drug).map((production) => {
-                      // Manual calculation with refreshTimer to ensure values update every second
-                      // The refreshTimer state triggers re-renders when it changes
-                      const _ = refreshTimer; // use refreshTimer to trigger re-renders
-                      const now = new Date();
-                      const completesAt = new Date(production.completesAt);
-                      const startedAt = new Date(production.startedAt);
-                      const isCompleted = now >= completesAt;
+                      // Force re-render with timer but avoid using hooks in map functions
+                      const _ = refreshTimer; // This triggers re-renders when refreshTimer changes
                       
-                      // Calculate remaining time
-                      const msRemaining = Math.max(0, completesAt.getTime() - now.getTime());
-                      const hoursRemaining = Math.floor(msRemaining / (1000 * 60 * 60));
-                      const minutesRemaining = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
-                      const secondsRemaining = Math.floor((msRemaining % (1000 * 60)) / 1000);
-                      
-                      // Calculate progress percentage
-                      const totalDuration = completesAt.getTime() - startedAt.getTime();
-                      const elapsed = now.getTime() - startedAt.getTime();
-                      const progress = Math.min(100, Math.round((elapsed / totalDuration) * 100));
-                      
-                      // Format countdown with real-time updates
-                      const countdown = isCompleted 
-                        ? "Ready for collection!" 
-                        : `${hoursRemaining}h ${minutesRemaining}m ${secondsRemaining}s`;
+                      // Use our utility function instead of inline calculations
+                      const timerData = calculateProductionTimer(production.completesAt, production.startedAt);
+                      const { isCompleted, progress, hours: hoursRemaining, minutes: minutesRemaining, seconds: secondsRemaining, countdown } = timerData;
                         
                       // Calculate color and style variables based on progress
                       const progressColor = isCompleted 
