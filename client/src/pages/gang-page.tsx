@@ -484,55 +484,177 @@ export default function GangPage() {
           </Card>
 
           {isInGang && (
-            <Card className="bg-dark-surface">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="h-5 w-5 mr-2" />
-                  Gang Members
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-80 overflow-y-auto">
-                  {/* This would be populated with actual data in a real app */}
-                  {[
-                    { id: 1, username: "DonBosco", rank: "Leader" },
-                    { id: 2, username: "LuckyJoe", rank: "Officer" },
-                    { id: 3, username: "ShadowHunter", rank: "Member" },
-                    { id: 4, username: "BigBoss", rank: "Member" },
-                    { id: 5, username: "NightRider", rank: "Member" }
-                  ].map(member => (
-                    <div key={member.id} className="flex items-center justify-between bg-dark-lighter p-2 rounded-lg">
-                      <div className="flex items-center">
-                        <Avatar className="h-8 w-8 mr-2 bg-primary">
-                          <AvatarFallback>{getInitials(member.username)}</AvatarFallback>
-                        </Avatar>
-                        <span>{member.username}</span>
+            <>
+              <Card className="bg-dark-surface mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Users className="h-5 w-5 mr-2" />
+                    Gang Members
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {/* This would be populated with actual data in a real app */}
+                    {[
+                      { id: 1, username: "DonBosco", rank: "Leader" },
+                      { id: 2, username: "LuckyJoe", rank: "Officer" },
+                      { id: 3, username: "ShadowHunter", rank: "Member" },
+                      { id: 4, username: "BigBoss", rank: "Member" },
+                      { id: 5, username: "NightRider", rank: "Member" }
+                    ].map(member => (
+                      <div key={member.id} className="flex items-center justify-between bg-dark-lighter p-2 rounded-lg">
+                        <div className="flex items-center">
+                          <Avatar className="h-8 w-8 mr-2 bg-primary">
+                            <AvatarFallback>{getInitials(member.username)}</AvatarFallback>
+                          </Avatar>
+                          <span>{member.username}</span>
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={`
+                            ${member.rank === 'Leader' 
+                              ? 'bg-primary bg-opacity-20 text-primary' 
+                              : member.rank === 'Officer'
+                              ? 'bg-blue-600 bg-opacity-20 text-blue-400'
+                              : 'bg-gray-600 bg-opacity-20 text-gray-400'
+                            }
+                          `}
+                        >
+                          {member.rank}
+                        </Badge>
                       </div>
-                      <Badge 
-                        variant="outline" 
-                        className={`
-                          ${member.rank === 'Leader' 
-                            ? 'bg-primary bg-opacity-20 text-primary' 
-                            : member.rank === 'Officer'
-                            ? 'bg-blue-600 bg-opacity-20 text-blue-400'
-                            : 'bg-gray-600 bg-opacity-20 text-gray-400'
-                          }
-                        `}
-                      >
-                        {member.rank}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-              {userGangRank === "Leader" && (
-                <CardFooter>
-                  <Button variant="outline" className="w-full bg-dark-lighter hover:bg-dark-lighter/80">
-                    Manage Members
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+                {userGangRank === "Leader" && (
+                  <CardFooter>
+                    <Button variant="outline" className="w-full bg-dark-lighter hover:bg-dark-lighter/80">
+                      Manage Members
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+              
+              <Card className="bg-dark-surface">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <MapPin className="h-5 w-5 mr-2" />
+                    Gang Activities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="territories" className="w-full">
+                    <TabsList className="grid grid-cols-3 mb-4">
+                      <TabsTrigger value="territories">Territories</TabsTrigger>
+                      <TabsTrigger value="wars">Gang Wars</TabsTrigger>
+                      <TabsTrigger value="missions">Missions</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="territories" className="space-y-4">
+                      {gangTerritories && gangTerritories.length > 0 ? (
+                        <div className="space-y-3">
+                          {gangTerritories.map((territory: any) => (
+                            <div key={territory.id} className="bg-dark-lighter rounded-lg p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <h3 className="font-medium">{territory.name}</h3>
+                                <Badge>{territory.controlLevel}% Control</Badge>
+                              </div>
+                              <Progress value={territory.controlLevel} className="h-2 bg-gray-800" />
+                              <div className="flex justify-between text-xs text-gray-400 mt-2">
+                                <span>Income: {formatCurrency(territory.income)} / day</span>
+                                <span>Since: {formatDate(new Date(territory.capturedAt))}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-dark-lighter rounded-lg p-4 text-center">
+                          <MapPin className="h-10 w-10 mx-auto mb-2 text-gray-500" />
+                          <h3 className="text-lg font-medium mb-1">No Territories</h3>
+                          <p className="text-sm text-gray-400 mb-4">Your gang doesn't control any territories yet.</p>
+                          <Button className="bg-primary hover:bg-primary/80">
+                            Find Territories to Attack
+                          </Button>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="wars" className="space-y-4">
+                      {activeWars && activeWars.length > 0 ? (
+                        <div className="space-y-3">
+                          {activeWars.map((war: any) => (
+                            <div key={war.id} className="bg-dark-lighter rounded-lg p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center">
+                                  <Swords className="h-5 w-5 mr-2 text-red-500" />
+                                  <span>War vs {war.enemyGang.name}</span>
+                                </div>
+                                <Badge variant="destructive">Active</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 mt-3">
+                                <div className="text-center p-2 bg-dark-surface rounded">
+                                  <div className="text-xl font-mono font-bold">{war.ourScore}</div>
+                                  <div className="text-xs text-gray-400">Our Score</div>
+                                </div>
+                                <div className="text-center p-2 bg-dark-surface rounded">
+                                  <div className="text-xl font-mono font-bold">{war.enemyScore}</div>
+                                  <div className="text-xs text-gray-400">Enemy Score</div>
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-400 mt-3">
+                                Started: {formatDate(new Date(war.startedAt))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-dark-lighter rounded-lg p-4 text-center">
+                          <Swords className="h-10 w-10 mx-auto mb-2 text-gray-500" />
+                          <h3 className="text-lg font-medium mb-1">No Active Wars</h3>
+                          <p className="text-sm text-gray-400 mb-4">Your gang is not currently at war with anyone.</p>
+                          <Button className="bg-primary hover:bg-primary/80" onClick={() => startGangWar(0)}>
+                            Declare War
+                          </Button>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="missions" className="space-y-4">
+                      {activeMissions && activeMissions.length > 0 ? (
+                        <div className="space-y-3">
+                          {activeMissions.map((mission: any) => (
+                            <div key={mission.id} className="bg-dark-lighter rounded-lg p-3">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center">
+                                  <Target className="h-5 w-5 mr-2 text-primary" />
+                                  <span>{mission.name}</span>
+                                </div>
+                                <Badge>In Progress</Badge>
+                              </div>
+                              <p className="text-sm text-gray-400 mb-2">{mission.description}</p>
+                              <Progress value={mission.progress} className="h-2 bg-gray-800" />
+                              <div className="flex justify-between text-xs text-gray-400 mt-2">
+                                <span>Reward: {formatCurrency(mission.reward)}</span>
+                                <span>Expires: {formatDate(new Date(mission.expiresAt))}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-dark-lighter rounded-lg p-4 text-center">
+                          <Target className="h-10 w-10 mx-auto mb-2 text-gray-500" />
+                          <h3 className="text-lg font-medium mb-1">No Active Missions</h3>
+                          <p className="text-sm text-gray-400 mb-4">Your gang has no active missions.</p>
+                          <Button className="bg-primary hover:bg-primary/80" onClick={() => acceptMission(0)}>
+                            Find Missions
+                          </Button>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
       </div>
