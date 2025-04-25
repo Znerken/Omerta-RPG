@@ -108,69 +108,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       
-      // First, log direct database query result
-      console.log("DIRECT DB QUERY - Checking gang_members for user", userId);
-      const gangRecord = await db.query.gangMembers.findFirst({
-        where: eq(gangMembers.userId, userId),
-        with: {
-          gang: true
-        }
-      });
-      console.log("DIRECT DB QUERY RESULT:", gangRecord);
-      
-      // Now proceed with regular fetch
-      const userWithStats = await storage.getUserWithStats(userId);
+      // Get gang member info directly
       const gangMember = await storage.getGangMember(userId);
+      console.log("Gang Member:", gangMember);
       
-      // Get the gang directly from the database as a fallback
-      const gangData = gangMember?.gang || (gangRecord ? {
-        id: gangRecord.gang.id,
-        name: gangRecord.gang.name,
-        tag: gangRecord.gang.tag,
-        description: gangRecord.gang.description,
-        level: gangRecord.gang.level
-      } : null);
+      // Get user profile with gang info
+      const userData = await storage.getUserProfile(userId);
+      if (!userData) {
+        // If no user profile found, return a basic profile with user data
+        return res.json({
+          ...req.user,
+          gangMember: gangMember || null,
+          inGang: !!gangMember,
+          gang: gangMember?.gang || null,
+          gangRank: gangMember?.rank || null
+        });
+      }
       
-      // Check multiple sources of gang membership
-      const hasGangMember = !!gangMember;
-      const hasGangRecord = !!gangRecord;
-      const hasUserGangId = !!userWithStats?.gangId;
-      
-      // Format response with all user data including explicit gang membership
-      // Include both gangMember and direct gang info for compatibility
-      const profileData = {
-        ...userWithStats,
-        gangMember: gangMember || (gangRecord ? { 
-          userId: gangRecord.userId,
-          gangId: gangRecord.gangId,
-          rank: gangRecord.rank,
-          gang: gangData
-        } : null),
-        inGang: !!(hasGangMember || hasGangRecord || hasUserGangId),
-        gang: gangData,
-        gangRank: gangMember?.rank || gangRecord?.rank || "Member",
-        // Include these fields for debugging
-        _debug: {
-          hasGangMember,
-          hasGangRecord,
-          hasUserGangId,
-          userGangId: userWithStats?.gangId
-        }
-      };
-      
-      console.log("===== FULL PROFILE RESPONSE =====");
-      console.log("User ID:", userId);
-      console.log("Gang Member via storage:", gangMember ? "Found" : "Not found"); 
-      console.log("Gang Member via direct query:", gangRecord ? "Found" : "Not found");
-      console.log("Is In Gang:", profileData.inGang);
-      console.log("Gang Data:", profileData.gang);
-      console.log("Gang Rank:", profileData.gangRank);
-      console.log("===============================");
-      
-      res.json(profileData);
+      res.json(userData);
     } catch (error) {
-      console.error("Error fetching user profile:", error);
-      res.status(500).json({ message: "Failed to fetch user profile" });
+      console.error("Error getting user profile:", error);
+      res.status(500).json({ message: "Failed to get user profile" });
     }
   });
   
