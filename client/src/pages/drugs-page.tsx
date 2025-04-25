@@ -37,7 +37,17 @@ import {
   Plus,
   Minus,
   Clock,
-  BadgePercent
+  BadgePercent,
+  Warehouse, 
+  Box, // Instead of PackageCheck
+  Home,
+  ChevronsDown, // Instead of StairsDown
+  Mountain,
+  Building,
+  Anchor,
+  Zap, // Instead of Nfc
+  Rocket,
+  Gauge
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
