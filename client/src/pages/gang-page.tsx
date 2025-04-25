@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
+import { useNotification } from "@/hooks/use-notification";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +31,7 @@ type CreateGangValues = z.infer<typeof createGangSchema>;
 export default function GangPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { addNotification } = useNotification();
   const queryClient = useQueryClient();
 
   const { data: userProfile, isLoading: profileLoading } = useQuery({
@@ -54,20 +56,54 @@ export default function GangPage() {
       const res = await apiRequest("POST", "/api/gangs", data);
       return await res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Gang Created",
-        description: "Your gang has been successfully created!",
+    onSuccess: (data) => {
+      const title = "Gang Created";
+      const message = "Your gang has been successfully created!";
+      
+      // Add to notification system
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "success",
+        read: false,
+        timestamp: new Date(),
+        data: {
+          gangId: data?.id,
+          gangName: data?.name,
+          gangTag: data?.tag,
+          isOwner: true,
+          action: "create"
+        }
       });
+      
+      toast({
+        title: title,
+        description: message,
+      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/gangs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
       setIsCreateDialogOpen(false);
       form.reset();
     },
     onError: (error) => {
+      const title = "Failed to Create Gang";
+      const message = error.message || "There was an error creating your gang. Please try again.";
+      
+      // Add error notification
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+      
       toast({
-        title: "Failed to Create Gang",
-        description: error.message,
+        title: title,
+        description: message,
         variant: "destructive",
       });
     },
@@ -79,17 +115,51 @@ export default function GangPage() {
       return await res.json();
     },
     onSuccess: (data) => {
-      toast({
-        title: "Gang Joined",
-        description: data.message,
+      const title = "Gang Joined";
+      const message = data.message || "You've successfully joined the gang.";
+      
+      // Add success notification
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "success",
+        read: false,
+        timestamp: new Date(),
+        data: {
+          gangId: data?.gangId,
+          gangName: data?.gangName || "Unknown gang",
+          gangTag: data?.gangTag,
+          isOwner: false,
+          action: "join"
+        }
       });
+      
+      toast({
+        title: title,
+        description: message,
+      });
+      
       queryClient.invalidateQueries({ queryKey: ["/api/gangs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
     },
     onError: (error) => {
+      const title = "Failed to Join Gang";
+      const message = error.message || "There was an error joining the gang. Please try again.";
+      
+      // Add error notification
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+      
       toast({
-        title: "Failed to Join Gang",
-        description: error.message,
+        title: title,
+        description: message,
         variant: "destructive",
       });
     },
