@@ -301,4 +301,48 @@ export function registerSocialRoutes(app: Express) {
       res.status(500).json({ message: "Failed to get online users" });
     }
   });
+  
+  // Search for users by username
+  app.get("/api/social/users/search", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const searchQuery = req.query.q as string;
+      
+      if (!searchQuery || searchQuery.trim().length < 3) {
+        return res.status(400).json({ message: "Search query must be at least 3 characters" });
+      }
+      
+      // Get users matching the search query
+      const users = await storage.getAllUsers(1, 10, searchQuery);
+      const currentUserId = req.user.id;
+      
+      // For each user, check if they are already a friend
+      const resultsWithFriendStatus = await Promise.all(users.map(async (user) => {
+        // Skip self in results
+        if (user.id === currentUserId) {
+          return null;
+        }
+        
+        // Check friendship status
+        const userWithStatus = await storage.getUserWithStatus(user.id, currentUserId);
+        
+        return {
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          isFriend: userWithStatus?.isFriend || false,
+          friendStatus: userWithStatus?.friendStatus || null
+        };
+      }));
+      
+      // Filter out null results (self)
+      const filteredResults = resultsWithFriendStatus.filter(u => u !== null);
+      
+      res.json(filteredResults);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Failed to search users" });
+    }
+  });
 }
