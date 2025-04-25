@@ -18,7 +18,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Friend } from "@/types";
+import { Friend, PendingFriendRequest, SentFriendRequest } from "@/types/social";
 import { FriendIndicator } from "./FriendIndicator";
 
 export function FriendsList() {

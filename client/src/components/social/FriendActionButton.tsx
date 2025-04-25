@@ -1,26 +1,20 @@
-import React, { useState } from 'react';
+import React from "react";
+import { Button, ButtonProps } from "@/components/ui/button";
 import { 
   UserPlus, 
   UserMinus, 
-  Check, 
-  X, 
-  Clock, 
-  HelpCircle, 
-  UserCheck,
-  MoreHorizontal
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { useToast } from '@/hooks/use-toast';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  User, 
+  Loader2, 
+  MessageSquare,
+  Check,
+  X
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-interface FriendActionButtonProps {
+interface FriendActionButtonProps extends Omit<ButtonProps, 'onClick'> {
   userId: number;
   friendStatus?: string;
   friendRequest?: {
@@ -35,264 +29,231 @@ interface FriendActionButtonProps {
 }
 
 export function FriendActionButton({ 
-  userId, 
-  friendStatus, 
-  friendRequest, 
-  onActionComplete, 
+  userId,
+  friendStatus,
+  friendRequest,
+  onActionComplete,
+  className,
   size = 'default',
-  variant = 'default' 
+  variant = 'outline',
+  ...props
 }: FriendActionButtonProps) {
-  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
-  // Function to determine what to display based on status
-  const getActionInfo = () => {
-    if (friendStatus === 'friends') {
-      return {
-        label: 'Friends',
-        icon: <UserCheck className="mr-2 h-4 w-4" />,
-      };
-    } else if (friendStatus === 'sent') {
-      return {
-        label: 'Pending',
-        icon: <Clock className="mr-2 h-4 w-4" />,
-      };
-    } else if (friendStatus === 'received') {
-      return {
-        label: 'Respond',
-        icon: <HelpCircle className="mr-2 h-4 w-4" />,
-      };
-    } else {
-      return {
-        label: 'Add Friend',
-        icon: <UserPlus className="mr-2 h-4 w-4" />,
-      };
-    }
-  };
+  const { toast } = useToast();
 
   // Send friend request mutation
   const sendRequestMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/social/friends/request', { receiverId: userId });
-      return await response.json();
+    mutationFn: async (receiverId: number) => {
+      return apiRequest("POST", "/api/social/friends/request", { receiverId });
     },
     onSuccess: () => {
       toast({
-        title: 'Friend request sent',
-        description: 'Your friend request has been sent successfully.'
+        title: "Friend request sent",
+        description: "They'll be notified of your request"
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/users', userId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/sent"] });
       if (onActionComplete) onActionComplete();
     },
     onError: (error: Error) => {
       toast({
-        title: 'Failed to send friend request',
+        title: "Failed to send friend request",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive"
       });
     }
   });
 
   // Accept friend request mutation
   const acceptRequestMutation = useMutation({
-    mutationFn: async () => {
-      if (!friendRequest) throw new Error('No friend request found');
-      const response = await apiRequest('PUT', `/api/social/friends/request/${friendRequest.id}`, { status: 'accepted' });
-      return await response.json();
+    mutationFn: async (requestId: number) => {
+      return apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "accepted" });
     },
     onSuccess: () => {
       toast({
-        title: 'Friend request accepted',
-        description: 'You are now friends!'
+        title: "Friend request accepted",
+        description: "You are now friends with this user"
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/users', userId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/friends/requests/pending'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/pending"] });
       if (onActionComplete) onActionComplete();
     },
     onError: (error: Error) => {
       toast({
-        title: 'Failed to accept friend request',
+        title: "Failed to accept friend request",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive"
       });
     }
   });
 
   // Reject friend request mutation
   const rejectRequestMutation = useMutation({
-    mutationFn: async () => {
-      if (!friendRequest) throw new Error('No friend request found');
-      const response = await apiRequest('PUT', `/api/social/friends/request/${friendRequest.id}`, { status: 'rejected' });
-      return await response.json();
+    mutationFn: async (requestId: number) => {
+      return apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "rejected" });
     },
     onSuccess: () => {
       toast({
-        title: 'Friend request rejected',
-        description: 'The friend request has been rejected.'
+        title: "Friend request rejected",
+        description: "The request has been rejected"
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/users', userId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/friends/requests/pending'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/pending"] });
       if (onActionComplete) onActionComplete();
     },
     onError: (error: Error) => {
       toast({
-        title: 'Failed to reject friend request',
+        title: "Failed to reject friend request",
         description: error.message,
-        variant: 'destructive'
-      });
-    }
-  });
-
-  // Remove friend mutation
-  const removeFriendMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('DELETE', `/api/social/friends/${userId}`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to remove friend');
-      }
-      return await response.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: 'Friend removed',
-        description: 'You are no longer friends with this user.'
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/users', userId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] });
-      if (onActionComplete) onActionComplete();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: 'Failed to remove friend',
-        description: error.message,
-        variant: 'destructive'
+        variant: "destructive"
       });
     }
   });
 
   // Cancel friend request mutation
   const cancelRequestMutation = useMutation({
-    mutationFn: async () => {
-      if (!friendRequest) throw new Error('No friend request found');
-      const response = await apiRequest('DELETE', `/api/social/friends/request/${friendRequest.id}`);
-      return await response.json();
+    mutationFn: async (requestId: number) => {
+      return apiRequest("DELETE", `/api/social/friends/request/${requestId}`);
     },
     onSuccess: () => {
       toast({
-        title: 'Friend request canceled',
-        description: 'Your friend request has been canceled.'
+        title: "Friend request cancelled",
+        description: "Your request has been cancelled"
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/users', userId.toString()] });
-      queryClient.invalidateQueries({ queryKey: ['/api/social/friends/requests/sent'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/sent"] });
       if (onActionComplete) onActionComplete();
     },
     onError: (error: Error) => {
       toast({
-        title: 'Failed to cancel friend request',
+        title: "Failed to cancel friend request",
         description: error.message,
-        variant: 'destructive'
+        variant: "destructive"
       });
     }
   });
 
-  const handleButtonClick = () => {
-    if (friendStatus === 'friends') {
-      // If friends, show dropdown menu
-      setIsDropdownOpen(true);
-    } else if (friendStatus === 'sent') {
-      // If request sent, cancel the request
-      cancelRequestMutation.mutate();
-    } else if (friendStatus === 'received') {
-      // If request received, show dropdown for accept/reject
-      setIsDropdownOpen(true);
-    } else {
-      // If not friends, send friend request
-      sendRequestMutation.mutate();
+  // Remove friend mutation
+  const removeFriendMutation = useMutation({
+    mutationFn: async (friendId: number) => {
+      return apiRequest("DELETE", `/api/social/friends/${friendId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Friend removed",
+        description: "This user has been removed from your friends list"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+      if (onActionComplete) onActionComplete();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to remove friend",
+        description: error.message,
+        variant: "destructive"
+      });
     }
-  };
+  });
 
-  const { label, icon } = getActionInfo();
+  // Determine loading state
   const isLoading = 
     sendRequestMutation.isPending || 
     acceptRequestMutation.isPending || 
     rejectRequestMutation.isPending || 
-    removeFriendMutation.isPending ||
-    cancelRequestMutation.isPending;
+    cancelRequestMutation.isPending || 
+    removeFriendMutation.isPending;
 
-  // For existing friends, show dropdown with option to remove friend
-  if (friendStatus === 'friends') {
+  // Render different button based on friend status
+  if (friendStatus === "friends") {
     return (
-      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant={variant}
-            size={size}
-            disabled={isLoading}
-          >
-            {icon} {label}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem 
-            onClick={() => removeFriendMutation.mutate()}
-            className="text-destructive focus:text-destructive"
-          >
-            <UserMinus className="mr-2 h-4 w-4" />
-            Remove Friend
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        variant={variant}
+        size={size}
+        className={cn("text-red-500 border-red-500/20 hover:bg-red-500/10", className)}
+        onClick={() => removeFriendMutation.mutate(userId)}
+        disabled={isLoading}
+        {...props}
+      >
+        {isLoading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <UserMinus className="mr-2 h-4 w-4" />
+        )}
+        Remove Friend
+      </Button>
     );
   }
 
-  // For received requests, show dropdown with accept/reject options
-  if (friendStatus === 'received') {
+  if (friendStatus === "sent") {
     return (
-      <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant={variant}
-            size={size}
-            disabled={isLoading}
-          >
-            {icon} {label}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuItem onClick={() => acceptRequestMutation.mutate()}>
+      <Button
+        variant={variant}
+        size={size}
+        className={cn("text-red-500 border-red-500/20 hover:bg-red-500/10", className)}
+        onClick={() => friendRequest && cancelRequestMutation.mutate(friendRequest.id)}
+        disabled={isLoading}
+        {...props}
+      >
+        {isLoading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+          <X className="mr-2 h-4 w-4" />
+        )}
+        Cancel Request
+      </Button>
+    );
+  }
+
+  if (friendStatus === "received") {
+    return (
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size={size}
+          className={cn("text-green-500 border-green-500/20 hover:bg-green-500/10", className)}
+          onClick={() => friendRequest && acceptRequestMutation.mutate(friendRequest.id)}
+          disabled={isLoading}
+          {...props}
+        >
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
             <Check className="mr-2 h-4 w-4" />
-            Accept
-          </DropdownMenuItem>
-          <DropdownMenuItem 
-            onClick={() => rejectRequestMutation.mutate()}
-            className="text-destructive focus:text-destructive"
-          >
+          )}
+          Accept
+        </Button>
+        <Button
+          variant="outline"
+          size={size}
+          className={cn("text-red-500 border-red-500/20 hover:bg-red-500/10", className)}
+          onClick={() => friendRequest && rejectRequestMutation.mutate(friendRequest.id)}
+          disabled={isLoading}
+          {...props}
+        >
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
             <X className="mr-2 h-4 w-4" />
-            Reject
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          )}
+          Reject
+        </Button>
+      </div>
     );
   }
 
-  // For other statuses (sent or none), just show the button
+  // Default = not friends
   return (
     <Button
       variant={variant}
       size={size}
+      className={cn(className)}
+      onClick={() => sendRequestMutation.mutate(userId)}
       disabled={isLoading}
-      onClick={handleButtonClick}
+      {...props}
     >
       {isLoading ? (
-        <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
       ) : (
-        icon
+        <UserPlus className="mr-2 h-4 w-4" />
       )}
-      {label}
+      Add Friend
     </Button>
   );
 }

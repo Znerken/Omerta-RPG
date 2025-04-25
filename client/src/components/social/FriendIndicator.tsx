@@ -1,7 +1,7 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatusIndicator } from "./StatusIndicator";
-import { Friend } from "@/types";
+import { Friend } from "@/types/social";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { MessageSquare, UserMinus } from "lucide-react";

@@ -440,6 +440,48 @@ export function registerSocialRoutes(app: Express) {
     }
   });
   
+  // Cancel friend request
+  app.delete("/api/social/friends/request/:requestId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const requestId = parseInt(req.params.requestId);
+      
+      // Get the friend request
+      const friendRequest = await storage.getFriendRequest(null, null, requestId);
+      if (!friendRequest) {
+        return res.status(404).json({ message: "Friend request not found" });
+      }
+      
+      // Verify the current user is the sender of the request
+      if (friendRequest.senderId !== req.user.id) {
+        return res.status(403).json({ message: "Not authorized to cancel this request" });
+      }
+      
+      // Delete the request
+      const deleted = await db.delete(friendRequests).where(eq(friendRequests.id, requestId)).returning();
+      
+      if (!deleted || deleted.length === 0) {
+        return res.status(404).json({ message: "Friend request not found" });
+      }
+      
+      // Notify the recipient that the request was canceled
+      notifyUser(friendRequest.receiverId, "friend_request_canceled", {
+        requestId: friendRequest.id,
+        from: {
+          id: req.user.id,
+          username: req.user.username,
+          avatar: req.user.avatar
+        }
+      });
+      
+      res.json({ success: true, message: "Friend request canceled" });
+    } catch (error) {
+      console.error("Error canceling friend request:", error);
+      res.status(500).json({ message: "Failed to cancel friend request" });
+    }
+  });
+  
   // Remove friend
   app.delete("/api/social/friends/:friendId", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
