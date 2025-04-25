@@ -12,35 +12,54 @@ import {
   Coins, 
   Zap, 
   Heart, 
-  Package 
+  Package,
+  Star,
+  TrendingUp
 } from "lucide-react";
 import { formatDistanceToNow, format, isAfter, isPast, isFuture } from "date-fns";
 
-// Types for challenges
+// Types for challenges (matching DB structure)
 interface Challenge {
   id: number;
   name: string;
   description: string;
   type: string;
-  targetValue: number;
-  startDate: string;
-  endDate: string | null;
-  cashReward: number;
-  xpReward: number;
-  respectReward: number;
-  itemReward: number | null;
+  difficulty: string;
+  start_date: string;
+  end_date: string | null;
+  cash_reward: number;
+  xp_reward: number;
+  respect_reward: number;
+  special_item_id: number | null;
+  requirement_type: string;
+  requirement_value: number;
+  requirement_target: string;
+  active: boolean;
+  time_limit: number | null;
+  image_url: string | null;
 }
 
 interface ChallengeProgress {
-  userId: number;
-  challengeId: number;
-  currentValue: number;
+  id: number;
+  user_id: number;
+  challenge_id: number;
+  current_value: number;
   completed: boolean;
+  completed_at: string | null;
   claimed: boolean;
+  created_at: string;
 }
 
 interface ChallengeWithProgress extends Challenge {
   progress?: ChallengeProgress;
+  // Added for convenience in UI
+  targetValue?: number; 
+  startDate?: string;
+  endDate?: string | null;
+  cashReward?: number;
+  xpReward?: number;
+  respectReward?: number;
+  itemReward?: number | null;
 }
 
 export default function ChallengesPage() {
@@ -111,8 +130,8 @@ export default function ChallengesPage() {
 
   // Helper function to determine if a challenge is active
   const isChallengeActive = (challenge: Challenge) => {
-    const start = new Date(challenge.startDate);
-    const end = challenge.endDate ? new Date(challenge.endDate) : null;
+    const start = new Date(challenge.start_date);
+    const end = challenge.end_date ? new Date(challenge.end_date) : null;
     const now = new Date();
     
     if (isFuture(start)) return false;
@@ -123,9 +142,9 @@ export default function ChallengesPage() {
 
   // Helper function to get the time remaining for a challenge
   const getRemainingTime = (challenge: Challenge) => {
-    if (!challenge.endDate) return "No end date";
+    if (!challenge.end_date) return "No end date";
     
-    const endDate = new Date(challenge.endDate);
+    const endDate = new Date(challenge.end_date);
     if (isPast(endDate)) return "Expired";
     
     return formatDistanceToNow(endDate, { addSuffix: true });
@@ -134,7 +153,7 @@ export default function ChallengesPage() {
   // Function to get the progress percentage for a challenge
   const getProgressPercentage = (challenge: ChallengeWithProgress) => {
     if (!challenge.progress) return 0;
-    const percentage = (challenge.progress.currentValue / challenge.targetValue) * 100;
+    const percentage = (challenge.progress.current_value / challenge.requirement_value) * 100;
     return Math.min(100, Math.max(0, percentage));
   };
 
