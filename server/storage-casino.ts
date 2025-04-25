@@ -210,8 +210,18 @@ export class CasinoStorage {
         SELECT * FROM casino_bets WHERE id = ${id}
       `);
       
-      if (Array.isArray(currentBet) && currentBet.length > 0) {
-        console.log('Current bet found:', JSON.stringify(currentBet[0], null, 2));
+      // Check if currentBet has rows property (which seems to be the case)
+      if (currentBet && currentBet.rows && currentBet.rows.length > 0) {
+        console.log('Current bet found:', JSON.stringify(currentBet.rows[0], null, 2));
+        if (currentBet.rows[0].bet_details) {
+          console.log('Current bet_details:', JSON.stringify(currentBet.rows[0].bet_details, null, 2));
+        } else {
+          console.log('No bet_details found in current bet');
+        }
+      } 
+      // Fallback to direct array approach
+      else if (Array.isArray(currentBet) && currentBet.length > 0) {
+        console.log('Current bet found (array approach):', JSON.stringify(currentBet[0], null, 2));
         if (currentBet[0].bet_details) {
           console.log('Current bet_details:', JSON.stringify(currentBet[0].bet_details, null, 2));
         } else {
@@ -234,30 +244,55 @@ export class CasinoStorage {
         RETURNING *
       `);
       
-      // Check if we have valid results
-      if (!Array.isArray(queryResult) || queryResult.length === 0) {
+      // Check if result is in rows property
+      if (queryResult && queryResult.rows && queryResult.rows.length > 0) {
+        console.log('Using rows property for query result');
+        const updatedBet = queryResult.rows[0];
+        
+        // Transform to match the expected structure
+        const transformedBet = {
+          id: updatedBet.id,
+          userId: updatedBet.user_id,
+          gameId: updatedBet.game_id,
+          betAmount: updatedBet.bet_amount,
+          betDetails: updatedBet.bet_details || {},
+          status: updatedBet.status,
+          result: updatedBet.result || {},
+          createdAt: updatedBet.created_at,
+          settledAt: updatedBet.settled_at
+        };
+        
+        console.log('Updated bet with details (rows approach):', JSON.stringify(transformedBet, null, 2));
+        console.log('==== END UPDATE BET RESULT DEBUG INFO ====\n');
+        
+        return transformedBet;
+      }
+      // Fallback to direct array approach
+      else if (Array.isArray(queryResult) && queryResult.length > 0) {
+        console.log('Using direct array for query result');
+        const updatedBet = queryResult[0];
+      
+        // Transform to match the expected structure
+        const transformedBet = {
+          id: updatedBet.id,
+          userId: updatedBet.user_id,
+          gameId: updatedBet.game_id,
+          betAmount: updatedBet.bet_amount,
+          betDetails: updatedBet.bet_details || {},
+          status: updatedBet.status,
+          result: updatedBet.result || {},
+          createdAt: updatedBet.created_at,
+          settledAt: updatedBet.settled_at
+        };
+        
+        console.log('Updated bet with details:', JSON.stringify(transformedBet, null, 2));
+        console.log('==== END UPDATE BET RESULT DEBUG INFO ====\n');
+        
+        return transformedBet;
+      } else {
+        console.log('No valid results found in updateBetResult');
         return undefined;
       }
-      
-      const updatedBet = queryResult[0];
-      
-      // Transform to match the expected structure
-      const transformedBet = {
-        id: updatedBet.id,
-        userId: updatedBet.user_id,
-        gameId: updatedBet.game_id,
-        betAmount: updatedBet.bet_amount,
-        betDetails: updatedBet.bet_details || {},
-        status: updatedBet.status,
-        result: updatedBet.result,
-        createdAt: updatedBet.created_at,
-        settledAt: updatedBet.settled_at
-      };
-      
-      console.log('Updated bet with details:', JSON.stringify(transformedBet, null, 2));
-      console.log('==== END UPDATE BET RESULT DEBUG INFO ====\n');
-      
-      return transformedBet;
     } catch (error) {
       console.error('Error updating bet result:', error);
       return undefined;
@@ -418,6 +453,30 @@ export class CasinoStorage {
         WHERE cs.user_id = ${userId} AND cs.game_id = ${gameId}
       `);
       
+      // Check if result has rows property
+      if (result && result.rows && result.rows.length > 0) {
+        console.log('Using rows property for getUserGameStats');
+        const stat = result.rows[0];
+        
+        // Transform to match the expected structure
+        return {
+          id: stat.id,
+          userId: stat.user_id,
+          gameId: stat.game_id,
+          totalBets: stat.total_bets,
+          totalWagered: stat.total_wagered,
+          totalWon: stat.total_won,
+          totalLost: stat.total_lost,
+          biggestWin: stat.biggest_win,
+          biggestLoss: stat.biggest_loss,
+          game: {
+            name: stat.game_name,
+            type: stat.game_type
+          }
+        };
+      }
+      
+      // Fallback to direct array approach
       // Ensure we have an array to work with
       const resultArray = Array.isArray(result) ? result : [];
       
@@ -487,12 +546,19 @@ export class CasinoStorage {
         RETURNING *
       `);
       
-      // Ensure we can safely access the first element
-      if (!Array.isArray(result) || result.length === 0) {
-        throw new Error('Failed to create casino stats');
+      // Check if result has rows property
+      let newStats;
+      if (result && result.rows && result.rows.length > 0) {
+        console.log('Using rows property for createUserGameStats');
+        newStats = result.rows[0];
       }
-      
-      const newStats = result[0];
+      // Fallback to direct array approach
+      else if (Array.isArray(result) && result.length > 0) {
+        newStats = result[0];
+      }
+      else {
+        throw new Error('Failed to create casino stats - no valid result found');
+      }
       
       // Get the game info for proper structure
       const gameResult = await db.execute(sql`
@@ -589,11 +655,20 @@ export class CasinoStorage {
         `);
         
         // Ensure we can safely access the updated stats
-        if (!Array.isArray(result) || result.length === 0) {
-          throw new Error('Failed to update casino stats');
-        }
+        let updatedStats;
         
-        const updatedStats = result[0];
+        // Check if result has rows property
+        if (result && result.rows && result.rows.length > 0) {
+          console.log('Using rows property for updateUserGameStats');
+          updatedStats = result.rows[0];
+        }
+        // Fallback to direct array approach
+        else if (Array.isArray(result) && result.length > 0) {
+          updatedStats = result[0];
+        }
+        else {
+          throw new Error('Failed to update casino stats - no valid result found');
+        }
         
         // Get the game info for proper structure
         const gameResult = await db.execute(sql`
@@ -660,6 +735,27 @@ export class CasinoStorage {
         WHERE cs.user_id = ${userId}
       `);
       
+      // Check if result has rows property
+      if (stats && stats.rows && Array.isArray(stats.rows)) {
+        console.log('Using rows property for getUserStats');
+        return stats.rows.map((stat: any) => ({
+          id: stat.id,
+          userId: stat.user_id,
+          gameId: stat.game_id,
+          totalBets: stat.total_bets,
+          totalWagered: stat.total_wagered,
+          totalWon: stat.total_won,
+          totalLost: stat.total_lost,
+          biggestWin: stat.biggest_win,
+          biggestLoss: stat.biggest_loss,
+          game: {
+            name: stat.game_name,
+            type: stat.game_type
+          }
+        }));
+      }
+      
+      // Fallback to direct array approach
       // Ensure we have an array to work with
       const statsArray = Array.isArray(stats) ? stats : [];
       
@@ -702,6 +798,19 @@ export class CasinoStorage {
         LIMIT ${limit}
       `);
       
+      // Check if result has rows property
+      if (queryResults && queryResults.rows && Array.isArray(queryResults.rows)) {
+        console.log('Using rows property for getTopWinners');
+        return queryResults.rows.map((result: any) => ({
+          userId: result.user_id,
+          username: result.username,
+          totalWon: result.total_won,
+          totalLost: result.total_lost,
+          netProfit: result.net_profit
+        }));
+      }
+      
+      // Fallback to direct array approach
       // Ensure we have an array to work with
       const resultsArray = Array.isArray(queryResults) ? queryResults : [];
       
