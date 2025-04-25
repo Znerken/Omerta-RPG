@@ -856,37 +856,46 @@ function LabsTab() {
                         
                         {/* Location description */}
                         <div className="mt-3 p-3 bg-black/30 rounded border border-primary/10 text-xs">
-                          <div className="flex items-center mb-2">
-                            <span className="mr-2">
-                              {locationDescriptions[selectedLocation].icon}
-                            </span>
-                            <span className="font-semibold">{selectedLocation}</span>
-                          </div>
-                          <p className="text-muted-foreground mb-2">{locationDescriptions[selectedLocation].description}</p>
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
-                            <div className="flex items-center">
-                              <Gauge className="h-3 w-3 mr-1.5 text-red-400" />
-                              <span>
-                                Risk: 
-                                <span className={locationDescriptions[selectedLocation].riskModifier < 0 ? 'text-green-400' : 
-                                                   locationDescriptions[selectedLocation].riskModifier > 0 ? 'text-red-400' : 'text-yellow-400'}>
-                                  {' '}{locationDescriptions[selectedLocation].riskModifier > 0 ? '+' : ''}
-                                  {locationDescriptions[selectedLocation].riskModifier}%
+                          {selectedLocation && locationDescriptions[selectedLocation] ? (
+                            <>
+                              <div className="flex items-center mb-2">
+                                <span className="mr-2">
+                                  {locationDescriptions[selectedLocation].icon}
                                 </span>
-                              </span>
+                                <span className="font-semibold">{selectedLocation}</span>
+                              </div>
+                              <p className="text-muted-foreground mb-2">{locationDescriptions[selectedLocation].description}</p>
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+                                <div className="flex items-center">
+                                  <Gauge className="h-3 w-3 mr-1.5 text-red-400" />
+                                  <span>
+                                    Risk: 
+                                    <span className={locationDescriptions[selectedLocation].riskModifier < 0 ? 'text-green-400' : 
+                                                     locationDescriptions[selectedLocation].riskModifier > 0 ? 'text-red-400' : 'text-yellow-400'}>
+                                      {' '}{locationDescriptions[selectedLocation].riskModifier > 0 ? '+' : ''}
+                                      {locationDescriptions[selectedLocation].riskModifier}%
+                                    </span>
+                                  </span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Rocket className="h-3 w-3 mr-1.5 text-blue-400" />
+                                  <span>
+                                    Production: 
+                                    <span className={locationDescriptions[selectedLocation].productionModifier < 0 ? 'text-red-400' : 
+                                                    locationDescriptions[selectedLocation].productionModifier > 0 ? 'text-green-400' : 'text-yellow-400'}>
+                                      {' '}{locationDescriptions[selectedLocation].productionModifier > 0 ? '+' : ''}
+                                      {locationDescriptions[selectedLocation].productionModifier}%
+                                    </span>
+                                  </span>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex items-center justify-center py-4">
+                              <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                              <span className="text-muted-foreground">Select a location</span>
                             </div>
-                            <div className="flex items-center">
-                              <Rocket className="h-3 w-3 mr-1.5 text-blue-400" />
-                              <span>
-                                Production: 
-                                <span className={locationDescriptions[selectedLocation].productionModifier < 0 ? 'text-red-400' : 
-                                                  locationDescriptions[selectedLocation].productionModifier > 0 ? 'text-green-400' : 'text-yellow-400'}>
-                                  {' '}{locationDescriptions[selectedLocation].productionModifier > 0 ? '+' : ''}
-                                  {locationDescriptions[selectedLocation].productionModifier}%
-                                </span>
-                              </span>
-                            </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -981,37 +990,46 @@ function LabsTab() {
                       
                       {/* Location description */}
                       <div className="mt-3 p-3 bg-black/30 rounded border border-primary/10 text-xs">
-                        <div className="flex items-center mb-2">
-                          <span className="mr-2">
-                            {locationDescriptions[selectedLocation].icon}
-                          </span>
-                          <span className="font-semibold">{selectedLocation}</span>
-                        </div>
-                        <p className="text-muted-foreground mb-2">{locationDescriptions[selectedLocation].description}</p>
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
-                          <div className="flex items-center">
-                            <Gauge className="h-3 w-3 mr-1.5 text-red-400" />
-                            <span>
-                              Risk: 
-                              <span className={locationDescriptions[selectedLocation].riskModifier < 0 ? 'text-green-400' : 
-                                                locationDescriptions[selectedLocation].riskModifier > 0 ? 'text-red-400' : 'text-yellow-400'}>
-                                {' '}{locationDescriptions[selectedLocation].riskModifier > 0 ? '+' : ''}
-                                {locationDescriptions[selectedLocation].riskModifier}%
+                        {selectedLocation && locationDescriptions[selectedLocation] ? (
+                          <>
+                            <div className="flex items-center mb-2">
+                              <span className="mr-2">
+                                {locationDescriptions[selectedLocation].icon}
                               </span>
-                            </span>
+                              <span className="font-semibold">{selectedLocation}</span>
+                            </div>
+                            <p className="text-muted-foreground mb-2">{locationDescriptions[selectedLocation].description}</p>
+                            <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+                              <div className="flex items-center">
+                                <Gauge className="h-3 w-3 mr-1.5 text-red-400" />
+                                <span>
+                                  Risk: 
+                                  <span className={locationDescriptions[selectedLocation].riskModifier < 0 ? 'text-green-400' : 
+                                                    locationDescriptions[selectedLocation].riskModifier > 0 ? 'text-red-400' : 'text-yellow-400'}>
+                                    {' '}{locationDescriptions[selectedLocation].riskModifier > 0 ? '+' : ''}
+                                    {locationDescriptions[selectedLocation].riskModifier}%
+                                  </span>
+                                </span>
+                              </div>
+                              <div className="flex items-center">
+                                <Rocket className="h-3 w-3 mr-1.5 text-blue-400" />
+                                <span>
+                                  Production: 
+                                  <span className={locationDescriptions[selectedLocation].productionModifier < 0 ? 'text-red-400' : 
+                                                  locationDescriptions[selectedLocation].productionModifier > 0 ? 'text-green-400' : 'text-yellow-400'}>
+                                    {' '}{locationDescriptions[selectedLocation].productionModifier > 0 ? '+' : ''}
+                                    {locationDescriptions[selectedLocation].productionModifier}%
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-center justify-center py-4">
+                            <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span className="text-muted-foreground">Select a location</span>
                           </div>
-                          <div className="flex items-center">
-                            <Rocket className="h-3 w-3 mr-1.5 text-blue-400" />
-                            <span>
-                              Production: 
-                              <span className={locationDescriptions[selectedLocation].productionModifier < 0 ? 'text-red-400' : 
-                                                locationDescriptions[selectedLocation].productionModifier > 0 ? 'text-green-400' : 'text-yellow-400'}>
-                                {' '}{locationDescriptions[selectedLocation].productionModifier > 0 ? '+' : ''}
-                                {locationDescriptions[selectedLocation].productionModifier}%
-                              </span>
-                            </span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>
