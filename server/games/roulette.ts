@@ -1,137 +1,112 @@
 /**
- * Roulette game logic
+ * Roulette Game logic
  * 
- * European roulette with a single zero (0-36).
- * Players can bet on specific numbers, colors, or groups of numbers.
+ * Rules:
+ * - Standard European roulette wheel with numbers 0-36
+ * - Various bet types: straight, split, street, corner, line, column, dozen, red/black, even/odd, low/high
+ * - Payouts vary by bet type
  */
 
-type RouletteBetType = 
-  'straight' | 'split' | 'street' | 'corner' | 'line' | 
-  'column' | 'dozen' | 'red' | 'black' | 'even' | 'odd' | 
-  'low' | 'high';
+export interface RouletteBetDetails {
+  betType: string;
+  numbers: number[]; // Numbers the player is betting on
+}
 
-type RouletteBetDetails = {
-  betType: RouletteBetType;
-  numbers: number[]; // Numbers covered by the bet
-};
-
-type RouletteResult = {
+export interface RouletteResult {
   win: boolean;
   amount: number;
   details: {
-    number: number;
-    color: 'red' | 'black' | 'green';
-    betType: RouletteBetType;
+    spinResult: number;
+    betType: string;
     selectedNumbers: number[];
-    payout: number;
   };
+}
+
+// Roulette bet types and payouts
+const BET_TYPES = {
+  straight: { payout: 35 },    // Single number
+  split: { payout: 17 },       // Two adjacent numbers
+  street: { payout: 11 },      // Three numbers in a row
+  corner: { payout: 8 },       // Four numbers in a square
+  line: { payout: 5 },         // Six numbers (two adjacent rows)
+  column: { payout: 2 },       // Twelve numbers (entire column)
+  dozen: { payout: 2 },        // Twelve numbers (1-12, 13-24, 25-36)
+  red: { payout: 1 },          // Red numbers
+  black: { payout: 1 },        // Black numbers
+  even: { payout: 1 },         // Even numbers
+  odd: { payout: 1 },          // Odd numbers
+  low: { payout: 1 },          // Numbers 1-18
+  high: { payout: 1 }          // Numbers 19-36
 };
 
-// Define number colors
+// Red numbers on a standard roulette wheel
 const RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
-const BLACK_NUMBERS = [2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35];
 
-// Payout ratios for different bet types
-const PAYOUTS: Record<RouletteBetType, number> = {
-  straight: 35, // Single number (1:35)
-  split: 17,     // Two adjacent numbers (1:17)
-  street: 11,    // Three numbers in a row (1:11)
-  corner: 8,     // Four adjacent numbers forming a square (1:8)
-  line: 5,       // Six numbers from two adjacent rows (1:5)
-  column: 2,     // 12 numbers in a column (1:2)
-  dozen: 2,      // 12 numbers (1-12, 13-24, 25-36) (1:2)
-  red: 1,        // 18 red numbers (1:1)
-  black: 1,      // 18 black numbers (1:1)
-  even: 1,       // 18 even numbers (1:1)
-  odd: 1,        // 18 odd numbers (1:1)
-  low: 1,        // Numbers 1-18 (1:1)
-  high: 1,       // Numbers 19-36 (1:1)
-};
-
-export function processRoulette(
-  betDetails: any, 
-  betAmount: number
-): RouletteResult {
+// Process a roulette bet
+export function processRoulette(betAmount: number, betDetails: RouletteBetDetails): RouletteResult {
   // Validate bet details
-  const details = betDetails as RouletteBetDetails;
-  if (!details.betType || !details.numbers || !details.numbers.length) {
-    throw new Error("Invalid bet details");
+  if (!betDetails.betType || !betDetails.numbers) {
+    throw new Error('Invalid bet details');
   }
   
-  // Spin the wheel (0-36)
-  const number = Math.floor(Math.random() * 37);
+  const betType = betDetails.betType.toLowerCase();
   
-  // Determine the color of the number
-  let color: 'red' | 'black' | 'green';
-  if (number === 0) {
-    color = 'green';
-  } else if (RED_NUMBERS.includes(number)) {
-    color = 'red';
-  } else {
-    color = 'black';
+  if (!BET_TYPES[betType]) {
+    throw new Error(`Unknown bet type: ${betType}`);
   }
   
-  // Check if the bet wins
+  // Generate a random number for the roulette wheel (0-36)
+  const spinResult = Math.floor(Math.random() * 37);
+  
+  // Determine if the bet is a winner
   let win = false;
   
-  switch (details.betType) {
+  switch (betType) {
     case 'straight':
+      win = betDetails.numbers.includes(spinResult);
+      break;
     case 'split':
     case 'street':
     case 'corner':
     case 'line':
-      // These bet types win if the landed number is in the selected numbers
-      win = details.numbers.includes(number);
+      win = betDetails.numbers.includes(spinResult);
       break;
-    
     case 'column':
+      win = betDetails.numbers.includes(spinResult);
+      break;
     case 'dozen':
-      // These bet types win if the landed number is in the selected numbers
-      // and the number is not 0
-      win = number !== 0 && details.numbers.includes(number);
+      win = betDetails.numbers.includes(spinResult);
       break;
-    
     case 'red':
-      win = color === 'red';
+      win = RED_NUMBERS.includes(spinResult);
       break;
-    
     case 'black':
-      win = color === 'black';
+      win = spinResult !== 0 && !RED_NUMBERS.includes(spinResult);
       break;
-    
     case 'even':
-      win = number !== 0 && number % 2 === 0;
+      win = spinResult !== 0 && spinResult % 2 === 0;
       break;
-    
     case 'odd':
-      win = number !== 0 && number % 2 === 1;
+      win = spinResult !== 0 && spinResult % 2 === 1;
       break;
-    
     case 'low':
-      win = number >= 1 && number <= 18;
+      win = spinResult >= 1 && spinResult <= 18;
       break;
-    
     case 'high':
-      win = number >= 19 && number <= 36;
+      win = spinResult >= 19 && spinResult <= 36;
       break;
-    
-    default:
-      throw new Error("Invalid bet type");
   }
   
   // Calculate payout
-  const payout = PAYOUTS[details.betType];
-  const winAmount = win ? betAmount * payout : 0;
+  const payout = win ? betAmount * (BET_TYPES[betType].payout + 1) : 0;
   
   return {
     win,
-    amount: winAmount,
+    amount: payout,
     details: {
-      number,
-      color,
-      betType: details.betType,
-      selectedNumbers: details.numbers,
-      payout
-    }
+      spinResult,
+      betType,
+      selectedNumbers: betDetails.numbers,
+    },
   };
 }

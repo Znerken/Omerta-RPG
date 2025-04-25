@@ -1,116 +1,107 @@
 /**
- * Slot machine game logic
+ * Slot Machine Game logic
  * 
- * Classic slot machine with three reels. Each reel can show different symbols,
- * and payouts depend on which symbols line up on the pay line.
+ * Rules:
+ * - Slot machine has 3 reels
+ * - Each reel has 5 different symbols
+ * - Payouts are based on matching symbols on paylines
+ * - Player can bet on 1-5 paylines
  */
 
-type SlotBetDetails = {
-  lines: number; // Number of pay lines to bet on (1-5)
-};
+export interface SlotMachineBetDetails {
+  lines: number; // Number of lines being bet on (1-5)
+}
 
-type SlotSymbol = {
-  id: string;
-  name: string;
-  value: number;
-};
-
-type SlotResult = {
+export interface SlotMachineResult {
   win: boolean;
   amount: number;
   details: {
-    reels: string[][];
-    payLines: {
-      symbols: string[];
-      win: boolean;
-      amount: number;
-    }[];
-    totalWin: number;
+    reels: number[][];
+    matchedLines: number[];
+    symbols: string[];
   };
-};
+}
 
-// Define slot symbols and their payouts
-const SLOT_SYMBOLS: SlotSymbol[] = [
-  { id: "cherry", name: "Cherry", value: 2 },
-  { id: "lemon", name: "Lemon", value: 3 },
-  { id: "orange", name: "Orange", value: 5 },
-  { id: "plum", name: "Plum", value: 10 },
-  { id: "bell", name: "Bell", value: 15 },
-  { id: "seven", name: "Seven", value: 25 },
-  { id: "diamond", name: "Diamond", value: 50 },
+// Slot symbols with their values
+const SLOT_SYMBOLS = [
+  { name: 'cherry', value: 2, frequency: 30 },
+  { name: 'lemon', value: 3, frequency: 25 },
+  { name: 'orange', value: 4, frequency: 20 },
+  { name: 'plum', value: 5, frequency: 15 },
+  { name: 'seven', value: 10, frequency: 5 },
+  { name: 'bar', value: 15, frequency: 3 },
+  { name: 'diamond', value: 20, frequency: 2 }
 ];
 
-// Pay line definitions (for a 3x3 slot machine)
-const PAY_LINES = [
-  [[0, 0], [0, 1], [0, 2]], // Top row
-  [[1, 0], [1, 1], [1, 2]], // Middle row
-  [[2, 0], [2, 1], [2, 2]], // Bottom row
-  [[0, 0], [1, 1], [2, 2]], // Diagonal top-left to bottom-right
-  [[2, 0], [1, 1], [0, 2]], // Diagonal bottom-left to top-right
+// Define paylines (patterns across the 3x3 grid)
+// Each number represents position on the grid (0-8)
+// 0 1 2
+// 3 4 5
+// 6 7 8
+const PAYLINES = [
+  [0, 1, 2], // horizontal top
+  [3, 4, 5], // horizontal middle
+  [6, 7, 8], // horizontal bottom
+  [0, 4, 8], // diagonal top-left to bottom-right
+  [6, 4, 2]  // diagonal bottom-left to top-right
 ];
 
-export function processSlotMachine(
-  betDetails: any, 
-  betAmount: number
-): SlotResult {
-  // Validate bet details
-  const details = betDetails as SlotBetDetails;
-  const lines = Math.min(Math.max(1, details.lines || 1), 5);
+// Get a random symbol based on frequency weighting
+function getRandomSymbol() {
+  const totalFrequency = SLOT_SYMBOLS.reduce((sum, symbol) => sum + symbol.frequency, 0);
+  let random = Math.random() * totalFrequency;
   
-  // Calculate bet per line
-  const betPerLine = Math.floor(betAmount / lines);
-  
-  // Generate random reels (3x3 grid)
-  const reels: string[][] = [[], [], []];
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      const randomIndex = Math.floor(Math.random() * SLOT_SYMBOLS.length);
-      reels[i].push(SLOT_SYMBOLS[randomIndex].id);
+  for (const symbol of SLOT_SYMBOLS) {
+    random -= symbol.frequency;
+    if (random <= 0) {
+      return symbol;
     }
   }
   
-  // Check pay lines
-  const payLineResults = [];
+  return SLOT_SYMBOLS[0]; // Fallback
+}
+
+// Process a slot machine bet
+export function processSlotMachine(betAmount: number, betDetails: SlotMachineBetDetails): SlotMachineResult {
+  // Validate input
+  if (!betDetails.lines || betDetails.lines < 1 || betDetails.lines > 5) {
+    throw new Error('Invalid number of lines. Must be between 1 and 5.');
+  }
+  
+  // Create 3x3 slot grid
+  const grid = Array(3).fill(0).map(() => 
+    Array(3).fill(0).map(() => SLOT_SYMBOLS.indexOf(getRandomSymbol()))
+  );
+  
+  // Flatten grid to check paylines
+  const flatGrid = grid.flat();
+  
+  // Check each active payline for matches
+  const matchedLines = [];
   let totalWin = 0;
   
-  for (let i = 0; i < lines; i++) {
-    const payLine = PAY_LINES[i];
-    const symbols = payLine.map(([row, col]) => reels[row][col]);
+  for (let i = 0; i < betDetails.lines; i++) {
+    if (i >= PAYLINES.length) break;
     
-    // Check for winning combinations
-    let payLineWin = false;
-    let payLineAmount = 0;
+    const payline = PAYLINES[i];
+    const symbols = payline.map(pos => flatGrid[pos]);
     
-    // Three of a kind
+    // Check if all symbols in the payline match
     if (symbols[0] === symbols[1] && symbols[1] === symbols[2]) {
-      const symbolValue = SLOT_SYMBOLS.find(s => s.id === symbols[0])?.value || 0;
-      payLineWin = true;
-      payLineAmount = betPerLine * symbolValue;
+      matchedLines.push(i);
+      const symbolValue = SLOT_SYMBOLS[symbols[0]].value;
+      totalWin += betAmount * symbolValue / betDetails.lines;
     }
-    // Two of the same symbol (partial win)
-    else if (symbols[0] === symbols[1] || symbols[1] === symbols[2]) {
-      const matchingSymbol = symbols[0] === symbols[1] ? symbols[0] : symbols[1];
-      const symbolValue = SLOT_SYMBOLS.find(s => s.id === matchingSymbol)?.value || 0;
-      payLineWin = true;
-      payLineAmount = Math.floor(betPerLine * (symbolValue / 5)); // Partial payout
-    }
-    
-    totalWin += payLineAmount;
-    
-    payLineResults.push({
-      symbols,
-      win: payLineWin,
-      amount: payLineAmount
-    });
   }
   
+  // Return the result
   return {
     win: totalWin > 0,
-    amount: totalWin,
+    amount: Math.floor(totalWin), // Round down to ensure house edge
     details: {
-      reels,
-      payLines: payLineResults,
-      totalWin
-    }
+      reels: grid,
+      matchedLines,
+      symbols: SLOT_SYMBOLS.map(s => s.name),
+    },
   };
 }

@@ -1,78 +1,76 @@
 /**
- * Dice game logic
+ * Dice Game logic
  * 
- * The player predicts whether a dice roll (1-6) will be 
- * higher or lower than a certain number, or equal to a specific value.
+ * Rules:
+ * - User predicts the outcome of a dice roll
+ * - User can bet higher, lower, or exact
+ * - For "higher", the roll must be higher than the target number
+ * - For "lower", the roll must be lower than the target number
+ * - For "exact", the roll must be exactly the target number
+ * - Payouts: 
+ *   - Higher/Lower: 1.8x (accounting for house edge)
+ *   - Exact: 5x (higher payout for higher difficulty)
  */
 
-type DiceBetDetails = {
-  prediction: 'higher' | 'lower' | 'exact'; // Higher, lower, or exact match
-  targetNumber: number; // The number to compare against (2-12 for two dice)
-};
+export interface DiceBetDetails {
+  prediction: 'higher' | 'lower' | 'exact';
+  targetNumber: number;
+}
 
-type DiceResult = {
+export interface DiceResult {
   win: boolean;
   amount: number;
   details: {
-    diceValue: number;
+    diceRoll: number;
     prediction: string;
     targetNumber: number;
-    success: boolean;
   };
-};
+}
 
-export function processDiceGame(
-  betDetails: any, 
-  betAmount: number
-): DiceResult {
-  // Validate the bet details
-  const details = betDetails as DiceBetDetails;
-  if (!details.prediction || !details.targetNumber) {
-    throw new Error("Invalid bet details");
+/**
+ * Process a dice game bet and determine the outcome
+ */
+export function processDiceGame(betAmount: number, betDetails: DiceBetDetails): DiceResult {
+  // Validate inputs
+  if (!betDetails.prediction || !betDetails.targetNumber) {
+    throw new Error('Invalid bet details');
   }
-
-  // Roll the dice (1-6)
-  const diceValue = Math.floor(Math.random() * 6) + 1;
   
-  // Determine if the prediction is correct
-  let success = false;
-  let multiplier = 1;
+  if (betDetails.targetNumber < 1 || betDetails.targetNumber > 6) {
+    throw new Error('Target number must be between 1 and 6');
+  }
   
-  switch (details.prediction) {
+  // Generate random dice roll (1-6)
+  const diceRoll = Math.floor(Math.random() * 6) + 1;
+  
+  // Determine if the player won
+  let win = false;
+  let winAmount = 0;
+  
+  switch (betDetails.prediction) {
     case 'higher':
-      success = diceValue > details.targetNumber;
-      // The multiplier depends on the probability of success
-      // Lower target numbers have higher probability of rolling higher
-      multiplier = 6 / (6 - details.targetNumber);
+      win = diceRoll > betDetails.targetNumber;
+      winAmount = Math.floor(betAmount * 1.8); // 80% profit (accounting for house edge)
       break;
-    
     case 'lower':
-      success = diceValue < details.targetNumber;
-      // Higher target numbers have higher probability of rolling lower
-      multiplier = 6 / (details.targetNumber - 1);
+      win = diceRoll < betDetails.targetNumber;
+      winAmount = Math.floor(betAmount * 1.8);
       break;
-    
     case 'exact':
-      success = diceValue === details.targetNumber;
-      // Exact matches have 1/6 probability
-      multiplier = 5;
+      win = diceRoll === betDetails.targetNumber;
+      winAmount = betAmount * 5; // 5x payout for exact match
       break;
-    
     default:
-      throw new Error("Invalid prediction type");
+      throw new Error('Invalid prediction type');
   }
-  
-  // Calculate the amount won (0 if lost)
-  const winAmount = success ? Math.floor(betAmount * multiplier) : 0;
   
   return {
-    win: success,
-    amount: winAmount,
+    win,
+    amount: win ? winAmount : 0,
     details: {
-      diceValue,
-      prediction: details.prediction,
-      targetNumber: details.targetNumber,
-      success
-    }
+      diceRoll,
+      prediction: betDetails.prediction,
+      targetNumber: betDetails.targetNumber,
+    },
   };
 }
