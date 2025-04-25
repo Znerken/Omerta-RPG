@@ -31,6 +31,7 @@ const navItems = [
   { name: "Gang", path: "/gang", icon: <Users className="h-5 w-5 mr-3" /> },
   { name: "Jail", path: "/jail", icon: <Lock className="h-5 w-5 mr-3" /> },
   { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5 mr-3" /> },
+  { name: "Banking", path: "/banking", icon: <MoneyBriefcaseIcon className="h-5 w-5 mr-3" /> },
   { name: "Messages", path: "/messages", icon: <MailIcon className="h-5 w-5 mr-3" /> },
   { name: "Leaderboard", path: "/leaderboard", icon: <Trophy className="h-5 w-5 mr-3" /> },
 ];
