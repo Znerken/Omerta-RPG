@@ -232,6 +232,25 @@ export const messages = pgTable("messages", {
   timestamp: timestamp("timestamp").defaultNow(),
 });
 
+// Friends system
+export const userFriends = pgTable("user_friends", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  friendId: integer("friend_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // pending, accepted, rejected, blocked
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Online status tracking
+export const userStatus = pgTable("user_status", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id).unique(),
+  status: text("status").notNull().default("offline"), // online, offline, away, busy
+  lastActive: timestamp("last_active").defaultNow(),
+  lastLocation: text("last_location"), // The last page the user was on
+});
+
 // Create insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -318,7 +337,23 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
   content: true,
 });
 
+export const insertUserFriendSchema = createInsertSchema(userFriends).pick({
+  userId: true,
+  friendId: true,
+  status: true,
+});
+
+export const insertUserStatusSchema = createInsertSchema(userStatus).pick({
+  userId: true,
+  status: true,
+  lastLocation: true,
+});
+
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type InsertUserFriend = z.infer<typeof insertUserFriendSchema>;
+export type InsertUserStatus = z.infer<typeof insertUserStatusSchema>;
+export type UserFriend = typeof userFriends.$inferSelect;
+export type UserStatus = typeof userStatus.$inferSelect;
 
 // Define types
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -371,6 +406,13 @@ export type UserWithStats = User & {
 export type UserWithGang = User & {
   gang?: Gang;
   gangRank?: string;
+};
+
+export type UserWithStatus = User & {
+  status: UserStatus;
+  isFriend: boolean;
+  friendStatus?: string;
+  friendRequest?: UserFriend;
 };
 
 export type CrimeWithHistory = Crime & {
