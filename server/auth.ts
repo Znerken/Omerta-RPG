@@ -53,14 +53,31 @@ export function setupAuth(app: Express) {
   app.use(passport.session());
 
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy({
+      // Add passReqToCallback for more context if needed in the future
+      passReqToCallback: false
+    }, async (username, password, done) => {
       try {
         const user = await storage.getUserByUsername(username);
-        if (!user || !(await comparePasswords(password, user.password))) {
-          return done(null, false);
-        } else {
-          return done(null, user);
+        
+        // Check for valid user and password
+        if (!user) {
+          return done(null, false, { message: "Invalid username or password" });
         }
+        
+        if (!(await comparePasswords(password, user.password))) {
+          return done(null, false, { message: "Invalid username or password" });
+        }
+        
+        // Check if user is banned
+        if (user.banExpiry && new Date(user.banExpiry) > new Date()) {
+          const banTimeLeft = Math.ceil((new Date(user.banExpiry).getTime() - Date.now()) / (1000 * 60 * 60));
+          return done(null, false, { 
+            message: `Your account is banned for ${banTimeLeft} more hours. Reason: ${user.banReason || 'No reason provided'}` 
+          });
+        }
+        
+        return done(null, user);
       } catch (err) {
         return done(err);
       }
@@ -71,6 +88,15 @@ export function setupAuth(app: Express) {
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
+      if (!user) {
+        return done(null, false);
+      }
+      
+      // Check if user is banned (terminate session if ban is active)
+      if (user.banExpiry && new Date(user.banExpiry) > new Date()) {
+        return done(null, false);
+      }
+      
       done(null, user);
     } catch (err) {
       done(err);
@@ -118,7 +144,13 @@ export function setupAuth(app: Express) {
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
       if (err) return next(err);
-      if (!user) return res.status(401).json({ message: "Invalid credentials" });
+      
+      // Handle bans and invalid credentials
+      if (!user) {
+        // If we have info with a message (like from ban check), use that
+        const message = info && info.message ? info.message : "Invalid credentials";
+        return res.status(401).json({ message });
+      }
       
       req.login(user, (loginErr) => {
         if (loginErr) return next(loginErr);
