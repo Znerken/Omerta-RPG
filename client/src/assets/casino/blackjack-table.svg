@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="300" viewBox="0 0 600 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Table surface -->
+  <rect width="600" height="300" fill="#0b4d27"/>
+  
+  <!-- Table edge -->
+  <rect x="10" y="10" width="580" height="280" stroke="#D4AF37" stroke-width="3" fill="none"/>
+  
+  <!-- Inner felt border -->
+  <rect x="20" y="20" width="560" height="260" stroke="#D4AF37" stroke-width="1" fill="none"/>
+  
+  <!-- Betting Circles -->
+  <g>
+    <!-- Main betting positions -->
+    <circle cx="150" cy="220" r="40" fill="none" stroke="#D4AF37" stroke-width="2"/>
+    <circle cx="250" cy="220" r="40" fill="none" stroke="#D4AF37" stroke-width="2"/>
+    <circle cx="350" cy="220" r="40" fill="none" stroke="#D4AF37" stroke-width="2"/>
+    <circle cx="450" cy="220" r="40" fill="none" stroke="#D4AF37" stroke-width="2"/>
+    
+    <!-- Insurance line -->
+    <rect x="100" y="160" width="400" height="2" fill="#D4AF37"/>
+    <text x="320" y="150" font-family="Arial" font-size="16" fill="#D4AF37" text-anchor="middle">INSURANCE PAYS 2 TO 1</text>
+    
+    <!-- Dealer position indicator -->
+    <path d="M300 60 L320 80 L280 80 Z" fill="#D4AF37"/>
+    <text x="300" y="100" font-family="Arial" font-size="14" fill="#D4AF37" text-anchor="middle">DEALER</text>
+    
+    <!-- Blackjack text -->
+    <text x="300" y="250" font-family="Arial" font-weight="bold" font-size="24" fill="#D4AF37" text-anchor="middle">BLACKJACK PAYS 3 TO 2</text>
+    <text x="300" y="275" font-family="Arial" font-size="16" fill="#D4AF37" text-anchor="middle">DEALER MUST STAND ON 17 AND DRAW TO 16</text>
+  </g>
+  
+  <!-- Card positions -->
+  <g opacity="0.3">
+    <!-- Dealer's cards position -->
+    <rect x="280" y="80" width="40" height="60" rx="5" stroke="#D4AF37" stroke-width="1" fill="none"/>
+    
+    <!-- Player 1 cards position -->
+    <rect x="130" y="150" width="40" height="60" rx="5" stroke="#D4AF37" stroke-width="1" fill="none"/>
+    
+    <!-- Player 2 cards position -->
+    <rect x="230" y="150" width="40" height="60" rx="5" stroke="#D4AF37" stroke-width="1" fill="none"/>
+    
+    <!-- Player 3 cards position -->
+    <rect x="330" y="150" width="40" height="60" rx="5" stroke="#D4AF37" stroke-width="1" fill="none"/>
+    
+    <!-- Player 4 cards position -->
+    <rect x="430" y="150" width="40" height="60" rx="5" stroke="#D4AF37" stroke-width="1" fill="none"/>
+  </g>
+  
+  <!-- Decorative elements -->
+  <g>
+    <!-- Corner decorations -->
+    <path d="M30 30 L50 30 L50 50 L30 50 Z" fill="none" stroke="#D4AF37" stroke-width="1"/>
+    <path d="M550 30 L570 30 L570 50 L550 50 Z" fill="none" stroke="#D4AF37" stroke-width="1"/>
+    <path d="M30 250 L50 250 L50 270 L30 270 Z" fill="none" stroke="#D4AF37" stroke-width="1"/>
+    <path d="M550 250 L570 250 L570 270 L550 270 Z" fill="none" stroke="#D4AF37" stroke-width="1"/>
+    
+    <!-- Table pattern -->
+    <circle cx="300" cy="150" r="100" fill="none" stroke="#D4AF37" stroke-width="0.5" stroke-dasharray="2 4"/>
+  </g>
+  
+  <!-- Luxurious shader overlay -->
+  <rect width="600" height="300" fill="url(#shader)" fill-opacity="0.3"/>
+  
+  <!-- Definitions -->
+  <defs>
+    <linearGradient id="shader" x1="0" y1="0" x2="600" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D4AF37" stop-opacity="0.1"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#D4AF37" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+</svg>

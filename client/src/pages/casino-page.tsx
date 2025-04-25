@@ -789,6 +789,47 @@ export default function CasinoPage() {
     );
   };
 
+  // Calculate roulette win chances and payouts
+  const calculateRouletteWinChance = (betType: string) => {
+    switch (betType) {
+      case "red":
+      case "black":
+      case "even":
+      case "odd":
+      case "low":
+      case "high":
+        return 18/37 * 100; // 18 out of 37 pockets, ~48.65% chance
+      case "1st12":
+      case "2nd12":
+      case "3rd12":
+      case "column1":
+      case "column2":
+      case "column3":
+        return 12/37 * 100; // 12 out of 37 pockets, ~32.43% chance
+      case "straight":
+        return 1/37 * 100; // 1 out of 37 pockets, ~2.7% chance
+      case "split":
+        return 2/37 * 100; // 2 out of 37 pockets, ~5.4% chance
+      case "corner":
+        return 4/37 * 100; // 4 out of 37 pockets, ~10.81% chance
+      case "zero":
+        return 1/37 * 100; // 1 out of 37 pockets, ~2.7% chance
+      default:
+        return 0;
+    }
+  };
+  
+  const calculateRoulettePayout = (betType: string, betAmount: number) => {
+    const payouts: Record<string, number> = {
+      "red": 2, "black": 2, "even": 2, "odd": 2, "low": 2, "high": 2, 
+      "1st12": 3, "2nd12": 3, "3rd12": 3, 
+      "column1": 3, "column2": 3, "column3": 3,
+      "straight": 36, "split": 18, "corner": 9, "zero": 36
+    };
+    
+    return betAmount * payouts[betType] || 0;
+  };
+  
   const Roulette = ({ game }: { game: CasinoGame }) => {
     const form = useForm<z.infer<typeof rouletteFormSchema>>({
       resolver: zodResolver(rouletteFormSchema),
@@ -798,8 +839,50 @@ export default function CasinoPage() {
         numbers: [],
       },
     });
+    
+    const [wheelSpinning, setWheelSpinning] = useState(false);
+    const [wheelRotation, setWheelRotation] = useState(0);
+    const [ballPosition, setBallPosition] = useState(0);
+    const [selectedNumber, setSelectedNumber] = useState<number | null>(null);
+    
+    const watchedBetType = form.watch("betType");
+    const watchedBetAmount = form.watch("betAmount");
+    const watchedNumbers = form.watch("numbers") || [];
+    
+    const winChance = calculateRouletteWinChance(watchedBetType);
+    const potentialPayout = calculateRoulettePayout(watchedBetType, watchedBetAmount);
+    
+    // Import SVG assets
+    const wheelSvgPath = "/src/assets/casino/roulette-wheel.svg";
+    const tableSvgPath = "/src/assets/casino/roulette-table.svg";
+    
+    // Determine betting area highlight based on bet type
+    const getBetHighlightArea = () => {
+      // This would return a className or JSX to highlight the appropriate betting area
+      return watchedBetType === "red" ? "bg-red-500/20" : watchedBetType === "black" ? "bg-black/20" : "";
+    };
 
     function onSubmit(values: z.infer<typeof rouletteFormSchema>) {
+      // Animate wheel spinning
+      setWheelSpinning(true);
+      
+      // Spin wheel animation - rotate a random amount
+      const randomSpin = Math.floor(Math.random() * 360) + 1080; // at least 3 full rotations + random position
+      
+      // Animate the wheel spinning
+      let currentRotation = 0;
+      const spinInterval = setInterval(() => {
+        const increment = Math.max(10, 50 * Math.exp(-currentRotation / 720)); // Slow down gradually
+        currentRotation += increment;
+        setWheelRotation(currentRotation % 360);
+        
+        if (currentRotation >= randomSpin) {
+          clearInterval(spinInterval);
+          // Set ball position after the wheel stops
+          setBallPosition(Math.floor(Math.random() * 37));
+        }
+      }, 30);
+      
       // Set default numbers for bet types that don't need explicit number selection
       let numbers: number[] = values.numbers || [];
       
@@ -822,120 +905,427 @@ export default function CasinoPage() {
         case "high":
           numbers = Array.from({ length: 18 }, (_, i) => i + 19);
           break;
-        // Other bet types require manual number input in the UI
+        case "1st12":
+          numbers = Array.from({ length: 12 }, (_, i) => i + 1);
+          break;
+        case "2nd12":
+          numbers = Array.from({ length: 12 }, (_, i) => i + 13);
+          break;
+        case "3rd12":
+          numbers = Array.from({ length: 12 }, (_, i) => i + 25);
+          break;
+        case "column1":
+          numbers = [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34];
+          break;
+        case "column2":
+          numbers = [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35];
+          break;
+        case "column3":
+          numbers = [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36];
+          break;
+        case "zero":
+          numbers = [0];
+          break;
+        // For straight, split, corner, etc. the user needs to select the numbers
       }
       
-      placeBetMutation.mutate({
-        gameId: game.id,
-        betAmount: values.betAmount,
-        betDetails: {
-          betType: values.betType,
-          numbers,
-        },
-      });
+      // Visually select a random number for simulation
+      const randomIndex = Math.floor(Math.random() * numbers.length);
+      const randomSelectedNumber = numbers.length > 0 ? numbers[randomIndex] : null;
+      setSelectedNumber(randomSelectedNumber);
+
+      // Submit the bet after animation
+      setTimeout(() => {
+        placeBetMutation.mutate({
+          gameId: game.id,
+          betAmount: values.betAmount,
+          betDetails: {
+            betType: values.betType,
+            numbers,
+          },
+        });
+        
+        setTimeout(() => {
+          setWheelSpinning(false);
+          setWheelRotation(0);
+          setBallPosition(0);
+          setSelectedNumber(null);
+        }, 1000);
+      }, 3000);
     }
+    
+    // Get bet type label for display
+    const getBetTypeLabel = (type: string) => {
+      const labels: Record<string, string> = {
+        "red": "Red", "black": "Black", "even": "Even", "odd": "Odd",
+        "low": "Low (1-18)", "high": "High (19-36)",
+        "1st12": "First Dozen (1-12)", "2nd12": "Second Dozen (13-24)", "3rd12": "Third Dozen (25-36)",
+        "column1": "First Column", "column2": "Second Column", "column3": "Third Column",
+        "straight": "Straight (Single Number)", "split": "Split (2 Numbers)", 
+        "corner": "Corner (4 Numbers)", "zero": "Zero (0)"
+      };
+      return labels[type] || type;
+    };
+    
+    // Get payout label for display
+    const getPayoutLabel = (type: string) => {
+      const labels: Record<string, string> = {
+        "red": "1:1", "black": "1:1", "even": "1:1", "odd": "1:1", "low": "1:1", "high": "1:1",
+        "1st12": "2:1", "2nd12": "2:1", "3rd12": "2:1", 
+        "column1": "2:1", "column2": "2:1", "column3": "2:1",
+        "straight": "35:1", "split": "17:1", "corner": "8:1", "zero": "35:1"
+      };
+      return labels[type] || "";
+    };
 
     return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <FormField
-            control={form.control}
-            name="betAmount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bet Amount</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={game.minBet}
-                    max={game.maxBet}
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(Number(e.target.value))
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
+      <div className="space-y-8 relative">
+        <div className="bg-black/30 rounded-xl p-4 backdrop-blur-sm border border-gray-800/60">
+          <div className="text-center mb-4">
+            <h3 className="text-xl font-semibold">Roulette</h3>
+            <p className="text-muted-foreground text-sm">
+              Betting on: <span className="text-amber-200">{getBetTypeLabel(watchedBetType)}</span> 
+              <span className="ml-2 text-green-400">{getPayoutLabel(watchedBetType)}</span>
+            </p>
+          </div>
+          
+          {/* Roulette wheel visualization */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="flex flex-col justify-center items-center">
+              <div className={cn(
+                "relative w-40 h-40 sm:w-48 sm:h-48 md:w-60 md:h-60 transition-transform duration-[3s]",
+                wheelSpinning && "animate-spin-slow"
+              )}>
+                <img 
+                  src={wheelSvgPath} 
+                  alt="Roulette Wheel" 
+                  style={{ transform: `rotate(${wheelRotation}deg)` }}
+                  className="w-full h-full"
+                />
+                {selectedNumber !== null && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 z-10">
+                    <span className={cn(
+                      "text-2xl font-bold",
+                      [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36].includes(selectedNumber) 
+                        ? "text-red-600" 
+                        : selectedNumber === 0 ? "text-green-600" : "text-black"
+                    )}>
+                      {selectedNumber}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Roulette table */}
+            <div className="hidden md:block relative border border-amber-900/30 rounded overflow-hidden">
+              <img 
+                src={tableSvgPath} 
+                alt="Roulette Table" 
+                className="w-full h-auto"
+              />
+              
+              {/* Highlight based on bet type */}
+              {watchedBetType === "red" && (
+                <div className="absolute inset-0 bg-red-500/10 pointer-events-none" />
+              )}
+              {watchedBetType === "black" && (
+                <div className="absolute inset-0 bg-black/20 pointer-events-none" />
+              )}
+              {watchedBetType === "even" && (
+                <div className="absolute inset-0 bg-amber-500/10 pointer-events-none" />
+              )}
+            </div>
+          </div>
+          
+          <div className="flex justify-between items-center mb-2 mt-4">
+            <p className="text-sm font-medium">Win Chance</p>
+            <Badge 
+              variant={winChance > 30 ? "default" : (winChance > 10 ? "outline" : "destructive")}
+            >
+              {winChance.toFixed(1)}%
+            </Badge>
+          </div>
+          <Progress 
+            className="h-2" 
+            value={winChance} 
+            indicatorColor={winChance > 30 ? "bg-green-500" : (winChance > 10 ? "bg-amber-500" : "bg-red-500")}
           />
 
-          <FormField
-            control={form.control}
-            name="betType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bet Type</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a bet type" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="red">Red</SelectItem>
-                    <SelectItem value="black">Black</SelectItem>
-                    <SelectItem value="even">Even</SelectItem>
-                    <SelectItem value="odd">Odd</SelectItem>
-                    <SelectItem value="low">Low (1-18)</SelectItem>
-                    <SelectItem value="high">High (19-36)</SelectItem>
-                    <SelectItem value="straight">Straight (Single Number)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="flex justify-between items-center mt-4 mb-2">
+            <p className="text-sm font-medium">Potential Payout</p>
+            <Badge variant="outline" className="bg-green-900/30">
+              <DollarSign className="h-3 w-3 mr-1" />
+              {potentialPayout.toFixed(2)}
+            </Badge>
+          </div>
+          
+          <Separator className="my-4 opacity-30" />
+        </div>
 
-          {form.watch("betType") === "straight" && (
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="numbers"
+              name="betAmount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Number</FormLabel>
+                  <div className="flex justify-between">
+                    <FormLabel>Bet Amount</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      Min: ${game.minBet} | Max: ${game.maxBet}
+                    </div>
+                  </div>
                   <FormControl>
-                    <Select
-                      onValueChange={(value) => field.onChange([Number(value)])}
-                      defaultValue={field.value?.[0]?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a number" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Array.from({ length: 37 }, (_, i) => (
-                          <SelectItem key={i} value={i.toString()}>
-                            {i}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          min={game.minBet}
+                          max={game.maxBet}
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="bg-gray-950/80 border-gray-800"
+                        />
+                      </div>
+                      <Slider
+                        value={[field.value]}
+                        min={game.minBet}
+                        max={game.maxBet}
+                        step={10}
+                        onValueChange={(vals) => field.onChange(vals[0])}
+                        className="py-2"
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          )}
 
-          <Button
-            type="submit"
-            disabled={placeBetMutation.isPending}
-            className="w-full"
-          >
-            {placeBetMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <DollarSign className="h-4 w-4 mr-2" />
+            <FormField
+              control={form.control}
+              name="betType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bet Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="bg-gray-950/80 border-gray-800">
+                        <SelectValue placeholder="Select a bet type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Outside Bets</SelectLabel>
+                        <SelectItem value="red">
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 rounded-full bg-red-600 mr-2" />
+                            <span>Red (1:1)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="black">
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 rounded-full bg-black mr-2" />
+                            <span>Black (1:1)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="even">
+                          <div className="flex items-center">
+                            <Square2x2 className="h-4 w-4 mr-2 text-amber-500" />
+                            <span>Even (1:1)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="odd">
+                          <div className="flex items-center">
+                            <CircleDot className="h-4 w-4 mr-2 text-amber-500" />
+                            <span>Odd (1:1)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="low">
+                          <div className="flex items-center">
+                            <ArrowDown className="h-4 w-4 mr-2 text-amber-500" />
+                            <span>Low 1-18 (1:1)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="high">
+                          <div className="flex items-center">
+                            <ArrowUp className="h-4 w-4 mr-2 text-amber-500" />
+                            <span>High 19-36 (1:1)</span>
+                          </div>
+                        </SelectItem>
+                      </SelectGroup>
+                      <SelectSeparator />
+                      <SelectGroup>
+                        <SelectLabel>Dozen Bets (2:1)</SelectLabel>
+                        <SelectItem value="1st12">1st Dozen (1-12)</SelectItem>
+                        <SelectItem value="2nd12">2nd Dozen (13-24)</SelectItem>
+                        <SelectItem value="3rd12">3rd Dozen (25-36)</SelectItem>
+                      </SelectGroup>
+                      <SelectSeparator />
+                      <SelectGroup>
+                        <SelectLabel>Column Bets (2:1)</SelectLabel>
+                        <SelectItem value="column1">Column 1</SelectItem>
+                        <SelectItem value="column2">Column 2</SelectItem>
+                        <SelectItem value="column3">Column 3</SelectItem>
+                      </SelectGroup>
+                      <SelectSeparator />
+                      <SelectGroup>
+                        <SelectLabel>Inside Bets</SelectLabel>
+                        <SelectItem value="zero">
+                          <div className="flex items-center">
+                            <div className="w-4 h-4 rounded-full bg-green-600 mr-2" />
+                            <span>Zero (35:1)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="straight">Straight - Single Number (35:1)</SelectItem>
+                        <SelectItem value="split">Split - 2 Numbers (17:1)</SelectItem>
+                        <SelectItem value="corner">Corner - 4 Numbers (8:1)</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {["straight", "split", "corner"].includes(
+              form.watch("betType")
+            ) && (
+              <div className="space-y-4 p-3 border border-amber-900/20 bg-black/20 rounded-md">
+                <FormLabel>Select Numbers</FormLabel>
+                <p className="text-sm text-muted-foreground">
+                  {form.watch("betType") === "straight" &&
+                    "Select 1 number"}
+                  {form.watch("betType") === "split" &&
+                    "Select 2 adjacent numbers"}
+                  {form.watch("betType") === "corner" &&
+                    "Select 4 adjacent numbers"}
+                </p>
+                <div className="grid grid-cols-6 md:grid-cols-12 gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className={cn(
+                      "bg-green-950/20 border-green-900",
+                      watchedNumbers.includes(0) && "bg-green-900/70 border-green-500"
+                    )}
+                    onClick={() => {
+                      const currentNums = form.watch("numbers") || [];
+                      let newNums: number[] = [];
+
+                      if (currentNums.includes(0)) {
+                        newNums = currentNums.filter((n) => n !== 0);
+                      } else {
+                        if (form.watch("betType") === "straight") {
+                          newNums = [0];
+                        } else {
+                          newNums = [...currentNums, 0];
+                          if (
+                            (form.watch("betType") === "split" && newNums.length > 2) ||
+                            (form.watch("betType") === "corner" && newNums.length > 4)
+                          ) {
+                            newNums = newNums.slice(1);
+                          }
+                        }
+                      }
+
+                      form.setValue("numbers", newNums);
+                    }}
+                  >
+                    0
+                  </Button>
+                  
+                  {[...Array(36).keys()].map((num) => (
+                    <Button
+                      key={num + 1}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36].includes(num + 1)
+                          ? "bg-red-950/20 border-red-900"
+                          : "bg-black/30 border-gray-800",
+                        watchedNumbers.includes(num + 1) && 
+                          ([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36].includes(num + 1)
+                            ? "bg-red-900/70 border-red-500"
+                            : "bg-gray-950 border-gray-400")
+                      )}
+                      onClick={() => {
+                        const currentNums = form.watch("numbers") || [];
+                        let newNums: number[] = [];
+
+                        if (currentNums.includes(num + 1)) {
+                          newNums = currentNums.filter((n) => n !== num + 1);
+                        } else {
+                          if (form.watch("betType") === "straight") {
+                            newNums = [num + 1];
+                          } else {
+                            newNums = [...currentNums, num + 1];
+                            if (
+                              (form.watch("betType") === "split" && newNums.length > 2) ||
+                              (form.watch("betType") === "corner" && newNums.length > 4)
+                            ) {
+                              newNums = newNums.slice(1);
+                            }
+                          }
+                        }
+
+                        form.setValue("numbers", newNums);
+                      }}
+                    >
+                      {num + 1}
+                    </Button>
+                  ))}
+                </div>
+                
+                {/* Selected numbers */}
+                {watchedNumbers.length > 0 && (
+                  <div className="mt-4">
+                    <FormLabel>Selected Numbers</FormLabel>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {watchedNumbers.map((num) => (
+                        <Badge key={num} variant="outline" className="text-base">
+                          {num}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-            Spin
-          </Button>
-        </form>
-      </Form>
+
+            <Sparkles intensity="low" sparkleColor="rgba(245, 158, 11, 0.6)">
+              <Button
+                type="submit"
+                disabled={placeBetMutation.isPending || wheelSpinning || 
+                  (["straight", "split", "corner"].includes(watchedBetType) && watchedNumbers.length === 0)}
+                className={cn(
+                  "w-full h-12 bg-gradient-to-r from-amber-600 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white border-amber-950",
+                  wheelSpinning && "animate-pulse"
+                )}
+              >
+                {placeBetMutation.isPending || wheelSpinning ? (
+                  <>
+                    <RotateCw className="h-5 w-5 animate-spin mr-2" />
+                    {wheelSpinning ? "Spinning Wheel..." : "Placing Bet..."}
+                  </>
+                ) : (
+                  <>
+                    <DollarSign className="h-5 w-5 mr-2" />
+                    Spin the Wheel
+                  </>
+                )}
+              </Button>
+            </Sparkles>
+          </form>
+        </Form>
+      </div>
     );
   };
 

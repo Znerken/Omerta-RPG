@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="300" viewBox="0 0 600 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="600" height="300" fill="#0D5B25" />
+  
+  <!-- Table Border -->
+  <rect x="5" y="5" width="590" height="290" fill="none" stroke="#D4AF37" stroke-width="2" />
+  
+  <!-- Numbers layout -->
+  <g>
+    <!-- 0 Section -->
+    <rect x="30" y="30" width="40" height="120" fill="#006633" stroke="#D4AF37" stroke-width="1" />
+    <text x="50" y="90" fill="white" font-family="Arial" font-size="24" text-anchor="middle">0</text>
+    
+    <!-- Numbers 1-36 grid -->
+    <g>
+      <!-- Row 1 -->
+      <rect x="70" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="90" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">3</text>
+      
+      <rect x="110" y="30" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="130" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">6</text>
+      
+      <rect x="150" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="170" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">9</text>
+      
+      <rect x="190" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="210" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">12</text>
+      
+      <rect x="230" y="30" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="250" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">15</text>
+      
+      <rect x="270" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="290" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">18</text>
+      
+      <rect x="310" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="330" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">21</text>
+      
+      <rect x="350" y="30" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="370" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">24</text>
+      
+      <rect x="390" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="410" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">27</text>
+      
+      <rect x="430" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="450" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">30</text>
+      
+      <rect x="470" y="30" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="490" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">33</text>
+      
+      <rect x="510" y="30" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="530" y="55" fill="white" font-family="Arial" font-size="18" text-anchor="middle">36</text>
+      
+      <!-- Row 2 -->
+      <rect x="70" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="90" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">2</text>
+      
+      <rect x="110" y="70" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="130" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">5</text>
+      
+      <rect x="150" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="170" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">8</text>
+      
+      <rect x="190" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="210" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">11</text>
+      
+      <rect x="230" y="70" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="250" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">14</text>
+      
+      <rect x="270" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="290" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">17</text>
+      
+      <rect x="310" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="330" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">20</text>
+      
+      <rect x="350" y="70" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="370" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">23</text>
+      
+      <rect x="390" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="410" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">26</text>
+      
+      <rect x="430" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="450" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">29</text>
+      
+      <rect x="470" y="70" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="490" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">32</text>
+      
+      <rect x="510" y="70" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="530" y="95" fill="white" font-family="Arial" font-size="18" text-anchor="middle">35</text>
+      
+      <!-- Row 3 -->
+      <rect x="70" y="110" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="90" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">1</text>
+      
+      <rect x="110" y="110" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="130" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">4</text>
+      
+      <rect x="150" y="110" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="170" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">7</text>
+      
+      <rect x="190" y="110" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="210" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">10</text>
+      
+      <rect x="230" y="110" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="250" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">13</text>
+      
+      <rect x="270" y="110" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="290" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">16</text>
+      
+      <rect x="310" y="110" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="330" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">19</text>
+      
+      <rect x="350" y="110" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="370" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">22</text>
+      
+      <rect x="390" y="110" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="410" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">25</text>
+      
+      <rect x="430" y="110" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="450" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">28</text>
+      
+      <rect x="470" y="110" width="40" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="490" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">31</text>
+      
+      <rect x="510" y="110" width="40" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="530" y="135" fill="white" font-family="Arial" font-size="18" text-anchor="middle">34</text>
+    </g>
+    
+    <!-- Bottom betting options -->
+    <g>
+      <!-- 1st 12 -->
+      <rect x="70" y="150" width="160" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+      <text x="150" y="175" fill="white" font-family="Arial" font-size="16" text-anchor="middle">1st 12</text>
+      
+      <!-- 2nd 12 -->
+      <rect x="230" y="150" width="160" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+      <text x="310" y="175" fill="white" font-family="Arial" font-size="16" text-anchor="middle">2nd 12</text>
+      
+      <!-- 3rd 12 -->
+      <rect x="390" y="150" width="160" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+      <text x="470" y="175" fill="white" font-family="Arial" font-size="16" text-anchor="middle">3rd 12</text>
+      
+      <!-- Bottom row -->
+      <rect x="70" y="190" width="80" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+      <text x="110" y="215" fill="white" font-family="Arial" font-size="16" text-anchor="middle">1-18</text>
+      
+      <rect x="150" y="190" width="80" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+      <text x="190" y="215" fill="white" font-family="Arial" font-size="16" text-anchor="middle">EVEN</text>
+      
+      <rect x="230" y="190" width="80" height="40" fill="#CC0000" stroke="#D4AF37" stroke-width="1" />
+      <text x="270" y="215" fill="white" font-family="Arial" font-size="16" text-anchor="middle">RED</text>
+      
+      <rect x="310" y="190" width="80" height="40" fill="#000000" stroke="#D4AF37" stroke-width="1" />
+      <text x="350" y="215" fill="white" font-family="Arial" font-size="16" text-anchor="middle">BLACK</text>
+      
+      <rect x="390" y="190" width="80" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+      <text x="430" y="215" fill="white" font-family="Arial" font-size="16" text-anchor="middle">ODD</text>
+      
+      <rect x="470" y="190" width="80" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+      <text x="510" y="215" fill="white" font-family="Arial" font-size="16" text-anchor="middle">19-36</text>
+    </g>
+    
+    <!-- Columns -->
+    <rect x="550" y="30" width="40" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+    <text x="570" y="55" fill="white" font-family="Arial" font-size="16" text-anchor="middle">2:1</text>
+    
+    <rect x="550" y="70" width="40" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+    <text x="570" y="95" fill="white" font-family="Arial" font-size="16" text-anchor="middle">2:1</text>
+    
+    <rect x="550" y="110" width="40" height="40" fill="#0D5B25" stroke="#D4AF37" stroke-width="1" />
+    <text x="570" y="135" fill="white" font-family="Arial" font-size="16" text-anchor="middle">2:1</text>
+  </g>
+  
+  <!-- Shader overlay to give an aged, luxury feel -->
+  <rect width="600" height="300" fill="url(#shader)" fill-opacity="0.3" />
+  
+  <!-- Decorative edge -->
+  <rect x="3" y="3" width="594" height="294" stroke="#D4AF37" stroke-width="1" fill="none" />
+  
+  <!-- Definitions for shader -->
+  <defs>
+    <linearGradient id="shader" x1="0" y1="0" x2="600" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D4AF37" stop-opacity="0.1" />
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0" />
+      <stop offset="1" stop-color="#D4AF37" stop-opacity="0.1" />
+    </linearGradient>
+  </defs>
+</svg>

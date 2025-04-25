@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="600" height="100" viewBox="0 0 600 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dice 1 -->
+  <g transform="translate(0, 0)">
+    <rect x="10" y="10" width="80" height="80" rx="10" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <circle cx="50" cy="50" r="8" fill="#cc0000"/>
+  </g>
+  
+  <!-- Dice 2 -->
+  <g transform="translate(100, 0)">
+    <rect x="10" y="10" width="80" height="80" rx="10" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <circle cx="30" cy="30" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="70" r="8" fill="#cc0000"/>
+  </g>
+  
+  <!-- Dice 3 -->
+  <g transform="translate(200, 0)">
+    <rect x="10" y="10" width="80" height="80" rx="10" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <circle cx="30" cy="30" r="8" fill="#cc0000"/>
+    <circle cx="50" cy="50" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="70" r="8" fill="#cc0000"/>
+  </g>
+  
+  <!-- Dice 4 -->
+  <g transform="translate(300, 0)">
+    <rect x="10" y="10" width="80" height="80" rx="10" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <circle cx="30" cy="30" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="30" r="8" fill="#cc0000"/>
+    <circle cx="30" cy="70" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="70" r="8" fill="#cc0000"/>
+  </g>
+  
+  <!-- Dice 5 -->
+  <g transform="translate(400, 0)">
+    <rect x="10" y="10" width="80" height="80" rx="10" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <circle cx="30" cy="30" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="30" r="8" fill="#cc0000"/>
+    <circle cx="50" cy="50" r="8" fill="#cc0000"/>
+    <circle cx="30" cy="70" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="70" r="8" fill="#cc0000"/>
+  </g>
+  
+  <!-- Dice 6 -->
+  <g transform="translate(500, 0)">
+    <rect x="10" y="10" width="80" height="80" rx="10" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <circle cx="30" cy="25" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="25" r="8" fill="#cc0000"/>
+    <circle cx="30" cy="50" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="50" r="8" fill="#cc0000"/>
+    <circle cx="30" cy="75" r="8" fill="#cc0000"/>
+    <circle cx="70" cy="75" r="8" fill="#cc0000"/>
+  </g>
+  
+  <!-- Luxurious shader overlay -->
+  <rect width="600" height="100" fill="url(#shader)" fill-opacity="0.1"/>
+  
+  <!-- Definitions -->
+  <defs>
+    <linearGradient id="shader" x1="0" y1="0" x2="600" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#D4AF37" stop-opacity="0.1"/>
+      <stop offset="0.5" stop-color="#000000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#D4AF37" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+</svg>
