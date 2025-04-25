@@ -29,6 +29,7 @@ import AchievementsPage from "@/pages/achievements-page";
 import AdminPage from "@/pages/admin-page";
 import DrugsPage from "@/pages/drugs-page";
 import CasinoPage from "@/pages/casino-page";
+import FriendsPage from "@/pages/friends-page";
 
 // Protected route with layout wrapper
 function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
@@ -134,6 +135,12 @@ function AppRouter() {
       <Route path="/achievements">
         {() => (
           <ProtectedRoute path="/achievements" component={() => <ProtectedPage component={AchievementsPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/friends">
+        {() => (
+          <ProtectedRoute path="/friends" component={() => <ProtectedPage component={FriendsPage} />} />
         )}
       </Route>
       
