@@ -618,7 +618,7 @@ function LabsTab() {
       description: "Deep beneath the surface and well-hidden. Low risk but limited capacity.",
       riskModifier: -15,
       productionModifier: -5,
-      icon: <PackageCheck className="h-4 w-4" />
+      icon: <Box className="h-4 w-4" />
     },
     "Remote Farmhouse": {
       description: "Far from the city, but harder to distribute. Low risk, low capacity.",
@@ -630,7 +630,7 @@ function LabsTab() {
       description: "Hidden in plain sight. Moderate risk and moderate capacity.",
       riskModifier: 5,
       productionModifier: 0,
-      icon: <StairsDown className="h-4 w-4" />
+      icon: <ChevronsDown className="h-4 w-4" />
     },
     "Industrial District": {
       description: "Blends in with other businesses. Moderate risk, high capacity.",
@@ -666,7 +666,7 @@ function LabsTab() {
       description: "Isolated and defensible, but attracts attention. Moderate risk, very high capacity.",
       riskModifier: 5,
       productionModifier: 30,
-      icon: <Nfc className="h-4 w-4" />
+      icon: <Zap className="h-4 w-4" />
     }
   };
   const [selectedLocation, setSelectedLocation] = useState(labLocations[0]);
