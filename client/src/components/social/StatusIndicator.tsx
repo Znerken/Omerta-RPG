@@ -11,7 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu/index";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -44,7 +44,7 @@ const statusVariants = cva("absolute border rounded-full", {
 });
 
 export interface StatusIndicatorProps
-  extends VariantProps<typeof statusVariants> {
+  extends Omit<VariantProps<typeof statusVariants>, 'status'> {
   children: ReactNode;
   status: string;
   isEditable?: boolean;

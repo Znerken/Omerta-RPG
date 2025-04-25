@@ -199,15 +199,18 @@ export function FriendsList() {
                     <React.Fragment key={friend.id}>
                       <div className="flex items-center justify-between py-2">
                         <div className="flex items-center space-x-3">
-                          <StatusIndicator 
-                            status={friend.status?.status || "offline"} 
-                            size="md"
-                          >
+                          <div className="relative">
                             <Avatar>
                               <AvatarImage src={friend.avatar || undefined} />
                               <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
                             </Avatar>
-                          </StatusIndicator>
+                            <span className={`absolute w-3 h-3 right-0 bottom-0 border rounded-full ${
+                              friend.status?.status === "online" ? "bg-green-500 border-green-400" :
+                              friend.status?.status === "away" ? "bg-yellow-500 border-yellow-400" :
+                              friend.status?.status === "busy" ? "bg-red-500 border-red-400" :
+                              "bg-gray-400 border-gray-400"
+                            }`}></span>
+                          </div>
                           <div>
                             <p className="text-sm font-medium">{friend.username}</p>
                             <p className="text-xs text-muted-foreground capitalize">
