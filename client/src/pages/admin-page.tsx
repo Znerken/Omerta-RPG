@@ -41,6 +41,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -48,7 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy } from "lucide-react";
+import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle } from "lucide-react";
 import PageHeader from "../components/layout/page-header";
 import { PageSection } from "../components/layout/page-section";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -439,47 +440,6 @@ export default function AdminPage() {
     },
   });
   
-  const clearLabProductionsMutation = useMutation({
-    mutationFn: async (labId: number) => {
-      const res = await apiRequest("DELETE", `/api/admin/drug-labs/${labId}/productions`);
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Productions Cleared",
-        description: "All productions for this lab have been cleared successfully.",
-      });
-      
-      addNotification({
-        id: Date.now().toString(),
-        title: "Admin Action: Productions Cleared",
-        message: "All productions for this lab have been cleared successfully.",
-        type: "success",
-        read: false,
-        timestamp: new Date()
-      });
-      
-      setClearLabProductionsDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["/api/user/drug-labs"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to Clear Productions",
-        description: error.message,
-        variant: "destructive",
-      });
-      
-      addNotification({
-        id: Date.now().toString(),
-        title: "Admin Action Failed",
-        message: `Failed to clear productions: ${error.message}`,
-        type: "error",
-        read: false,
-        timestamp: new Date()
-      });
-    },
-  });
-  
   const grantAchievementMutation = useMutation({
     mutationFn: async ({ userId, achievementId }: { userId: number; achievementId: number }) => {
       const res = await apiRequest("POST", `/api/admin/achievements/${achievementId}/unlock`, { userId });
@@ -519,6 +479,48 @@ export default function AdminPage() {
         id: Date.now().toString(),
         title: "Admin Action Failed",
         message: `Failed to grant achievement: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
+  
+  const clearLabProductionsMutation = useMutation({
+    mutationFn: async (labId: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/drug-labs/${labId}/productions`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Productions Cleared",
+        description: data.message || "All productions in the lab have been cleared successfully.",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: Productions Cleared",
+        message: data.message || "All productions in the lab have been cleared successfully.",
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      setClearLabProductionsDialogOpen(false);
+      setSelectedLabId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/user/drug-labs"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Clear Productions",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to clear productions: ${error.message}`,
         type: "error",
         read: false,
         timestamp: new Date()
@@ -934,6 +936,68 @@ export default function AdminPage() {
                           <TableRow>
                             <TableCell colSpan={3} className="text-center py-4">
                               No jailed users
+                            </TableCell>
+                          </TableRow>
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Drug Labs Tab */}
+        <TabsContent value="drug-labs" className="space-y-6">
+          <Card className="bg-dark-surface">
+            <CardHeader>
+              <CardTitle>Drug Lab Management</CardTitle>
+              <CardDescription>View and manage user drug labs and productions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Card className="bg-dark-lighter overflow-hidden">
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-dark-lighter">
+                      <TableRow>
+                        <TableHead>Lab ID</TableHead>
+                        <TableHead>Owner</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Level</TableHead>
+                        <TableHead>Productions</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isDrugLabsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        drugLabs?.map((lab: any) => (
+                          <TableRow key={lab.id} className="hover:bg-dark-surface">
+                            <TableCell className="font-mono">{lab.id}</TableCell>
+                            <TableCell>{lab.user?.username || `User #${lab.userId}`}</TableCell>
+                            <TableCell className="font-medium">{lab.name}</TableCell>
+                            <TableCell>{lab.level}</TableCell>
+                            <TableCell>{lab.activeProductionCount || 0} active</TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleClearLabProductions(lab.id)}
+                              >
+                                Clear All Productions
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )) || (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-4">
+                              No drug labs found
                             </TableCell>
                           </TableRow>
                         )
@@ -1525,6 +1589,51 @@ export default function AdminPage() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Lab Productions Dialog */}
+      <Dialog open={clearLabProductionsDialogOpen} onOpenChange={setClearLabProductionsDialogOpen}>
+        <DialogContent className="bg-dark-surface border-gray-700">
+          <DialogHeader>
+            <DialogTitle>Clear All Productions</DialogTitle>
+            <DialogDescription>
+              This will permanently delete all active drug productions for this lab.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Warning</AlertTitle>
+              <AlertDescription>
+                This action cannot be undone. All progress on active productions will be lost.
+              </AlertDescription>
+            </Alert>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setClearLabProductionsDialogOpen(false)}
+              className="bg-dark-lighter"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={onClearLabProductions}
+              disabled={clearLabProductionsMutation.isPending}
+            >
+              {clearLabProductionsMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                </>
+              ) : (
+                "Clear All Productions"
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
