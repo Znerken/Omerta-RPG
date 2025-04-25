@@ -50,6 +50,48 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     this.initializeDefaultData();
   }
   
+  // Admin methods
+  async getAllUsers(page: number = 1, limit: number = 20, search: string = ""): Promise<User[]> {
+    const offset = (page - 1) * limit;
+    
+    let query = db.select().from(users);
+    
+    if (search) {
+      query = query.where(
+        sql`(${users.username} ILIKE ${'%' + search + '%'} OR ${users.email} ILIKE ${'%' + search + '%'})`
+      );
+    }
+    
+    return await query
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(users.id));
+  }
+  
+  async getUserCount(search: string = ""): Promise<number> {
+    let query = db
+      .select({ count: sql<number>`count(*)` })
+      .from(users);
+    
+    if (search) {
+      query = query.where(
+        sql`(${users.username} ILIKE ${'%' + search + '%'} OR ${users.email} ILIKE ${'%' + search + '%'})`
+      );
+    }
+    
+    const result = await query;
+    return result[0]?.count || 0;
+  }
+  
+  async getActiveUserCount(hoursAgo: number = 24): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setHours(cutoffDate.getHours() - hoursAgo);
+    
+    // We would normally use lastActive, but it doesn't exist in the schema yet
+    // For now, we'll get all users
+    return await this.getUserCount();
+  }
+  
   private async initializeDefaultData() {
     // Check if there are any crimes, if not, create defaults
     const existingCrimes = await this.getAllCrimes();

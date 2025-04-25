@@ -36,6 +36,11 @@ export interface IStorage {
   // Session store
   sessionStore: any;
 
+  // Admin methods
+  getAllUsers(page?: number, limit?: number, search?: string): Promise<User[]>;
+  getUserCount(search?: string): Promise<number>;
+  getActiveUserCount(hoursAgo?: number): Promise<number>;
+
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
