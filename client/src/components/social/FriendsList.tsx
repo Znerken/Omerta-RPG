@@ -18,29 +18,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { StatusIndicator } from "./StatusIndicator";
-
-interface Friend {
-  id: number;
-  username: string;
-  avatar: string | null;
-  status: {
-    id: number;
-    userId: number;
-    status: string;
-    lastActive: Date | null;
-    lastLocation: string | null;
-  };
-  isFriend: boolean;
-  friendStatus?: string;
-  friendRequest?: {
-    id: number;
-    userId: number;
-    friendId: number;
-    status: string;
-    createdAt: Date | null;
-  };
-}
+import { Friend } from "@/types";
 
 export function FriendsList() {
   const [searchQuery, setSearchQuery] = useState("");

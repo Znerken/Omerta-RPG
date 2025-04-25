@@ -12,13 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { debounce } from "@/lib/utils";
 
-interface UserSearchResult {
-  id: number;
-  username: string;
-  avatar: string | null;
-  isFriend: boolean;
-  friendStatus: string | null;
-}
+import { UserWithStatus } from "@/types";
 
 export function AddFriend() {
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -51,7 +45,7 @@ export function AddFriend() {
       if (!debouncedQuery || debouncedQuery.length < 3) return [];
       
       const response = await apiRequest("GET", `/api/social/users/search?q=${encodeURIComponent(debouncedQuery)}`);
-      return await response.json() as UserSearchResult[];
+      return await response.json() as UserWithStatus[];
     },
     enabled: debouncedQuery.length >= 3,
   });
@@ -79,7 +73,7 @@ export function AddFriend() {
   });
   
   // Render user search result item
-  const renderUserItem = (user: UserSearchResult) => {
+  const renderUserItem = (user: UserWithStatus) => {
     let actionButton;
     
     if (user.isFriend) {
