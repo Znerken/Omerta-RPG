@@ -522,6 +522,7 @@ export const insertDrugProductionSchema = createInsertSchema(drugProduction).omi
   id: true,
   startedAt: true,
   isCompleted: true,
+  completesAt: true, // Server will calculate this
 });
 
 // Drug Deal Schema
