@@ -106,11 +106,19 @@ const editStatsSchema = z.object({
     }),
 });
 
+const grantAchievementSchema = z.object({
+  achievementId: z.string().transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Please select an achievement",
+    }),
+});
+
 type UserSearchValues = z.infer<typeof userSearchSchema>;
 type GiveCashValues = z.infer<typeof giveCashSchema>;
 type GiveXpValues = z.infer<typeof giveXpSchema>;
 type BanUserValues = z.infer<typeof banUserSchema>;
 type EditStatsValues = z.infer<typeof editStatsSchema>;
+type GrantAchievementValues = z.infer<typeof grantAchievementSchema>;
 
 export default function AdminPage() {
   const { toast } = useToast();
@@ -121,6 +129,7 @@ export default function AdminPage() {
   const [xpDialogOpen, setXpDialogOpen] = useState(false);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
+  const [achievementDialogOpen, setAchievementDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchValue, setSearchValue] = useState("");
 
