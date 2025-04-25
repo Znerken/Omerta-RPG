@@ -12,6 +12,7 @@ import {
   Message, InsertMessage,
   UserWithStats,
   UserWithGang,
+  UserWithFinancials,
   CrimeWithHistory,
   ItemWithDetails,
   GangWithMembers,
@@ -29,14 +30,17 @@ import { eq, and, desc, gte, sql, asc } from "drizzle-orm";
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import { calculateCrimeSuccessChance } from "@shared/gameUtils";
+import { EconomyStorage } from "./storage-economy";
 
 const PostgresSessionStore = connectPg(session);
 
 // Database storage implementation
-export class DatabaseStorage implements IStorage {
+export class DatabaseStorage extends EconomyStorage implements IStorage {
   sessionStore: session.SessionStore;
   
   constructor() {
+    super(); // Initialize EconomyStorage
+    
     this.sessionStore = new PostgresSessionStore({
       pool, 
       createTableIfMissing: true

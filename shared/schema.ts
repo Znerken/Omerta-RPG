@@ -6,12 +6,15 @@ import { z } from "zod";
 import * as Economy from "./schema-economy";
 
 // Session Schema for authentication (matching existing database)
-// Note: We're using the exact same types as the database but skipping schema validation
-// to avoid losing session data since this table is maintained by connect-pg-simple
+// Note: We're skipping schema validation for this table to avoid
+// losing session data since it's maintained by connect-pg-simple
+// Using varchar for sid to match existing database structure
+// Drizzle will ignore this table during migrations
+import { sql } from "drizzle-orm";
 export const sessions = pgTable("session", {
-  sid: text("sid").primaryKey(),
+  sid: text("sid", { mode: "varchar" }).primaryKey(),
   sess: json("sess").notNull(),
-  expire: timestamp("expire", { precision: 6 }).notNull(),
+  expire: timestamp("expire", { precision: 6, mode: "timestamp" }).notNull(),
 }, (table) => {
   return {
     expireIdx: index("IDX_session_expire").on(table.expire),
