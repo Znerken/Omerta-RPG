@@ -1,5 +1,4 @@
 import { Express } from "express";
-import { storage } from "./storage";
 import { db } from "./db";
 import { eq, and, or, sql } from "drizzle-orm";
 import { 
@@ -24,7 +23,8 @@ import {
   updateUserStatus,
   createUserStatus,
   getOnlineUsers,
-  getUserWithStatus
+  getUserWithStatus,
+  getUser
 } from "./social-database";
 
 // Get reference to the notifyUser function from routes.ts
