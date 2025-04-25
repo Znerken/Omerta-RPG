@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -9,6 +8,7 @@ import { MessageComposer } from "@/components/messages/MessageComposer";
 import { MessageList } from "@/components/messages/MessageList";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { JailTimer } from "@/components/jail/JailTimer";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getInitials } from "@/lib/utils";
@@ -102,16 +102,26 @@ export default function JailPage() {
 
   if (isLoading) {
     return (
-      <MainLayout title="Jail">
+      <>
+        <PageHeader 
+          title="Jail" 
+          icon={<Vault className="h-5 w-5" />}
+          description="You've been caught breaking the law"
+        />
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
-      </MainLayout>
+      </>
     );
   }
 
   return (
-    <MainLayout title="Jail">
+    <>
+      <PageHeader 
+        title="Jail" 
+        icon={<Vault className="h-5 w-5" />}
+        description={jailStatus?.isJailed ? "You've been caught breaking the law" : "Stay on the right side of the law"}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           {jailStatus?.isJailed ? (
@@ -338,6 +348,6 @@ export default function JailPage() {
           </Card>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }
