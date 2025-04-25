@@ -10,7 +10,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import gangsterBg from "@assets/gen-mafia-gangster-organized-crime-suit-man-photoreali.webp";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -70,8 +69,7 @@ export default function AuthPage() {
     <div 
       className="min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
       style={{ 
-        backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.4) 100%), url(${gangsterBg})`,
-        backgroundPosition: "right center"
+        backgroundImage: `url('/assets/mafia-background.svg')`,
       }}
     >
       <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8">
@@ -209,9 +207,10 @@ export default function AuthPage() {
         
         {/* Right column: Hero section */}
         <div className="flex-1 hidden md:flex flex-col justify-center z-10 pl-8">
-          <div className="backdrop-blur-sm bg-black/20 rounded-sm p-8 h-full shadow-dramatic border-l-4 border-gold/40">
+          <div className="backdrop-blur-sm bg-black/30 rounded-sm p-8 h-full shadow-dramatic border-l-4 border-gold/40">
             <div className="h-full flex flex-col justify-center space-y-8">
-              <div className="mb-8">
+              <div className="mb-8 flex flex-col items-center md:items-start">
+                <img src="/assets/mafia-icon.svg" alt="Mafia Icon" className="w-24 h-24 mb-4" />
                 <div className="inline-block mb-3 pb-1 border-b-2 border-gold/40">
                   <h2 className="text-3xl font-heading text-gold-gradient">Rise to Power</h2>
                 </div>
@@ -257,8 +256,8 @@ export default function AuthPage() {
 
 function Feature({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
   return (
-    <div className="flex items-start">
-      <div className="mr-4 p-2 bg-gold/10 border border-gold/20 rounded-sm text-gold">
+    <div className="flex items-start hover:translate-x-1 transition-transform duration-200">
+      <div className="mr-4 p-2 bg-black/60 border border-gold/30 rounded-sm text-gold shadow-gold/20 shadow-inner">
         {icon}
       </div>
       <div>
