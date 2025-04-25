@@ -34,7 +34,11 @@ export const users = pgTable("users", {
   respect: integer("respect").notNull().default(0),
   // Basic user data
   avatar: text("avatar"),
+  bannerImage: text("banner_image"),
   bio: text("bio"),
+  htmlProfile: text("html_profile"),
+  profileTheme: text("profile_theme"),
+  showAchievements: boolean("show_achievements").default(true),
   isAdmin: boolean("is_admin").notNull().default(false),
   isJailed: boolean("is_jailed").notNull().default(false),
   jailTimeEnd: timestamp("jail_time_end"),

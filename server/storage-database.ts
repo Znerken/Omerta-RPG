@@ -46,7 +46,7 @@ import {
   achievements,
   userAchievements
 } from "@shared/schema";
-import { eq, and, desc, gte, lte, sql, asc } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql, asc, inArray } from "drizzle-orm";
 import { db, pool } from "./db";
 import { IStorage } from "./storage";
 import { calculateCrimeSuccessChance } from "@shared/gameUtils";
@@ -500,10 +500,17 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       
       // Get the full achievement details for each one
       const achievementIds = userAchievementResults.map(ua => ua.achievementId);
-      const achievementResults = await db
-        .select()
-        .from(achievements)
-        .where(sql`id = ANY(${achievementIds})`);
+      
+      // Use in operator instead of ANY to avoid array formatting issues
+      let achievementResults;
+      if (achievementIds.length > 0) {
+        achievementResults = await db
+          .select()
+          .from(achievements)
+          .where(inArray(achievements.id, achievementIds));
+      } else {
+        achievementResults = [];
+      }
       
       // Create a map for quick lookup
       const userAchievementMap = new Map(
@@ -566,6 +573,44 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       return userAchievement;
     } catch (error) {
       console.error("Error in unlockAchievement:", error);
+      return undefined;
+    }
+  }
+  
+  async markAchievementAsViewed(userId: number, achievementId: number): Promise<UserAchievement | undefined> {
+    try {
+      // Find the user achievement record
+      const [existingAchievement] = await db
+        .select()
+        .from(userAchievements)
+        .where(
+          and(
+            eq(userAchievements.userId, userId),
+            eq(userAchievements.achievementId, achievementId)
+          )
+        );
+      
+      if (!existingAchievement) {
+        console.log(`Achievement ${achievementId} not found for user ${userId}`);
+        return undefined;
+      }
+      
+      // Update the viewed status
+      const [updatedAchievement] = await db
+        .update(userAchievements)
+        .set({ viewed: true })
+        .where(
+          and(
+            eq(userAchievements.userId, userId),
+            eq(userAchievements.achievementId, achievementId)
+          )
+        )
+        .returning();
+      
+      console.log(`Marked achievement ${achievementId} as viewed for user ${userId}`);
+      return updatedAchievement;
+    } catch (error) {
+      console.error("Error in markAchievementAsViewed:", error);
       return undefined;
     }
   }
