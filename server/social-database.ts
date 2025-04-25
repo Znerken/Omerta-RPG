@@ -69,27 +69,47 @@ export async function getFriendRequest(
   friendId: number | null, 
   requestId?: number
 ): Promise<UserFriend | undefined> {
-  if (requestId) {
-    // Find by ID
-    const [request] = await db
-      .select()
-      .from(userFriends)
-      .where(eq(userFriends.id, requestId));
+  try {
+    // Validate inputs
+    if (requestId !== undefined && isNaN(requestId)) {
+      console.error(`Invalid requestId in getFriendRequest: ${requestId}`);
+      return undefined;
+    }
     
-    return request;
-  } else if (userId && friendId) {
-    // Find by user pair
-    const [request] = await db
-      .select()
-      .from(userFriends)
-      .where(
-        and(
-          eq(userFriends.userId, userId),
-          eq(userFriends.friendId, friendId)
-        )
-      );
+    if (userId !== null && isNaN(userId as number)) {
+      console.error(`Invalid userId in getFriendRequest: ${userId}`);
+      return undefined;
+    }
     
-    return request;
+    if (friendId !== null && isNaN(friendId as number)) {
+      console.error(`Invalid friendId in getFriendRequest: ${friendId}`);
+      return undefined;
+    }
+    
+    if (requestId) {
+      // Find by ID
+      const [request] = await db
+        .select()
+        .from(userFriends)
+        .where(eq(userFriends.id, requestId));
+      
+      return request;
+    } else if (userId && friendId) {
+      // Find by user pair
+      const [request] = await db
+        .select()
+        .from(userFriends)
+        .where(
+          and(
+            eq(userFriends.userId, userId),
+            eq(userFriends.friendId, friendId)
+          )
+        );
+      
+      return request;
+    }
+  } catch (error) {
+    console.error("Error in getFriendRequest:", error);
   }
   
   return undefined;
@@ -165,6 +185,10 @@ export async function getUserWithStatus(
   targetUserId: number, 
   currentUserId: number
 ): Promise<UserWithStatus | undefined> {
+  if (isNaN(targetUserId) || isNaN(currentUserId)) {
+    throw new Error(`Invalid user IDs: targetUserId=${targetUserId}, currentUserId=${currentUserId}`);
+  }
+
   // Get user and their status
   const [userResult] = await db
     .select({
@@ -201,6 +225,7 @@ export async function getUserWithStatus(
   return {
     ...userResult.user,
     status: userResult.status || {
+      id: 0, // Placeholder ID for frontend
       userId: targetUserId,
       status: "offline",
       lastActive: new Date(),

@@ -39,7 +39,12 @@ export function registerSocialRoutes(app: Express) {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
     
     try {
-      const targetUserId = parseInt(req.params.userId);
+      const targetUserIdParam = req.params.userId;
+      if (!targetUserIdParam || isNaN(parseInt(targetUserIdParam))) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const targetUserId = parseInt(targetUserIdParam);
       const currentUserId = req.user.id;
       
       // Skip friend status check if viewing own profile
@@ -50,6 +55,7 @@ export function registerSocialRoutes(app: Express) {
         }
         
         const status = await storage.getUserStatus(targetUserId) || {
+          id: 0, // Placeholder ID for frontend
           userId: targetUserId,
           status: "offline",
           lastActive: new Date(),
@@ -65,12 +71,36 @@ export function registerSocialRoutes(app: Express) {
         });
       }
       
-      const userWithStatus = await storage.getUserWithStatus(targetUserId, currentUserId);
-      if (!userWithStatus) {
-        return res.status(404).json({ message: "User not found" });
+      try {
+        const userWithStatus = await storage.getUserWithStatus(targetUserId, currentUserId);
+        if (!userWithStatus) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.json(userWithStatus);
+      } catch (error) {
+        console.error("Error getting user with status:", error);
+        
+        // Fallback to basic user info without status if there's an error
+        const user = await storage.getUser(targetUserId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        return res.json({
+          ...user,
+          status: {
+            id: 0, // Placeholder ID for frontend
+            userId: targetUserId,
+            status: "offline",
+            lastActive: new Date(),
+            lastLocation: null
+          },
+          isFriend: false,
+          friendStatus: null,
+          friendRequest: null
+        });
       }
-      
-      res.json(userWithStatus);
     } catch (error) {
       console.error("Error getting user with status:", error);
       res.status(500).json({ message: "Failed to get user" });
@@ -324,16 +354,28 @@ export function registerSocialRoutes(app: Express) {
           return null;
         }
         
-        // Check friendship status
-        const userWithStatus = await storage.getUserWithStatus(user.id, currentUserId);
-        
-        return {
-          id: user.id,
-          username: user.username,
-          avatar: user.avatar,
-          isFriend: userWithStatus?.isFriend || false,
-          friendStatus: userWithStatus?.friendStatus || null
-        };
+        try {
+          // Check friendship status
+          const userWithStatus = await storage.getUserWithStatus(user.id, currentUserId);
+          
+          return {
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar,
+            isFriend: userWithStatus?.isFriend || false,
+            friendStatus: userWithStatus?.friendStatus || null
+          };
+        } catch (error) {
+          console.error(`Error getting status for user ${user.id}:`, error);
+          // Return basic user info without status if there's an error
+          return {
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar,
+            isFriend: false,
+            friendStatus: null
+          };
+        }
       }));
       
       // Filter out null results (self)
