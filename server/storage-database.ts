@@ -258,7 +258,7 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
     const [user] = await db
       .update(users)
-      .set({ ...userData, updatedAt: new Date() })
+      .set(userData)
       .where(eq(users.id, id))
       .returning();
     return user;
@@ -301,13 +301,14 @@ export class DatabaseStorage implements IStorage {
   }
   
   async createStats(insertStat: InsertStat): Promise<Stat> {
-    const now = new Date();
     const [stat] = await db
       .insert(stats)
       .values({
         ...insertStat,
-        createdAt: now,
-        updatedAt: now
+        strength: 10,
+        stealth: 10,
+        charisma: 10,
+        intelligence: 10
       })
       .returning();
     return stat;
@@ -316,7 +317,7 @@ export class DatabaseStorage implements IStorage {
   async updateStats(userId: number, statData: Partial<Stat>): Promise<Stat | undefined> {
     const [stat] = await db
       .update(stats)
-      .set({ ...statData, updatedAt: new Date() })
+      .set(statData)
       .where(eq(stats.userId, userId))
       .returning();
     return stat;
