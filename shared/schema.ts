@@ -1,15 +1,21 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Import economy types
 import * as Economy from "./schema-economy";
 
-// Session Schema for authentication
+// Session Schema for authentication (matching existing database)
+// Note: We're using the exact same types as the database but skipping schema validation
+// to avoid losing session data since this table is maintained by connect-pg-simple
 export const sessions = pgTable("session", {
   sid: text("sid").primaryKey(),
-  sess: text("sess").notNull(),
-  expire: timestamp("expire").notNull(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+}, (table) => {
+  return {
+    expireIdx: index("IDX_session_expire").on(table.expire),
+  }
 });
 
 // ========== Core Game Tables ==========
