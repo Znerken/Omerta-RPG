@@ -21,7 +21,15 @@ import {
   UserWithGang,
   CrimeWithHistory,
   ItemWithDetails,
-  GangWithMembers
+  GangWithMembers,
+  // Challenge types
+  Challenge,
+  ChallengeProgress,
+  ChallengeReward,
+  InsertChallenge,
+  InsertChallengeProgress,
+  InsertChallengeReward,
+  ChallengeWithProgress
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -108,6 +116,20 @@ export interface IStorage {
   // Jail methods
   getJailedUsers(): Promise<User[]>;
   releaseFromJail(userId: number): Promise<User | undefined>;
+  
+  // Challenge methods
+  getAllChallenges(): Promise<Challenge[]>;
+  getActiveChallenges(): Promise<Challenge[]>;
+  getChallenge(id: number): Promise<Challenge | undefined>;
+  createChallenge(challenge: InsertChallenge): Promise<Challenge>;
+  updateChallenge(id: number, challengeData: Partial<Challenge>): Promise<Challenge | undefined>;
+  deleteChallenge(id: number): Promise<boolean>;
+  getChallengesWithProgress(userId: number): Promise<ChallengeWithProgress[]>;
+  getChallengeProgress(userId: number, challengeId: number): Promise<ChallengeProgress | undefined>;
+  createChallengeProgress(progress: InsertChallengeProgress): Promise<ChallengeProgress>;
+  updateChallengeProgress(userId: number, challengeId: number, data: Partial<ChallengeProgress>): Promise<ChallengeProgress | undefined>;
+  createChallengeReward(reward: InsertChallengeReward): Promise<ChallengeReward>;
+  getUserChallengeRewards(userId: number, limit?: number): Promise<ChallengeReward[]>;
 }
 
 // Use the DatabaseStorage for all operations
@@ -126,6 +148,9 @@ class MemStorage implements IStorage {
   private gangs: Map<number, Gang>;
   private gangMembers: Map<number, GangMember>;
   private messages: Map<number, Message>;
+  private challenges: Map<number, Challenge>;
+  private challengeProgress: Map<number, ChallengeProgress>;
+  private challengeRewards: Map<number, ChallengeReward>;
   
   // ID counters
   private userIdCounter: number;
@@ -137,6 +162,9 @@ class MemStorage implements IStorage {
   private gangIdCounter: number;
   private gangMemberIdCounter: number;
   private messageIdCounter: number;
+  private challengeIdCounter: number;
+  private challengeProgressIdCounter: number;
+  private challengeRewardIdCounter: number;
   
   // Session store
   sessionStore: any;

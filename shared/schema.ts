@@ -263,6 +263,86 @@ export type GangWithMembers = Gang & {
   members: (User & { rank: string })[];
 };
 
+// Weekly challenges system
+export const challenges = pgTable('challenges', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  type: text('type').notNull(), // 'crime', 'gang', 'banking', etc.
+  difficulty: text('difficulty').notNull().default('medium'), // 'easy', 'medium', 'hard', 'boss'
+  startDate: timestamp('start_date', { mode: 'date' }).notNull(),
+  endDate: timestamp('end_date', { mode: 'date' }).notNull(),
+  cashReward: integer('cash_reward').notNull(),
+  xpReward: integer('xp_reward').notNull(),
+  respectReward: integer('respect_reward').notNull().default(0),
+  specialItemId: integer('special_item_id').references(() => items.id),
+  requirementType: text('requirement_type').notNull(), // 'count', 'amount', 'specific', etc.
+  requirementValue: integer('requirement_value').notNull(),
+  requirementTarget: text('requirement_target').notNull(), // target crime ID, amount of cash, etc.
+  active: boolean('active').notNull().default(true),
+  timeLimit: integer('time_limit'), // optional time limit in seconds
+  imageUrl: text('image_url'),
+});
+
+export const challengeProgress = pgTable('challenge_progress', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  challengeId: integer('challenge_id').notNull().references(() => challenges.id),
+  currentValue: integer('current_value').notNull().default(0),
+  completed: boolean('completed').notNull().default(false),
+  completedAt: timestamp('completed_at', { mode: 'date' }),
+  claimed: boolean('claimed').notNull().default(false),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+});
+
+// Challenge reward history
+export const challengeRewards = pgTable('challenge_rewards', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  challengeId: integer('challenge_id').notNull().references(() => challenges.id),
+  cashReward: integer('cash_reward').notNull(),
+  xpReward: integer('xp_reward').notNull(),
+  respectReward: integer('respect_reward').notNull(),
+  specialItemId: integer('special_item_id').references(() => items.id),
+  awardedAt: timestamp('awarded_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
+// Create insert schemas for challenges
+export const insertChallengeSchema = createInsertSchema(challenges);
+export const insertChallengeProgressSchema = createInsertSchema(challengeProgress).pick({
+  userId: true,
+  challengeId: true,
+  currentValue: true,
+  completed: true,
+  claimed: true,
+});
+export const insertChallengeRewardSchema = createInsertSchema(challengeRewards).pick({
+  userId: true,
+  challengeId: true,
+  cashReward: true,
+  xpReward: true,
+  respectReward: true,
+  specialItemId: true,
+});
+
+// Define challenge types
+export type InsertChallenge = z.infer<typeof insertChallengeSchema>;
+export type Challenge = typeof challenges.$inferSelect;
+
+export type InsertChallengeProgress = z.infer<typeof insertChallengeProgressSchema>;
+export type ChallengeProgress = typeof challengeProgress.$inferSelect;
+
+export type InsertChallengeReward = z.infer<typeof insertChallengeRewardSchema>;
+export type ChallengeReward = typeof challengeRewards.$inferSelect;
+
+// Custom types for challenges
+export type ChallengeWithProgress = Challenge & {
+  progress?: ChallengeProgress;
+  completed: boolean;
+  claimed: boolean;
+  currentValue: number;
+};
+
 // Re-export economy types for use in the app
 export type { 
   BankAccount, Company, CompanyEmployee, 
