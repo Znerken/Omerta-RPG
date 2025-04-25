@@ -123,17 +123,17 @@ export function registerAdminRoutes(app: Express) {
         return res.status(403).json({ message: "Cannot ban an admin user" });
       }
       
-      // Calculate jail end time
-      const jailEnd = new Date(Date.now() + duration);
+      // Calculate ban end time
+      const banExpiry = new Date(Date.now() + duration);
       
       await storage.updateUser(userId, {
-        isJailed: true,
-        jailTimeEnd: jailEnd,
+        banExpiry: banExpiry,
+        banReason: reason
       });
       
       res.json({
-        message: `User ${user.username} has been banned until ${jailEnd.toLocaleString()}`,
-        jailEnd,
+        message: `User ${user.username} has been banned until ${banExpiry.toLocaleString()}`,
+        banExpiry,
       });
     } catch (error) {
       console.error("Error banning user:", error);
@@ -152,13 +152,13 @@ export function registerAdminRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      if (!user.isJailed) {
+      if (!user.banExpiry) {
         return res.status(400).json({ message: "User is not banned" });
       }
       
       await storage.updateUser(userId, {
-        isJailed: false,
-        jailTimeEnd: null,
+        banExpiry: null,
+        banReason: null
       });
       
       res.json({

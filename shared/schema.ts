@@ -38,6 +38,9 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").notNull().default(false),
   isJailed: boolean("is_jailed").notNull().default(false),
   jailTimeEnd: timestamp("jail_time_end"),
+  // Ban information
+  banExpiry: timestamp("ban_expiry"),
+  banReason: text("ban_reason"),
   gangId: integer("gang_id"),
   createdAt: timestamp("created_at").defaultNow(),
   
