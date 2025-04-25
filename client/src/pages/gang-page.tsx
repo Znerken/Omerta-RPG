@@ -8,17 +8,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useNotification } from "@/hooks/use-notification";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
-import { formatCurrency, getInitials } from "@/lib/utils";
-import { Loader2, Users, Plus, Skull, DollarSign } from "lucide-react";
+import { formatCurrency, getInitials, formatDate } from "@/lib/utils";
+import { Loader2, Users, Plus, Skull, DollarSign, MapPin, Shield, Swords, Target, Medal, Briefcase, Award, ArrowUp } from "lucide-react";
 
 const createGangSchema = z.object({
   name: z.string().min(3, "Gang name must be at least 3 characters").max(20, "Gang name must be at most 20 characters"),
@@ -40,6 +43,27 @@ export default function GangPage() {
 
   const { data: gangsList, isLoading: gangsLoading } = useQuery({
     queryKey: ["/api/gangs"],
+  });
+  
+  // For users in a gang, fetch detailed data with territories, wars, and missions
+  const { data: gangDetails, isLoading: gangDetailsLoading } = useQuery({
+    queryKey: ["/api/gangs", userProfile?.gang?.id],
+    enabled: !!userProfile?.gang?.id,
+  });
+  
+  const { data: gangTerritories, isLoading: territoriesLoading } = useQuery({
+    queryKey: ["/api/gangs/territories"],
+    enabled: !!userProfile?.gang?.id,
+  });
+  
+  const { data: activeWars, isLoading: warsLoading } = useQuery({
+    queryKey: ["/api/gangs/wars/active"],
+    enabled: !!userProfile?.gang?.id,
+  });
+  
+  const { data: activeMissions, isLoading: missionsLoading } = useQuery({
+    queryKey: ["/api/gangs/missions/active"],
+    enabled: !!userProfile?.gang?.id,
   });
 
   const form = useForm<CreateGangValues>({

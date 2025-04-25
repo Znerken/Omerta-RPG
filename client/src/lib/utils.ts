@@ -128,3 +128,18 @@ export function calculateLevelProgress(currentXp: number, nextLevelXp: number): 
 export function calculateRequiredXP(level: number): number {
   return 100 * Math.pow(level, 2);
 }
+
+/**
+ * Format a date in a human-readable way
+ */
+export function formatDate(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  };
+  
+  return new Intl.DateTimeFormat('en-US', options).format(new Date(date));
+}

@@ -800,6 +800,68 @@ class MemStorage implements IStorage {
       members
     };
   }
+  
+  async getGangWithDetails(id: number): Promise<GangWithDetails | undefined> {
+    const gang = await this.getGang(id);
+    if (!gang) return undefined;
+    
+    // Get members with contribution data
+    const allMembers = Array.from(this.gangMembers.values())
+      .filter(member => member.gangId === id);
+    
+    const members = await Promise.all(allMembers.map(async member => {
+      const user = await this.getUser(member.userId);
+      if (!user) throw new Error(`User with id ${member.userId} not found`);
+      
+      return {
+        ...user,
+        rank: member.rank,
+        contribution: member.contribution || 0
+      };
+    }));
+    
+    // Get territories controlled by this gang
+    const territories = Array.from(this.gangTerritories.values())
+      .filter(territory => territory.controlledByGangId === id);
+    
+    // Get active wars involving this gang
+    const activeWars = Array.from(this.gangWars.values())
+      .filter(war => 
+        (war.attackerGangId === id || war.defenderGangId === id) && 
+        war.status === 'active'
+      );
+    
+    // Get active missions with current attempts
+    const activeMissions = await Promise.all(
+      Array.from(this.gangMissions.values())
+        .filter(mission => mission.isActive)
+        .map(async mission => {
+          const attempt = Array.from(this.gangMissionAttempts.values()).find(
+            a => a.missionId === mission.id && a.gangId === id && !a.isCompleted
+          );
+          
+          if (attempt) {
+            return {
+              ...mission,
+              attempt
+            };
+          }
+          
+          return null;
+        })
+    );
+    
+    // Filter out null values (missions not currently attempted by this gang)
+    const filteredMissions = activeMissions.filter(mission => mission !== null) as (GangMission & { attempt: GangMissionAttempt })[];
+    
+    return {
+      ...gang,
+      members,
+      territories,
+      activeWars,
+      activeMissions: filteredMissions
+    };
+  }
 
   // Gang Member methods
   async getGangMember(userId: number): Promise<(GangMember & { gang: Gang }) | undefined> {
@@ -850,6 +912,382 @@ class MemStorage implements IStorage {
     
     this.gangMembers.delete(member.id);
     return true;
+  }
+  
+  async getGangMemberCount(gangId: number): Promise<number> {
+    return Array.from(this.gangMembers.values()).filter(
+      member => member.gangId === gangId
+    ).length;
+  }
+  
+  async updateMemberContribution(userId: number, gangId: number, amount: number): Promise<GangMember | undefined> {
+    const member = Array.from(this.gangMembers.values()).find(
+      m => m.userId === userId && m.gangId === gangId
+    );
+    
+    if (!member) return undefined;
+    
+    const updatedMember = { 
+      ...member, 
+      contribution: (member.contribution || 0) + amount 
+    };
+    
+    this.gangMembers.set(member.id, updatedMember);
+    return updatedMember;
+  }
+  
+  // Gang Territory methods
+  async getAllTerritories(): Promise<GangTerritory[]> {
+    return Array.from(this.gangTerritories.values());
+  }
+  
+  async getTerritory(id: number): Promise<GangTerritory | undefined> {
+    return this.gangTerritories.get(id);
+  }
+  
+  async getTerritoryWithDetails(id: number): Promise<GangTerritoryWithDetails | undefined> {
+    const territory = await this.getTerritory(id);
+    if (!territory) return undefined;
+    
+    const controller = territory.controlledByGangId ? 
+      await this.getGang(territory.controlledByGangId) : 
+      undefined;
+    
+    return {
+      ...territory,
+      controller
+    };
+  }
+  
+  async getTerritoriesByGangId(gangId: number): Promise<GangTerritory[]> {
+    return Array.from(this.gangTerritories.values()).filter(
+      territory => territory.controlledByGangId === gangId
+    );
+  }
+  
+  async createTerritory(territory: InsertGangTerritory): Promise<GangTerritory> {
+    const id = this.gangTerritoryIdCounter++;
+    const now = new Date();
+    
+    const newTerritory: GangTerritory = {
+      ...territory,
+      id,
+      createdAt: now,
+      lastCapturedAt: territory.controlledByGangId ? now : null
+    };
+    
+    this.gangTerritories.set(id, newTerritory);
+    return newTerritory;
+  }
+  
+  async updateTerritory(id: number, data: Partial<GangTerritory>): Promise<GangTerritory | undefined> {
+    const territory = await this.getTerritory(id);
+    if (!territory) return undefined;
+    
+    const updatedTerritory = { ...territory, ...data };
+    this.gangTerritories.set(id, updatedTerritory);
+    return updatedTerritory;
+  }
+  
+  async claimTerritory(territoryId: number, gangId: number): Promise<GangTerritory | undefined> {
+    const territory = await this.getTerritory(territoryId);
+    if (!territory) return undefined;
+    
+    const gang = await this.getGang(gangId);
+    if (!gang) return undefined;
+    
+    const updatedTerritory: GangTerritory = {
+      ...territory,
+      controlledByGangId: gangId,
+      lastCapturedAt: new Date()
+    };
+    
+    this.gangTerritories.set(territoryId, updatedTerritory);
+    return updatedTerritory;
+  }
+  
+  // Gang War methods
+  async getAllGangWars(): Promise<GangWar[]> {
+    return Array.from(this.gangWars.values());
+  }
+  
+  async getGangWar(id: number): Promise<GangWar | undefined> {
+    return this.gangWars.get(id);
+  }
+  
+  async getActiveGangWars(): Promise<GangWar[]> {
+    return Array.from(this.gangWars.values()).filter(
+      war => war.status === 'active'
+    );
+  }
+  
+  async getGangWarsForGang(gangId: number): Promise<GangWar[]> {
+    return Array.from(this.gangWars.values()).filter(
+      war => war.attackerGangId === gangId || war.defenderGangId === gangId
+    );
+  }
+  
+  async getGangWarWithDetails(id: number): Promise<GangWarWithDetails | undefined> {
+    const war = await this.getGangWar(id);
+    if (!war) return undefined;
+    
+    const attacker = await this.getGang(war.attackerGangId);
+    if (!attacker) throw new Error(`Attacker gang with id ${war.attackerGangId} not found`);
+    
+    const defender = await this.getGang(war.defenderGangId);
+    if (!defender) throw new Error(`Defender gang with id ${war.defenderGangId} not found`);
+    
+    let territory: GangTerritory | undefined;
+    if (war.territoryId) {
+      territory = await this.getTerritory(war.territoryId);
+    }
+    
+    const participantEntries = Array.from(this.gangWarParticipants.values())
+      .filter(p => p.warId === id);
+    
+    const participants = await Promise.all(
+      participantEntries.map(async participant => {
+        const user = await this.getUser(participant.userId);
+        if (!user) throw new Error(`User with id ${participant.userId} not found`);
+        
+        return {
+          ...participant,
+          user
+        };
+      })
+    );
+    
+    return {
+      ...war,
+      attacker,
+      defender,
+      territory,
+      participants
+    };
+  }
+  
+  async createGangWar(war: InsertGangWar): Promise<GangWar> {
+    const id = this.gangWarIdCounter++;
+    const now = new Date();
+    
+    const newWar: GangWar = {
+      ...war,
+      id,
+      startTime: now,
+      status: 'active',
+      attackerScore: 0,
+      defenderScore: 0,
+      endTime: null,
+      winnerGangId: null
+    };
+    
+    this.gangWars.set(id, newWar);
+    return newWar;
+  }
+  
+  async updateGangWar(id: number, data: Partial<GangWar>): Promise<GangWar | undefined> {
+    const war = await this.getGangWar(id);
+    if (!war) return undefined;
+    
+    const updatedWar = { ...war, ...data };
+    this.gangWars.set(id, updatedWar);
+    return updatedWar;
+  }
+  
+  async endGangWar(id: number, winnerGangId: number): Promise<GangWar | undefined> {
+    const war = await this.getGangWar(id);
+    if (!war) return undefined;
+    
+    const updatedWar: GangWar = {
+      ...war,
+      status: 'completed',
+      endTime: new Date(),
+      winnerGangId
+    };
+    
+    this.gangWars.set(id, updatedWar);
+    
+    // If there's a territory at stake, transfer it to the winner
+    if (war.territoryId) {
+      await this.claimTerritory(war.territoryId, winnerGangId);
+    }
+    
+    return updatedWar;
+  }
+  
+  async addGangWarParticipant(participant: InsertGangWarParticipant): Promise<GangWarParticipant> {
+    const id = this.gangWarParticipantIdCounter++;
+    const newParticipant: GangWarParticipant = {
+      ...participant,
+      id,
+      joinedAt: new Date(),
+      contribution: 0
+    };
+    
+    this.gangWarParticipants.set(id, newParticipant);
+    return newParticipant;
+  }
+  
+  async updateGangWarParticipant(userId: number, warId: number, data: Partial<GangWarParticipant>): Promise<GangWarParticipant | undefined> {
+    const participant = Array.from(this.gangWarParticipants.values()).find(
+      p => p.userId === userId && p.warId === warId
+    );
+    
+    if (!participant) return undefined;
+    
+    const updatedParticipant = { ...participant, ...data };
+    this.gangWarParticipants.set(participant.id, updatedParticipant);
+    return updatedParticipant;
+  }
+  
+  async getGangWarParticipants(warId: number): Promise<GangWarParticipant[]> {
+    return Array.from(this.gangWarParticipants.values()).filter(
+      p => p.warId === warId
+    );
+  }
+  
+  async getGangWarParticipant(userId: number, warId: number): Promise<GangWarParticipant | undefined> {
+    return Array.from(this.gangWarParticipants.values()).find(
+      p => p.userId === userId && p.warId === warId
+    );
+  }
+  
+  // Gang Mission methods
+  async getAllGangMissions(): Promise<GangMission[]> {
+    return Array.from(this.gangMissions.values());
+  }
+  
+  async getActiveMissions(): Promise<GangMission[]> {
+    return Array.from(this.gangMissions.values()).filter(
+      mission => mission.isActive
+    );
+  }
+  
+  async getGangMission(id: number): Promise<GangMission | undefined> {
+    return this.gangMissions.get(id);
+  }
+  
+  async getGangMissionWithDetails(id: number, gangId: number): Promise<GangMissionWithDetails | undefined> {
+    const mission = await this.getGangMission(id);
+    if (!mission) return undefined;
+    
+    const currentAttempt = Array.from(this.gangMissionAttempts.values()).find(
+      attempt => attempt.missionId === id && 
+                attempt.gangId === gangId && 
+                !attempt.isCompleted
+    );
+    
+    // Check if the gang can attempt this mission
+    // (based on cooldown or other criteria)
+    const completedAttempt = Array.from(this.gangMissionAttempts.values()).find(
+      attempt => attempt.missionId === id && 
+                attempt.gangId === gangId && 
+                attempt.isCompleted
+    );
+    
+    const canAttempt = mission.isActive && 
+      (!completedAttempt || 
+        (completedAttempt.completedAt && 
+         (new Date().getTime() - completedAttempt.completedAt.getTime() > mission.cooldownTime * 1000)));
+    
+    return {
+      ...mission,
+      currentAttempt,
+      canAttempt
+    };
+  }
+  
+  async createGangMission(mission: InsertGangMission): Promise<GangMission> {
+    const id = this.gangMissionIdCounter++;
+    const newMission: GangMission = {
+      ...mission,
+      id,
+      createdAt: new Date()
+    };
+    
+    this.gangMissions.set(id, newMission);
+    return newMission;
+  }
+  
+  async updateGangMission(id: number, data: Partial<GangMission>): Promise<GangMission | undefined> {
+    const mission = await this.getGangMission(id);
+    if (!mission) return undefined;
+    
+    const updatedMission = { ...mission, ...data };
+    this.gangMissions.set(id, updatedMission);
+    return updatedMission;
+  }
+  
+  async startGangMissionAttempt(attempt: InsertGangMissionAttempt): Promise<GangMissionAttempt> {
+    const id = this.gangMissionAttemptIdCounter++;
+    const newAttempt: GangMissionAttempt = {
+      ...attempt,
+      id,
+      startedAt: new Date(),
+      completedAt: null,
+      progress: 0,
+      isCompleted: false
+    };
+    
+    this.gangMissionAttempts.set(id, newAttempt);
+    return newAttempt;
+  }
+  
+  async updateGangMissionAttempt(id: number, data: Partial<GangMissionAttempt>): Promise<GangMissionAttempt | undefined> {
+    const attempt = this.gangMissionAttempts.get(id);
+    if (!attempt) return undefined;
+    
+    const updatedAttempt = { ...attempt, ...data };
+    
+    // If the mission is being completed, set the completion time
+    if (data.isCompleted === true && !attempt.isCompleted) {
+      updatedAttempt.completedAt = new Date();
+      updatedAttempt.progress = 100;
+      
+      // Award the gang for completing the mission
+      const mission = await this.getGangMission(attempt.missionId);
+      if (mission) {
+        const gang = await this.getGang(attempt.gangId);
+        if (gang) {
+          const updatedGang = {
+            ...gang,
+            bankBalance: gang.bankBalance + mission.cashReward,
+            respect: gang.respect + mission.respectReward
+          };
+          this.gangs.set(gang.id, updatedGang);
+        }
+      }
+    }
+    
+    this.gangMissionAttempts.set(id, updatedAttempt);
+    return updatedAttempt;
+  }
+  
+  async getGangMissionAttempt(gangId: number, missionId: number): Promise<GangMissionAttempt | undefined> {
+    return Array.from(this.gangMissionAttempts.values()).find(
+      attempt => attempt.gangId === gangId && 
+                attempt.missionId === missionId && 
+                !attempt.isCompleted
+    );
+  }
+  
+  async getCompletedGangMissions(gangId: number): Promise<(GangMission & { completedAt: Date })[]> {
+    const completedAttempts = Array.from(this.gangMissionAttempts.values())
+      .filter(attempt => attempt.gangId === gangId && attempt.isCompleted && attempt.completedAt);
+    
+    const results = await Promise.all(
+      completedAttempts.map(async (attempt) => {
+        const mission = await this.getGangMission(attempt.missionId);
+        if (!mission) return null;
+        
+        return {
+          ...mission,
+          completedAt: attempt.completedAt as Date
+        };
+      })
+    );
+    
+    return results.filter((mission): mission is (GangMission & { completedAt: Date }) => mission !== null);
   }
 
   // Message methods

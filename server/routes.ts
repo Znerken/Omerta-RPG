@@ -8,6 +8,7 @@ import { registerAchievementRoutes } from "./achievement-routes";
 import { registerDrugRoutes } from "./drug-routes";
 import { registerCasinoRoutes } from "./casino-routes";
 import challengeRoutes from "./challenge-routes";
+import gangRoutes from "./gang-routes";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { calculateRequiredXP } from "../shared/gameUtils";
@@ -30,6 +31,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register challenge routes
   app.use("/api", challengeRoutes);
+  
+  // Register gang routes with nested features
+  app.use("/api/gangs", gangRoutes);
   
   // Register casino routes
   registerCasinoRoutes(app);
