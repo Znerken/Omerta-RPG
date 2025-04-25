@@ -45,6 +45,66 @@ export function registerSocialRoutes(app: Express) {
       res.status(500).json({ message: "Failed to get friends" });
     }
   });
+  
+  // Get pending friend requests (requests received by the user)
+  app.get("/api/social/friends/requests/pending", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const userId = req.user.id;
+      const pendingRequests = await storage.getPendingFriendRequests(userId);
+      
+      // Populate sender information
+      const requestsWithSenders = await Promise.all(
+        pendingRequests.map(async (request) => {
+          const sender = await storage.getUser(request.senderId);
+          return {
+            ...request,
+            sender: sender ? {
+              id: sender.id,
+              username: sender.username,
+              avatar: sender.avatar
+            } : null
+          };
+        })
+      );
+      
+      res.json(requestsWithSenders);
+    } catch (error) {
+      console.error("Error getting pending friend requests:", error);
+      res.status(500).json({ message: "Failed to get pending friend requests" });
+    }
+  });
+  
+  // Get sent friend requests (requests sent by the user)
+  app.get("/api/social/friends/requests/sent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const userId = req.user.id;
+      const sentRequests = await storage.getSentFriendRequests(userId);
+      
+      // Populate receiver information
+      const requestsWithReceivers = await Promise.all(
+        sentRequests.map(async (request) => {
+          const receiver = await storage.getUser(request.receiverId);
+          return {
+            ...request,
+            receiver: receiver ? {
+              id: receiver.id,
+              username: receiver.username,
+              avatar: receiver.avatar
+            } : null
+          };
+        })
+      );
+      
+      res.json(requestsWithReceivers);
+    } catch (error) {
+      console.error("Error getting sent friend requests:", error);
+      res.status(500).json({ message: "Failed to get sent friend requests" });
+    }
+  });
 
   // IMPORTANT: This specific route must come BEFORE the generic /:userId route!
   app.get("/api/social/users/search", async (req, res) => {

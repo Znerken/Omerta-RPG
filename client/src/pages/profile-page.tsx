@@ -50,191 +50,23 @@ interface ProfilePageProps {
   userId?: number;
 }
 
-// Friend action button component for other users' profiles
+// Import our shared FriendActionButton component from social components
+import { FriendActionButton as SharedFriendActionButton } from "@/components/social/FriendActionButton";
+
+// Wrapper component to adapt the shared component to the profile page styling
 function FriendActionButton({ profile }: { profile: any }) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  // Check if already friends or have pending request
-  const isFriend = profile.isFriend;
-  const friendStatus = profile.friendStatus;
-  const friendRequest = profile.friendRequest;
-  
-  // Mutation for sending friend request
-  const sendFriendRequestMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/social/friends/request", { friendId: profile.id });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Friend request sent",
-        description: `Request sent to ${profile.username}`,
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error sending request",
-        description: error.message || "Failed to send friend request",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Mutation for accepting friend request
-  const acceptFriendRequestMutation = useMutation({
-    mutationFn: async () => {
-      if (!friendRequest) return;
-      return apiRequest("POST", `/api/social/friends/request/${friendRequest.id}/accept`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Friend request accepted",
-        description: `You are now friends with ${profile.username}`,
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error accepting request",
-        description: error.message || "Failed to accept friend request",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Mutation for rejecting friend request
-  const rejectFriendRequestMutation = useMutation({
-    mutationFn: async () => {
-      if (!friendRequest) return;
-      return apiRequest("POST", `/api/social/friends/request/${friendRequest.id}/reject`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Friend request rejected",
-        description: `Request from ${profile.username} has been rejected`,
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error rejecting request",
-        description: error.message || "Failed to reject friend request",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Mutation for removing friend
-  const removeFriendMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("DELETE", `/api/social/friends/${profile.id}`);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Friend removed",
-        description: `${profile.username} has been removed from your friends`,
-      });
-      queryClient.invalidateQueries({ queryKey: [`/api/social/users/${profile.id}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error removing friend",
-        description: error.message || "Failed to remove friend",
-        variant: "destructive",
-      });
-    },
-  });
-  
-  // Render button based on relationship status
-  if (isFriend) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => removeFriendMutation.mutate()}
-        disabled={removeFriendMutation.isPending}
-        className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
-      >
-        {removeFriendMutation.isPending ? (
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        ) : (
-          <UserMinus className="h-4 w-4 text-red-400" />
-        )}
-        Remove Friend
-      </Button>
-    );
-  }
-  
-  if (friendStatus === "pending" && !friendRequest) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        disabled
-        className="flex items-center gap-1 bg-black/50 backdrop-blur-sm"
-      >
-        <Clock className="h-4 w-4 text-yellow-400" />
-        Request Pending
-      </Button>
-    );
-  }
-  
-  if (friendRequest) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="text-sm text-muted-foreground text-center mb-1">
-          Friend Request
-        </div>
-        <Button
-          size="sm"
-          onClick={() => acceptFriendRequestMutation.mutate()}
-          disabled={acceptFriendRequestMutation.isPending || rejectFriendRequestMutation.isPending}
-          className="flex items-center gap-1"
-        >
-          {acceptFriendRequestMutation.isPending ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          ) : (
-            <UserCheck className="h-4 w-4" />
-          )}
-          Accept
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => rejectFriendRequestMutation.mutate()}
-          disabled={acceptFriendRequestMutation.isPending || rejectFriendRequestMutation.isPending}
-          className="flex items-center gap-1"
-        >
-          {rejectFriendRequestMutation.isPending ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          ) : (
-            <UserMinus className="h-4 w-4" />
-          )}
-          Reject
-        </Button>
-      </div>
-    );
-  }
-  
-  // Default: No relationship yet, show add friend button
+  // Adapt our shared component with profile page specific styling
   return (
-    <Button
+    <SharedFriendActionButton
+      userId={profile.id}
+      friendStatus={profile.friendStatus}
+      friendRequest={profile.friendRequest}
       size="sm"
-      onClick={() => sendFriendRequestMutation.mutate()}
-      disabled={sendFriendRequestMutation.isPending}
-      className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
-    >
-      {sendFriendRequestMutation.isPending ? (
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      ) : (
-        <UserPlus className="h-4 w-4" />
-      )}
-      Add Friend
-    </Button>
+      variant="outline"
+      onActionComplete={() => {
+        // This will be called after any friend action is completed
+      }}
+    />
   );
 }
 

@@ -5,81 +5,68 @@ import { UserWithStatus, UserStatus, UserFriend, FriendRequest, InsertUserStatus
 
 // Friend methods
 export async function getUserFriends(userId: number): Promise<UserWithStatus[]> {
-  // Find all friendships (in either direction)
-  const friendships = await db
-    .select()
-    .from(userFriends)
-    .where(
-      or(
-        eq(userFriends.userId, userId),
-        eq(userFriends.friendId, userId)
-      )
-    );
-
-  if (!friendships.length) {
+  if (isNaN(userId)) {
+    console.error("Invalid userId in getUserFriends:", userId);
     return [];
   }
 
-  // Extract all friend IDs (might be in userId or friendId field)
-  const friendIds = friendships.map(fs => 
-    fs.userId === userId ? fs.friendId : fs.userId
-  );
-
-  // Get all friend users with their status
-  const friendUsers = await db
-    .select({
-      user: users,
-      status: userStatus
-    })
-    .from(users)
-    .leftJoin(userStatus, eq(users.id, userStatus.userId))
-    .where(
-      // Only include users in the friend IDs list
-      // @ts-ignore - type is correct
-      userId => userId.in(users.id, friendIds)
-    );
-
-  // Get friend requests for these users
-  const requests = await db
-    .select()
-    .from(friendRequests)
-    .where(
-      or(
-        and(
-          eq(friendRequests.senderId, userId),
-          // @ts-ignore - type is correct
-          receiverId => receiverId.in(friendRequests.receiverId, friendIds)
-        ),
-        and(
-          // @ts-ignore - type is correct
-          senderId => senderId.in(friendRequests.senderId, friendIds),
-          eq(friendRequests.receiverId, userId)
+  try {
+    // Find all friendships (in either direction)
+    const friendships = await db
+      .select()
+      .from(userFriends)
+      .where(
+        or(
+          eq(userFriends.userId, userId),
+          eq(userFriends.friendId, userId)
         )
-      )
+      );
+
+    if (!friendships.length) {
+      return [];
+    }
+
+    // Extract all friend IDs (might be in userId or friendId field)
+    const friendIds = friendships.map(fs => 
+      fs.userId === userId ? fs.friendId : fs.userId
     );
 
-  // Format the results as UserWithStatus
-  return friendUsers.map(({ user, status }) => {
-    // Find friend request if any
-    const request = requests.find(req => 
-      (req.senderId === userId && req.receiverId === user.id) ||
-      (req.senderId === user.id && req.receiverId === userId)
-    );
+    // Get all friend users with their status
+    const friendUsers = await db
+      .select({
+        user: users,
+        status: userStatus
+      })
+      .from(users)
+      .leftJoin(userStatus, eq(users.id, userStatus.userId))
+      .where(
+        // Only include users in the friend IDs list
+        // @ts-ignore - type is correct
+        userId => userId.in(users.id, friendIds)
+      );
 
-    return {
-      ...user,
-      status: status || {
-        id: 0, // Placeholder ID for frontend
-        userId: user.id,
-        status: "offline",
-        lastActive: new Date(),
-        lastLocation: null
-      },
-      isFriend: true,
-      friendStatus: request ? request.status : undefined,
-      friendRequest: request || undefined
-    };
-  });
+    // Format the results as UserWithStatus
+    // In getUserFriends we don't need to check for pending requests
+    // since all users are confirmed friends
+    return friendUsers.map(({ user, status }) => {
+      return {
+        ...user,
+        status: status || {
+          id: 0, // Placeholder ID for frontend
+          userId: user.id,
+          status: "offline",
+          lastActive: new Date(),
+          lastLocation: null
+        },
+        isFriend: true,
+        friendStatus: "friends", // All users are confirmed friends
+        friendRequest: undefined // No need for request info on confirmed friends
+      };
+    });
+  } catch (error) {
+    console.error("Error in getUserFriends:", error);
+    return [];
+  }
 }
 
 export async function getFriendRequest(
