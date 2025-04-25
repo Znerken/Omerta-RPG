@@ -1,214 +1,227 @@
-import { Router } from "express";
-import { storage } from "./storage";
+import express, { Request, Response } from "express";
 import { z } from "zod";
-import { insertChallengeProgressSchema, insertChallengeRewardSchema, insertChallengeSchema } from "@shared/schema";
-import { isAdmin, isAuthenticated } from "./middleware/auth";
+import { storage } from "./storage";
+import { isAuthenticated, isAdmin } from "./middleware/auth";
 
-const router = Router();
+const router = express.Router();
 
-// Get all active challenges with user progress
-router.get("/challenges", isAuthenticated, async (req, res) => {
+// Get all active challenges for the current user
+router.get("/challenges", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
-    const challenges = await storage.getChallengesWithProgress(userId);
+    const challenges = await storage.getChallengesWithProgress(req.user.id);
     res.json(challenges);
-  } catch (error: any) {
-    console.error("Error getting challenges:", error);
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    console.error("Error fetching challenges:", error);
+    res.status(500).json({ error: "Failed to fetch challenges" });
   }
 });
 
-// Get a specific challenge with user progress
-router.get("/challenges/:id", isAuthenticated, async (req, res) => {
+// Update challenge progress for a specific challenge
+router.post("/challenges/:id/progress", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id;
     const challengeId = parseInt(req.params.id);
+    const userId = req.user.id;
     
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ error: "Invalid challenge ID" });
-    }
-    
-    const challenge = await storage.getChallenge(challengeId);
-    if (!challenge) {
-      return res.status(404).json({ error: "Challenge not found" });
-    }
-    
-    const progress = await storage.getChallengeProgress(userId, challengeId);
-    
-    res.json({
-      ...challenge,
-      progress,
-      completed: progress?.completed || false,
-      claimed: progress?.claimed || false,
-      currentValue: progress?.currentValue || 0
-    });
-  } catch (error: any) {
-    console.error("Error getting challenge:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Update progress for a challenge
-router.post("/challenges/:id/progress", isAuthenticated, async (req, res) => {
-  try {
-    const userId = req.user!.id;
-    const challengeId = parseInt(req.params.id);
-    
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ error: "Invalid challenge ID" });
-    }
-    
-    const challenge = await storage.getChallenge(challengeId);
-    if (!challenge) {
-      return res.status(404).json({ error: "Challenge not found" });
-    }
-    
-    const updateSchema = z.object({
+    // Validate request body
+    const schema = z.object({
+      claimed: z.boolean().optional(),
       currentValue: z.number().optional(),
-      completed: z.boolean().optional(),
-      claimed: z.boolean().optional()
     });
     
-    const validatedData = updateSchema.parse(req.body);
+    const validatedData = schema.safeParse(req.body);
     
+    if (!validatedData.success) {
+      return res.status(400).json({ error: "Invalid request data" });
+    }
+    
+    const { claimed, currentValue } = validatedData.data;
+    
+    // Get the challenge and current progress
+    const challenge = await storage.getChallenge(challengeId);
+    if (!challenge) {
+      return res.status(404).json({ error: "Challenge not found" });
+    }
+    
+    // Check if the challenge is active
+    const now = new Date();
+    if (challenge.startDate > now || (challenge.endDate && challenge.endDate < now)) {
+      return res.status(400).json({ error: "Challenge is not active" });
+    }
+    
+    // Get current progress
     let progress = await storage.getChallengeProgress(userId, challengeId);
     
+    // If no progress record exists, create one
     if (!progress) {
-      // Create new progress record if it doesn't exist
       progress = await storage.createChallengeProgress({
         userId,
         challengeId,
-        currentValue: validatedData.currentValue || 0,
-        completed: validatedData.completed || false,
-        claimed: validatedData.claimed || false
+        currentValue: 0,
+        completed: false,
+        claimed: false
       });
-    } else {
-      // Update existing progress
-      progress = await storage.updateChallengeProgress(userId, challengeId, validatedData);
-      
-      // If marking as claimed and challenge is completed, create a reward
-      if (validatedData.claimed && progress?.completed && !progress?.claimed) {
-        // Create reward
-        const reward = await storage.createChallengeReward({
-          userId,
-          challengeId,
-          cashReward: challenge.cashReward,
-          xpReward: challenge.xpReward,
-          respectReward: challenge.respectReward,
-          itemReward: challenge.itemReward
-        });
-        
-        // Apply rewards to user
-        const user = await storage.getUser(userId);
-        if (user) {
-          const updatedUser = await storage.updateUser(userId, {
-            cash: user.cash + (challenge.cashReward || 0),
-            xp: user.xp + (challenge.xpReward || 0),
-            respect: user.respect + (challenge.respectReward || 0)
-          });
-          
-          // Return both updated progress and reward
-          return res.json({ progress, reward, user: updatedUser });
-        }
-      }
     }
     
-    res.json(progress);
-  } catch (error: any) {
+    // If challenge is completed and user is claiming rewards
+    if (claimed && progress.completed && !progress.claimed) {
+      // Create a record of the reward
+      const reward = await storage.createChallengeReward({
+        userId,
+        challengeId,
+        cashReward: challenge.cashReward,
+        xpReward: challenge.xpReward,
+        respectReward: challenge.respectReward,
+        itemId: challenge.itemReward > 0 ? challenge.itemReward : null
+      });
+      
+      // Update user with rewards
+      const user = await storage.getUser(userId);
+      if (user) {
+        await storage.updateUser(userId, {
+          cash: user.cash + challenge.cashReward,
+          xp: user.xp + challenge.xpReward,
+          respect: user.respect + challenge.respectReward
+        });
+        
+        // Add item to inventory if there is an item reward
+        if (challenge.itemReward > 0) {
+          await storage.addItemToInventory({
+            userId,
+            itemId: challenge.itemReward,
+            quantity: 1,
+            equipped: false
+          });
+        }
+      }
+      
+      // Mark progress as claimed
+      await storage.updateChallengeProgress(userId, challengeId, { claimed: true });
+      
+      return res.json({ 
+        success: true, 
+        message: "Reward claimed successfully", 
+        reward 
+      });
+    }
+    
+    // If updating current value
+    if (currentValue !== undefined && !progress.completed) {
+      // Check if the challenge is completed with this update
+      const completed = currentValue >= challenge.targetValue;
+      
+      // Update the progress
+      const updatedProgress = await storage.updateChallengeProgress(userId, challengeId, { 
+        currentValue, 
+        completed 
+      });
+      
+      return res.json({ 
+        success: true, 
+        progress: updatedProgress,
+        completed
+      });
+    }
+    
+    // If no changes were made
+    return res.json({ 
+      success: false, 
+      message: "No changes made to challenge progress",
+      progress
+    });
+    
+  } catch (error) {
     console.error("Error updating challenge progress:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Failed to update challenge progress" });
   }
 });
 
-// Get user's challenge rewards
-router.get("/rewards", isAuthenticated, async (req, res) => {
-  try {
-    const userId = req.user!.id;
-    const rewards = await storage.getUserChallengeRewards(userId);
-    res.json(rewards);
-  } catch (error: any) {
-    console.error("Error getting rewards:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Admin routes for challenge management
-router.get("/admin/challenges", isAuthenticated, isAdmin, async (req, res) => {
+// Admin routes for managing challenges
+router.get("/admin/challenges", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
   try {
     const challenges = await storage.getAllChallenges();
     res.json(challenges);
-  } catch (error: any) {
-    console.error("Error getting all challenges:", error);
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch challenges" });
   }
 });
 
-router.post("/admin/challenges", isAuthenticated, isAdmin, async (req, res) => {
+router.post("/admin/challenges", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
   try {
-    const validatedData = insertChallengeSchema.parse(req.body);
-    const challenge = await storage.createChallenge(validatedData);
+    // Validate request body
+    const schema = z.object({
+      name: z.string(),
+      description: z.string(),
+      type: z.string(),
+      targetValue: z.number().min(1),
+      startDate: z.string().transform(str => new Date(str)),
+      endDate: z.string().transform(str => new Date(str)).optional(),
+      cashReward: z.number().min(0),
+      xpReward: z.number().min(0),
+      respectReward: z.number().min(0),
+      itemReward: z.number().min(0)
+    });
+    
+    const validatedData = schema.safeParse(req.body);
+    
+    if (!validatedData.success) {
+      return res.status(400).json({ error: "Invalid challenge data", details: validatedData.error });
+    }
+    
+    const challenge = await storage.createChallenge(validatedData.data);
     res.status(201).json(challenge);
-  } catch (error: any) {
-    console.error("Error creating challenge:", error);
-    res.status(500).json({ error: error.message });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create challenge" });
   }
 });
 
-router.put("/admin/challenges/:id", isAuthenticated, isAdmin, async (req, res) => {
+router.patch("/admin/challenges/:id", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
   try {
     const challengeId = parseInt(req.params.id);
     
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ error: "Invalid challenge ID" });
+    // Validate request body
+    const schema = z.object({
+      name: z.string().optional(),
+      description: z.string().optional(),
+      type: z.string().optional(),
+      targetValue: z.number().min(1).optional(),
+      startDate: z.string().transform(str => new Date(str)).optional(),
+      endDate: z.string().transform(str => new Date(str)).optional().nullable(),
+      cashReward: z.number().min(0).optional(),
+      xpReward: z.number().min(0).optional(),
+      respectReward: z.number().min(0).optional(),
+      itemReward: z.number().min(0).optional()
+    });
+    
+    const validatedData = schema.safeParse(req.body);
+    
+    if (!validatedData.success) {
+      return res.status(400).json({ error: "Invalid challenge data", details: validatedData.error });
     }
     
-    const challenge = await storage.getChallenge(challengeId);
+    const challenge = await storage.updateChallenge(challengeId, validatedData.data);
+    
     if (!challenge) {
       return res.status(404).json({ error: "Challenge not found" });
     }
     
-    const updateSchema = z.object({
-      name: z.string().optional(),
-      description: z.string().optional(),
-      type: z.string().optional(),
-      targetValue: z.number().optional(),
-      startDate: z.date().optional(),
-      endDate: z.date().optional(),
-      active: z.boolean().optional(),
-      cashReward: z.number().optional(),
-      xpReward: z.number().optional(),
-      respectReward: z.number().optional(),
-      itemReward: z.number().optional()
-    });
-    
-    const validatedData = updateSchema.parse(req.body);
-    const updatedChallenge = await storage.updateChallenge(challengeId, validatedData);
-    
-    res.json(updatedChallenge);
-  } catch (error: any) {
-    console.error("Error updating challenge:", error);
-    res.status(500).json({ error: error.message });
+    res.json(challenge);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update challenge" });
   }
 });
 
-router.delete("/admin/challenges/:id", isAuthenticated, isAdmin, async (req, res) => {
+router.delete("/admin/challenges/:id", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
   try {
     const challengeId = parseInt(req.params.id);
-    
-    if (isNaN(challengeId)) {
-      return res.status(400).json({ error: "Invalid challenge ID" });
-    }
-    
     const success = await storage.deleteChallenge(challengeId);
     
-    if (success) {
-      res.status(204).end();
-    } else {
-      res.status(404).json({ error: "Challenge not found" });
+    if (!success) {
+      return res.status(404).json({ error: "Challenge not found" });
     }
-  } catch (error: any) {
-    console.error("Error deleting challenge:", error);
-    res.status(500).json({ error: error.message });
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete challenge" });
   }
 });
 

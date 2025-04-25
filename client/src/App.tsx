@@ -22,6 +22,7 @@ import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";
 import LeaderboardPage from "@/pages/leaderboard-page";
 import BankingPage from "@/pages/banking-page";
+import ChallengesPage from "@/pages/challenges-page";
 import AdminPage from "@/pages/admin-page";
 
 // Protected route with layout wrapper
@@ -104,6 +105,12 @@ function AppRouter() {
       <Route path="/banking">
         {() => (
           <ProtectedRoute path="/banking" component={() => <ProtectedPage component={BankingPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/challenges">
+        {() => (
+          <ProtectedRoute path="/challenges" component={() => <ProtectedPage component={ChallengesPage} />} />
         )}
       </Route>
       
