@@ -171,7 +171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userWithStats = await storage.getUserWithStats(userId);
       const userWithGang = await storage.getUserWithGang(userId);
       const recentCrimes = await storage.getCrimeHistoryByUserId(userId, 5);
-      const topPlayers = await storage.getTopUsersByLevel(3);
+      // Temporarily use empty array for top players until the leaderboard methods are fully implemented
+      const topPlayers = [];
       
       // Get next level XP requirement
       const currentLevel = userWithStats!.level;
@@ -186,10 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gangRank: userWithGang?.gangRank
         },
         recentActivity: recentCrimes,
-        topPlayers: topPlayers.map((p: any) => {
-          const { password, ...player } = p;
-          return player;
-        })
+        topPlayers: [] // Empty array for now until leaderboard functionality is fully implemented
       };
       
       res.json(dashboardData);
