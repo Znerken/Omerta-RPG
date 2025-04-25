@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./hooks/use-auth";
+import { WebSocketProvider } from "./hooks/use-websocket-context";
 import { NotificationProvider } from "./hooks/use-notification";
 import { AchievementsProvider } from "./hooks/use-achievements";
 import { MessagesProvider } from "./hooks/use-messages";
@@ -190,13 +191,15 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Toaster />
         <AuthProvider>
-          <NotificationProvider>
-            <AchievementsProvider>
-              <MessagesProvider>
-                <AppRouter />
-              </MessagesProvider>
-            </AchievementsProvider>
-          </NotificationProvider>
+          <WebSocketProvider>
+            <NotificationProvider>
+              <AchievementsProvider>
+                <MessagesProvider>
+                  <AppRouter />
+                </MessagesProvider>
+              </AchievementsProvider>
+            </NotificationProvider>
+          </WebSocketProvider>
         </AuthProvider>
       </QueryClientProvider>
     </TooltipProvider>

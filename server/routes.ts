@@ -19,6 +19,7 @@ import { calculateRequiredXP } from "../shared/gameUtils";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { gangMembers } from "@shared/schema";
+import { getUserStatus, updateUserStatus, createUserStatus } from './social-database';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // sets up /api/register, /api/login, /api/logout, /api/user
@@ -114,6 +115,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error sending initial unread count:', err);
     });
     
+    // Auto-update user status to online when they connect
+    
+    // Update the user's status to online
+    getUserStatus(userId).then(async (status) => {
+      if (status) {
+        // Update existing status to online
+        await updateUserStatus(userId, {
+          status: "online",
+          lastActive: new Date()
+        });
+      } else {
+        // Create new status as online
+        await createUserStatus({
+          userId,
+          status: "online",
+          lastActive: new Date(),
+          lastLocation: null
+        });
+      }
+      
+      // Notify friends about this user coming online
+      storage.getUserFriends(userId).then(friends => {
+        friends.forEach(friend => {
+          notifyUser(friend.id, "friend_status", {
+            userId,
+            username: req.user?.username || "User", // Use any available user info
+            avatar: req.user?.avatar || null,
+            status: "online"
+          });
+        });
+      }).catch(err => {
+        console.error('Error notifying friends of status change:', err);
+      });
+    }).catch(err => {
+      console.error('Error updating user status to online:', err);
+    });
+    
     // Handle client messages
     ws.on('message', (message) => {
       try {
@@ -153,6 +191,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clean up empty user entries
       if (clients.get(userId)?.size === 0) {
         clients.delete(userId);
+        
+        // Update user status to offline if they have no more connections
+        getUserStatus(userId).then(async (status) => {
+          if (status) {
+            await updateUserStatus(userId, {
+              status: "offline",
+              lastActive: new Date()
+            });
+            
+            // Notify friends about status change
+            storage.getUserFriends(userId).then(friends => {
+              friends.forEach(friend => {
+                notifyUser(friend.id, "friend_status", {
+                  userId,
+                  status: "offline"
+                });
+              });
+            }).catch(err => {
+              console.error('Error notifying friends of offline status:', err);
+            });
+          }
+        }).catch(err => {
+          console.error('Error updating user status to offline:', err);
+        });
       }
     });
   });

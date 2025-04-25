@@ -32,6 +32,7 @@ import {
   MoneyBriefcaseIcon 
 } from "@/components/ui/mafia-icons";
 import { NotificationList } from "@/components/notification/notification-list";
+import { ConnectionStatus } from "@/components/social/ConnectionStatus";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: <Home className="h-5 w-5 mr-3" /> },
