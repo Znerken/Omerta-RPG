@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import luxuryStudyBg from "@assets/gen-mafia-study-luxury-dark-wood-leather-mahogany-desk.webp";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -66,11 +67,14 @@ export default function AuthPage() {
   }
   
   return (
-    <div className="h-screen w-full flex items-center justify-center">
+    <div 
+      className="min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.85)), url(${luxuryStudyBg})` }}
+    >
       <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8">
         {/* Left column: Auth forms */}
-        <div className="flex-1 flex flex-col justify-center">
-          <Card className="card-mafia shadow-dramatic p-8">
+        <div className="flex-1 flex flex-col justify-center z-10">
+          <Card className="card-mafia backdrop-blur-sm shadow-dramatic p-8 border border-primary/20">
             <div className="mb-8 flex items-center justify-center">
               <FedoraIcon size="lg" color="primary" className="mr-4" />
               <div>
@@ -201,11 +205,11 @@ export default function AuthPage() {
         </div>
         
         {/* Right column: Hero section */}
-        <div className="flex-1 hidden md:flex flex-col justify-center">
-          <div className="backdrop-mafia rounded-sm p-8 h-full shadow-dramatic">
+        <div className="flex-1 hidden md:flex flex-col justify-center z-10">
+          <div className="backdrop-blur-sm bg-black/30 rounded-sm p-8 h-full shadow-dramatic border border-gold/20">
             <div className="h-full flex flex-col justify-center space-y-8">
               <div className="mb-8">
-                <h2 className="text-3xl font-heading mb-4">Rise to Power</h2>
+                <h2 className="text-3xl font-heading mb-4 text-gold-gradient">Rise to Power</h2>
                 <p className="text-muted-foreground">
                   Welcome to Mafia Empire, where the streets are yours for the taking.
                   Build your criminal empire, form powerful alliances, and leave your mark
@@ -249,11 +253,11 @@ export default function AuthPage() {
 function Feature({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
   return (
     <div className="flex items-start">
-      <div className="mr-4 p-2 bg-primary/10 rounded-sm text-primary">
+      <div className="mr-4 p-2 bg-gold/10 border border-gold/20 rounded-sm text-gold">
         {icon}
       </div>
       <div>
-        <h3 className="font-medium mb-1">{title}</h3>
+        <h3 className="font-medium mb-1 text-gold/90">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
