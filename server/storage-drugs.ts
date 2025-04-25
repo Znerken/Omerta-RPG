@@ -263,11 +263,22 @@ export class DrugStorage {
 
   // Drug Lab operations
   async getUserLabs(userId: number): Promise<DrugLab[]> {
-    return await db
-      .select()
-      .from(drugLabs)
-      .where(eq(drugLabs.userId, userId))
-      .orderBy(drugLabs.level, desc);
+    try {
+      const labs = await db
+        .select()
+        .from(drugLabs)
+        .where(eq(drugLabs.userId, userId))
+        .orderBy(drugLabs.level, desc);
+      
+      // Ensure location has a default value if it's null
+      return labs.map(lab => ({
+        ...lab,
+        location: lab.location || 'Hidden Location'
+      }));
+    } catch (error) {
+      console.error("Error fetching drug labs:", error);
+      throw error;
+    }
   }
 
   async getDrugLab(id: number): Promise<DrugLab | undefined> {
@@ -550,7 +561,18 @@ export class DrugStorage {
 
   // Drug Territory operations
   async getAllTerritories(): Promise<DrugTerritory[]> {
-    return await db.select().from(drugTerritories);
+    try {
+      const territories = await db.select().from(drugTerritories);
+      
+      // Ensure image has a default value if it's null
+      return territories.map(territory => ({
+        ...territory,
+        image: territory.image || '/territories/default-territory.png'
+      }));
+    } catch (error) {
+      console.error("Error fetching territories:", error);
+      throw error;
+    }
   }
 
   async getTerritory(id: number): Promise<DrugTerritory | undefined> {
