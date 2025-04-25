@@ -15,7 +15,8 @@ import {
   Trophy, 
   Menu, 
   X, 
-  LogOut 
+  LogOut,
+  Shield
 } from "lucide-react";
 import { 
   TommyGunIcon, 
@@ -46,13 +47,25 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
     logoutMutation.mutate();
   };
   
+  // Create admin menu item if user is admin
+  const adminMenuItem = {
+    name: "Admin Panel",
+    path: "/admin",
+    icon: <Shield className="h-5 w-5 mr-3" />
+  };
+
   // Filter out "Jail" if user is not jailed
-  const filteredNavItems = navItems.filter(item => {
+  const filteredNavItems = [...navItems].filter(item => {
     if (item.path === "/jail" && user && !user.isJailed) {
       return false;
     }
     return true;
   });
+  
+  // Add admin menu item if user is admin
+  if (user?.isAdmin) {
+    filteredNavItems.push(adminMenuItem);
+  }
   
   return (
     <div className="flex h-screen bg-background text-foreground">

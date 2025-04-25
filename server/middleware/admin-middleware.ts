@@ -1,16 +1,17 @@
 import { Request, Response, NextFunction } from "express";
 
-export function isAdmin(req: Request, res: Response, next: NextFunction) {
-  // Check if the user is authenticated
+/**
+ * Middleware to check if the user has admin privileges
+ * This should be applied to all admin routes
+ */
+export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (!req.isAuthenticated()) {
-    return res.status(401).json({ message: "Unauthorized: You must be logged in" });
+    return res.status(401).json({ message: "Not authenticated" });
   }
-
-  // Check if the authenticated user has admin privileges
-  if (!req.user?.isAdmin) {
-    return res.status(403).json({ message: "Forbidden: You don't have permission to access this resource" });
+  
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ message: "Access denied: Admin privileges required" });
   }
-
-  // If the user is authenticated and has admin privileges, proceed
+  
   next();
-}
+};

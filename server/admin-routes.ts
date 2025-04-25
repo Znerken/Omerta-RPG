@@ -1,37 +1,72 @@
 import { Express, Request, Response } from "express";
-import { isAdmin } from "./middleware/admin-middleware";
 import { storage } from "./storage";
+import { isAdmin } from "./middleware/admin-middleware";
+import { z } from "zod";
 
+// Validation schemas
+const userSearchSchema = z.object({
+  page: z.string().optional().transform(val => val ? parseInt(val) : 1),
+  limit: z.string().optional().transform(val => val ? parseInt(val) : 20),
+  search: z.string().optional(),
+});
+
+const giveCashSchema = z.object({
+  amount: z.number().positive("Amount must be positive"),
+});
+
+const giveXpSchema = z.object({
+  amount: z.number().positive("Amount must be positive"),
+});
+
+const banUserSchema = z.object({
+  reason: z.string().min(3, "Reason must be at least 3 characters"),
+  duration: z.number().positive("Duration must be positive"), // Duration in milliseconds
+});
+
+const editStatsSchema = z.object({
+  strength: z.number().min(1).max(100),
+  stealth: z.number().min(1).max(100),
+  charisma: z.number().min(1).max(100),
+  intelligence: z.number().min(1).max(100),
+});
+
+/**
+ * Register admin routes
+ * All these routes require admin privileges
+ */
 export function registerAdminRoutes(app: Express) {
-  // Apply the admin middleware to all admin routes
-  const adminRouter = app.route("/api/admin/*").all(isAdmin);
-
-  // Get all users (with pagination)
-  app.get("/api/admin/users", async (req: Request, res: Response) => {
+  // Get all users with pagination and search
+  app.get("/api/admin/users", isAdmin, async (req: Request, res: Response) => {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const search = req.query.search as string || "";
+      const { page, limit, search } = userSearchSchema.parse(req.query);
       
       const users = await storage.getAllUsers(page, limit, search);
-      const total = await storage.getUserCount(search);
+      const totalUsers = await storage.getUserCount(search);
       
-      return res.json({
-        users,
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(totalUsers / limit);
+      
+      res.json({
+        users: users.map(user => {
+          // Remove password from response
+          const { password, ...userWithoutPassword } = user;
+          return userWithoutPassword;
+        }),
         pagination: {
           page,
           limit,
-          total,
-          totalPages: Math.ceil(total / limit)
-        }
+          totalItems: totalUsers,
+          totalPages,
+        },
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+    } catch (error) {
+      console.error("Error getting users:", error);
+      res.status(400).json({ message: "Failed to get users", error: error.message });
     }
   });
-
-  // Get user by ID
-  app.get("/api/admin/users/:id", async (req: Request, res: Response) => {
+  
+  // Get a specific user with their stats
+  app.get("/api/admin/users/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
       const user = await storage.getUserWithStats(userId);
@@ -40,108 +75,127 @@ export function registerAdminRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      return res.json(user);
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error getting user:", error);
+      res.status(400).json({ message: "Failed to get user", error: error.message });
     }
   });
-
-  // Update user (admin can update any user property)
-  app.patch("/api/admin/users/:id", async (req: Request, res: Response) => {
+  
+  // Update user
+  app.patch("/api/admin/users/:id", isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const userData = req.body;
+      const user = await storage.getUser(userId);
       
-      const updatedUser = await storage.updateUser(userId, userData);
-      
-      if (!updatedUser) {
+      if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      return res.json(updatedUser);
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+      const updatedUser = await storage.updateUser(userId, req.body);
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser!;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(400).json({ message: "Failed to update user", error: error.message });
     }
   });
-
-  // Ban/unban user
-  app.post("/api/admin/users/:id/ban", async (req: Request, res: Response) => {
+  
+  // Ban a user
+  app.post("/api/admin/users/:id/ban", isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const { reason, duration } = req.body;
-      const durationMs = duration || 24 * 60 * 60 * 1000; // Default 24 hours
+      const { reason, duration } = banUserSchema.parse(req.body);
       
-      const jailTimeEnd = new Date(Date.now() + durationMs);
+      const user = await storage.getUser(userId);
       
-      const updatedUser = await storage.updateUser(userId, {
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.isAdmin) {
+        return res.status(403).json({ message: "Cannot ban an admin user" });
+      }
+      
+      // Calculate jail end time
+      const jailEnd = new Date(Date.now() + duration);
+      
+      await storage.updateUser(userId, {
         isJailed: true,
-        jailTimeEnd,
+        jailTimeEnd: jailEnd,
       });
       
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      return res.json({
-        success: true,
-        message: `User banned until ${jailTimeEnd.toISOString()}`,
-        user: updatedUser
+      res.json({
+        message: `User ${user.username} has been banned until ${jailEnd.toLocaleString()}`,
+        jailEnd,
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+    } catch (error) {
+      console.error("Error banning user:", error);
+      res.status(400).json({ message: "Failed to ban user", error: error.message });
     }
   });
-
-  app.post("/api/admin/users/:id/unban", async (req: Request, res: Response) => {
+  
+  // Unban a user
+  app.post("/api/admin/users/:id/unban", isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
       
-      const updatedUser = await storage.updateUser(userId, {
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (!user.isJailed) {
+        return res.status(400).json({ message: "User is not banned" });
+      }
+      
+      await storage.updateUser(userId, {
         isJailed: false,
         jailTimeEnd: null,
       });
       
-      if (!updatedUser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      return res.json({
-        success: true,
-        message: "User unbanned",
-        user: updatedUser
+      res.json({
+        message: `User ${user.username} has been unbanned`,
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+    } catch (error) {
+      console.error("Error unbanning user:", error);
+      res.status(400).json({ message: "Failed to unban user", error: error.message });
     }
   });
-
+  
   // Update user stats
-  app.patch("/api/admin/users/:id/stats", async (req: Request, res: Response) => {
+  app.patch("/api/admin/users/:id/stats", isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const statsData = req.body;
+      const statsData = editStatsSchema.parse(req.body);
       
-      const updatedStats = await storage.updateStats(userId, statsData);
+      const userStats = await storage.getStatsByUserId(userId);
       
-      if (!updatedStats) {
+      if (!userStats) {
         return res.status(404).json({ message: "User stats not found" });
       }
       
-      return res.json(updatedStats);
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+      const updatedStats = await storage.updateStats(userId, statsData);
+      
+      res.json(updatedStats);
+    } catch (error) {
+      console.error("Error updating user stats:", error);
+      res.status(400).json({ message: "Failed to update user stats", error: error.message });
     }
   });
-
+  
   // Give cash to user
-  app.post("/api/admin/users/:id/give-cash", async (req: Request, res: Response) => {
+  app.post("/api/admin/users/:id/give-cash", isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const { amount } = req.body;
-      
-      if (!amount || isNaN(amount) || amount <= 0) {
-        return res.status(400).json({ message: "Valid amount required" });
-      }
+      const { amount } = giveCashSchema.parse(req.body);
       
       const user = await storage.getUser(userId);
       
@@ -150,28 +204,24 @@ export function registerAdminRoutes(app: Express) {
       }
       
       const updatedUser = await storage.updateUser(userId, {
-        cash: user.cash + amount
+        cash: user.cash + amount,
       });
       
-      return res.json({
-        success: true,
-        message: `$${amount.toLocaleString()} added to user's account`,
-        user: updatedUser
+      res.json({
+        message: `Added ${amount} cash to ${user.username}`,
+        newBalance: updatedUser!.cash,
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+    } catch (error) {
+      console.error("Error giving cash:", error);
+      res.status(400).json({ message: "Failed to give cash", error: error.message });
     }
   });
-
+  
   // Give XP to user
-  app.post("/api/admin/users/:id/give-xp", async (req: Request, res: Response) => {
+  app.post("/api/admin/users/:id/give-xp", isAdmin, async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const { amount } = req.body;
-      
-      if (!amount || isNaN(amount) || amount <= 0) {
-        return res.status(400).json({ message: "Valid amount required" });
-      }
+      const { amount } = giveXpSchema.parse(req.body);
       
       const user = await storage.getUser(userId);
       
@@ -179,36 +229,60 @@ export function registerAdminRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      const updatedUser = await storage.updateUser(userId, {
-        xp: user.xp + amount
+      // Add XP
+      const newXp = user.xp + amount;
+      let updatedUser = await storage.updateUser(userId, {
+        xp: newXp,
       });
       
-      return res.json({
-        success: true,
-        message: `${amount.toLocaleString()} XP added to user's account`,
-        user: updatedUser
+      // Check for level up
+      const newLevel = Math.floor(1 + Math.sqrt(newXp / 100));
+      if (newLevel > user.level) {
+        updatedUser = await storage.updateUser(userId, {
+          level: newLevel,
+        });
+      }
+      
+      res.json({
+        message: `Added ${amount} XP to ${user.username}${newLevel > user.level ? ` (Leveled up to ${newLevel}!)` : ''}`,
+        newXp: updatedUser!.xp,
+        newLevel: updatedUser!.level,
+        leveledUp: newLevel > user.level,
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+    } catch (error) {
+      console.error("Error giving XP:", error);
+      res.status(400).json({ message: "Failed to give XP", error: error.message });
     }
   });
-
-  // Admin dashboard stats
-  app.get("/api/admin/dashboard", async (req: Request, res: Response) => {
+  
+  // Get admin dashboard data
+  app.get("/api/admin/dashboard", isAdmin, async (req: Request, res: Response) => {
     try {
+      // Get counts
       const totalUsers = await storage.getUserCount();
-      const activeUsers = await storage.getActiveUserCount(24); // active in last 24h
+      const activeUsers = await storage.getActiveUserCount(24); // Active in last 24 hours
       const jailedUsers = await storage.getJailedUsers();
-      const topUsers = await storage.getTopUsersByCash(5);
       
-      return res.json({
+      // Get top users by cash
+      const topUsers = await storage.getTopUsersByCash(10);
+      
+      // Return formatted dashboard data
+      res.json({
         totalUsers,
         activeUsers,
         jailedUsers: jailedUsers.length,
-        topUsers
+        jailedUsersList: jailedUsers.map(user => {
+          const { password, ...userWithoutPassword } = user;
+          return userWithoutPassword;
+        }),
+        topUsers: topUsers.map(user => {
+          const { password, ...userWithoutPassword } = user;
+          return userWithoutPassword;
+        }),
       });
-    } catch (error: any) {
-      return res.status(500).json({ message: error.message });
+    } catch (error) {
+      console.error("Error getting dashboard data:", error);
+      res.status(400).json({ message: "Failed to get dashboard data", error: error.message });
     }
   });
 }

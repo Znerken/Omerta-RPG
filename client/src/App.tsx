@@ -22,6 +22,7 @@ import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";
 import LeaderboardPage from "@/pages/leaderboard-page";
 import BankingPage from "@/pages/banking-page";
+import AdminPage from "@/pages/admin-page";
 
 // Protected route with layout wrapper
 function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
@@ -103,6 +104,24 @@ function AppRouter() {
       <Route path="/banking">
         {() => (
           <ProtectedRoute path="/banking" component={() => <ProtectedPage component={BankingPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/admin">
+        {() => (
+          <ProtectedRoute path="/admin" component={() => {
+            // Only render the admin page if the user is an admin
+            const { user } = useAuth();
+            if (!user?.isAdmin) {
+              return <ProtectedPage component={() => (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                  <h1 className="text-2xl font-bold">Access Denied</h1>
+                  <p className="text-gray-400">You don't have permission to access this page.</p>
+                </div>
+              )} />
+            }
+            return <ProtectedPage component={AdminPage} />;
+          }} />
         )}
       </Route>
       
