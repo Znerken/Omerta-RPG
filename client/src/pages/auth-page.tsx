@@ -174,408 +174,397 @@ export default function AuthPage() {
     return <Redirect to="/" />;
   }
   
-  return (
-      <motion.div 
-        className="h-screen w-full flex items-center justify-center relative"
-        initial="initial"
-        animate="in"
-        exit="out"
-        variants={pageVariants}
-      >
-        {/* Special effects overlays */}
-        <div className={`spotlight-effect w-full h-full absolute top-0 left-0 ${showSpotlight ? 'active' : ''}`}></div>
-        <div className={`gunshot-effect w-full h-full absolute top-0 left-0 ${showGunshot ? 'active' : ''}`}></div>
-        
-        <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8 z-10">
-          {/* Left column: Auth forms */}
-          <motion.div 
-            className="flex-1 flex flex-col justify-center"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
+  // Prepare login and register content
+  const loginContent = (
+    <TabsContent value="login" key="login-tab">
+      <Form {...loginForm}>
+        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={1}
           >
-            <Card className={`card-mafia shadow-dramatic p-8 relative overflow-hidden ${showSmoke ? 'smoke-effect active' : ''}`}>
-              <motion.div 
-                className="mb-8 flex items-center justify-center"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.4 }}
-              >
-                <motion.div
-                  variants={iconVariants}
-                  initial="initial"
-                  animate={animateIcon ? "success" : "initial"}
-                  whileHover="hover"
-                  whileTap="tap"
-                  className="mr-4"
-                >
-                  <FedoraIcon size="lg" color="primary" />
-                </motion.div>
-                <div>
-                  <motion.h1 
-                    className="text-4xl font-heading text-gold-gradient mb-2"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.6, duration: 0.4 }}
-                  >
-                    Mafia Empire
-                  </motion.h1>
-                  <motion.p 
-                    className="text-muted-foreground typing-effect"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.4 }}
-                  >
-                    Enter the criminal underworld.
-                  </motion.p>
-                </div>
-              </motion.div>
-              
-              <Tabs 
-                value={activeTab} 
-                onValueChange={(v) => handleTabChange(v as "login" | "register")} 
-                className="w-full"
-              >
-                <TabsList className="grid w-full grid-cols-2 mb-8">
-                  <TabsTrigger value="login">
-                    <motion.span 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.9 }}
-                      className="flex items-center"
-                    >
-                      <RevolverIcon size="sm" className="mr-2" /> Login
-                    </motion.span>
-                  </TabsTrigger>
-                  <TabsTrigger value="register">
-                    <motion.span 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 1.0 }}
-                      className="flex items-center"
-                    >
-                      <MoneyBriefcaseIcon size="sm" className="mr-2" /> Register
-                    </motion.span>
-                  </TabsTrigger>
-                </TabsList>
-                
-                {activeTab === "login" && (
-                    <TabsContent value="login" key="login-tab">
-                      <Form {...loginForm}>
-                        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={1}
-                          >
-                            <FormField
-                              control={loginForm.control}
-                              name="username"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Username</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      placeholder="Enter your alias" 
-                                      {...field} 
-                                      className="backdrop-blur-sm"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </motion.div>
-                          
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={2}
-                          >
-                            <FormField
-                              control={loginForm.control}
-                              name="password"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Password</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="password" 
-                                      placeholder="Enter your password" 
-                                      {...field} 
-                                      className="backdrop-blur-sm"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </motion.div>
-                          
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={3}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Button 
-                              type="submit" 
-                              className="w-full relative overflow-hidden"
-                              disabled={loginMutation.isPending}
-                            >
-                              <motion.span className="relative z-10 flex items-center justify-center">
-                                {loginMutation.isPending ? (
-                                  <>Verifying... <WhiskeyGlassIcon className="ml-2 animate-spin" size="sm" /></>
-                                ) : (
-                                  <>Enter the Underworld <TommyGunIcon className="ml-2" size="sm" /></>
-                                )}
-                              </motion.span>
-                            </Button>
-                          </motion.div>
-                        </form>
-                      </Form>
-                    </TabsContent>
-                  )}
-                  
-                {activeTab === "register" && (
-                    <TabsContent value="register" key="register-tab">
-                      <Form {...registerForm}>
-                        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={1}
-                          >
-                            <FormField
-                              control={registerForm.control}
-                              name="username"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Username</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      placeholder="Choose your alias" 
-                                      {...field} 
-                                      className="backdrop-blur-sm"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </motion.div>
-                          
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={2}
-                          >
-                            <FormField
-                              control={registerForm.control}
-                              name="email"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Email</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      placeholder="your@email.com" 
-                                      {...field} 
-                                      className="backdrop-blur-sm"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </motion.div>
-                          
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={3}
-                          >
-                            <FormField
-                              control={registerForm.control}
-                              name="password"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Password</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="password" 
-                                      placeholder="Create a password" 
-                                      {...field} 
-                                      className="backdrop-blur-sm"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </motion.div>
-                          
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={4}
-                          >
-                            <FormField
-                              control={registerForm.control}
-                              name="confirmPassword"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Confirm Password</FormLabel>
-                                  <FormControl>
-                                    <Input 
-                                      type="password" 
-                                      placeholder="Confirm your password" 
-                                      {...field} 
-                                      className="backdrop-blur-sm"
-                                    />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </motion.div>
-                          
-                          <motion.div
-                            variants={formVariants}
-                            initial="hidden"
-                            animate="visible"
-                            custom={5}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Button 
-                              type="submit" 
-                              className="w-full relative overflow-hidden"
-                              disabled={registerMutation.isPending}
-                            >
-                              <span className="relative z-10 flex items-center justify-center">
-                                {registerMutation.isPending ? (
-                                  <>Creating... <WhiskeyGlassIcon className="ml-2 animate-spin" size="sm" /></>
-                                ) : (
-                                  <>Join the Family <FedoraIcon className="ml-2" size="sm" /></>
-                                )}
-                              </span>
-                            </Button>
-                          </motion.div>
-                        </form>
-                      </Form>
-                    </TabsContent>
-                  )}
-
-              </Tabs>
-              
-              {/* Crime tape border effect that appears on errors */}
-              {(loginForm.formState.errors.username || 
-                loginForm.formState.errors.password ||
-                registerForm.formState.errors.username ||
-                registerForm.formState.errors.email ||
-                registerForm.formState.errors.password ||
-                registerForm.formState.errors.confirmPassword) && (
-                <motion.div 
-                  className="absolute inset-0 pointer-events-none border-crime-scene animate-crime-tape"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                ></motion.div>
+            <FormField
+              control={loginForm.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Enter your alias" 
+                      {...field} 
+                      className="backdrop-blur-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </Card>
+            />
           </motion.div>
           
-          {/* Right column: Hero section */}
-          <motion.div 
-            className="flex-1 hidden md:flex flex-col justify-center"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={2}
           >
-            <div className={`backdrop-mafia rounded-sm p-8 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
-              <div className="h-full flex flex-col justify-center space-y-8">
-                <motion.div 
-                  className="mb-8"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.5 }}
+            <FormField
+              control={loginForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      placeholder="Enter your password" 
+                      {...field} 
+                      className="backdrop-blur-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </motion.div>
+          
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={3}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Button 
+              type="submit" 
+              className="w-full relative overflow-hidden"
+              disabled={loginMutation.isPending}
+            >
+              <motion.span className="relative z-10 flex items-center justify-center">
+                {loginMutation.isPending ? (
+                  <>Verifying... <WhiskeyGlassIcon className="ml-2 animate-spin" size="sm" /></>
+                ) : (
+                  <>Enter the Underworld <TommyGunIcon className="ml-2" size="sm" /></>
+                )}
+              </motion.span>
+            </Button>
+          </motion.div>
+        </form>
+      </Form>
+    </TabsContent>
+  );
+
+  const registerContent = (
+    <TabsContent value="register" key="register-tab">
+      <Form {...registerForm}>
+        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={1}
+          >
+            <FormField
+              control={registerForm.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Choose your alias" 
+                      {...field} 
+                      className="backdrop-blur-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </motion.div>
+          
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={2}
+          >
+            <FormField
+              control={registerForm.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="your@email.com" 
+                      {...field} 
+                      className="backdrop-blur-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </motion.div>
+          
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={3}
+          >
+            <FormField
+              control={registerForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      placeholder="Create a password" 
+                      {...field} 
+                      className="backdrop-blur-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </motion.div>
+          
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={4}
+          >
+            <FormField
+              control={registerForm.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="password" 
+                      placeholder="Confirm your password" 
+                      {...field} 
+                      className="backdrop-blur-sm"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </motion.div>
+          
+          <motion.div
+            variants={formVariants}
+            initial="hidden"
+            animate="visible"
+            custom={5}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Button 
+              type="submit" 
+              className="w-full relative overflow-hidden"
+              disabled={registerMutation.isPending}
+            >
+              <span className="relative z-10 flex items-center justify-center">
+                {registerMutation.isPending ? (
+                  <>Creating... <WhiskeyGlassIcon className="ml-2 animate-spin" size="sm" /></>
+                ) : (
+                  <>Join the Family <FedoraIcon className="ml-2" size="sm" /></>
+                )}
+              </span>
+            </Button>
+          </motion.div>
+        </form>
+      </Form>
+    </TabsContent>
+  );
+  
+  return (
+    <motion.div 
+      className="h-screen w-full flex items-center justify-center relative"
+      initial="initial"
+      animate="in"
+      exit="out"
+      variants={pageVariants}
+    >
+      {/* Special effects overlays */}
+      <div className={`spotlight-effect w-full h-full absolute top-0 left-0 ${showSpotlight ? 'active' : ''}`}></div>
+      <div className={`gunshot-effect w-full h-full absolute top-0 left-0 ${showGunshot ? 'active' : ''}`}></div>
+      
+      <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8 z-10">
+        {/* Left column: Auth forms */}
+        <motion.div 
+          className="flex-1 flex flex-col justify-center"
+          initial={{ opacity: 0, x: -50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
+          <Card className={`card-mafia shadow-dramatic p-8 relative overflow-hidden ${showSmoke ? 'smoke-effect active' : ''}`}>
+            <motion.div 
+              className="mb-8 flex items-center justify-center"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
+            >
+              <motion.div
+                variants={iconVariants}
+                initial="initial"
+                animate={animateIcon ? "success" : "initial"}
+                whileHover="hover"
+                whileTap="tap"
+                className="mr-4"
+              >
+                <FedoraIcon size="lg" color="primary" />
+              </motion.div>
+              <div>
+                <motion.h1 
+                  className="text-4xl font-heading text-gold-gradient mb-2"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.6, duration: 0.4 }}
                 >
-                  <motion.h2 
-                    className="text-3xl font-heading mb-4"
+                  Mafia Empire
+                </motion.h1>
+                <motion.p 
+                  className="text-muted-foreground typing-effect"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8, duration: 0.4 }}
+                >
+                  Enter the criminal underworld.
+                </motion.p>
+              </div>
+            </motion.div>
+            
+            <Tabs 
+              value={activeTab} 
+              onValueChange={(v) => handleTabChange(v as "login" | "register")} 
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2 mb-8">
+                <TabsTrigger value="login">
+                  <motion.span 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.4 }}
+                    transition={{ delay: 0.9 }}
+                    className="flex items-center"
                   >
-                    Rise to Power
-                  </motion.h2>
-                  <motion.p 
-                    className="text-muted-foreground"
+                    <RevolverIcon size="sm" className="mr-2" /> Login
+                  </motion.span>
+                </TabsTrigger>
+                <TabsTrigger value="register">
+                  <motion.span 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    transition={{ delay: 0.9, duration: 0.4 }}
+                    transition={{ delay: 1.0 }}
+                    className="flex items-center"
                   >
-                    Welcome to Mafia Empire, where the streets are yours for the taking.
-                    Build your criminal empire, form powerful alliances, and leave your mark
-                    on the underworld.
-                  </motion.p>
-                </motion.div>
+                    <MoneyBriefcaseIcon size="sm" className="mr-2" /> Register
+                  </motion.span>
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Display content based on active tab */}
+              {activeTab === "login" ? loginContent : registerContent}
+            </Tabs>
+            
+            {/* Crime tape border effect that appears on errors */}
+            {(loginForm.formState.errors.username || 
+              loginForm.formState.errors.password ||
+              registerForm.formState.errors.username ||
+              registerForm.formState.errors.email ||
+              registerForm.formState.errors.password ||
+              registerForm.formState.errors.confirmPassword) && (
+              <motion.div 
+                className="absolute inset-0 pointer-events-none border-crime-scene animate-crime-tape"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              ></motion.div>
+            )}
+          </Card>
+        </motion.div>
+        
+        {/* Right column: Hero section */}
+        <motion.div 
+          className="flex-1 hidden md:flex flex-col justify-center"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+        >
+          <div className={`backdrop-mafia rounded-sm p-8 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
+            <div className="h-full flex flex-col justify-center space-y-8">
+              <motion.div 
+                className="mb-8"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.5 }}
+              >
+                <motion.h2 
+                  className="text-3xl font-heading mb-4"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8, duration: 0.4 }}
+                >
+                  Rise to Power
+                </motion.h2>
+                <motion.p 
+                  className="text-muted-foreground"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.9, duration: 0.4 }}
+                >
+                  Welcome to Mafia Empire, where the streets are yours for the taking.
+                  Build your criminal empire, form powerful alliances, and leave your mark
+                  on the underworld.
+                </motion.p>
+              </motion.div>
+              
+              <div className="space-y-6">
+                <AnimatedFeature 
+                  title="Commit Crimes" 
+                  description="From petty theft to elaborate heists, climb your way up the criminal ladder." 
+                  icon={<TommyGunIcon size="md" />}
+                  delay={1.0}
+                />
                 
-                <div className="space-y-6">
-                  <AnimatedFeature 
-                    title="Commit Crimes" 
-                    description="From petty theft to elaborate heists, climb your way up the criminal ladder." 
-                    icon={<TommyGunIcon size="md" />}
-                    delay={1.0}
-                  />
-                  
-                  <AnimatedFeature 
-                    title="Form a Gang" 
-                    description="Recruit loyal members and establish a feared criminal organization." 
-                    icon={<FedoraIcon size="md" />}
-                    delay={1.2}
-                  />
-                  
-                  <AnimatedFeature 
-                    title="Control Territory" 
-                    description="Expand your influence and dominate the city district by district." 
-                    icon={<TommyGunIcon size="md" />}
-                    delay={1.4}
-                  />
-                  
-                  <AnimatedFeature 
-                    title="Build an Empire" 
-                    description="Develop businesses, launder money, and become the ultimate crime boss." 
-                    icon={<MoneyBriefcaseIcon size="md" />}
-                    delay={1.6}
-                  />
-                </div>
+                <AnimatedFeature 
+                  title="Form a Gang" 
+                  description="Recruit loyal members and establish a feared criminal organization." 
+                  icon={<FedoraIcon size="md" />}
+                  delay={1.2}
+                />
+                
+                <AnimatedFeature 
+                  title="Control Territory" 
+                  description="Expand your influence and dominate the city district by district." 
+                  icon={<TommyGunIcon size="md" />}
+                  delay={1.4}
+                />
+                
+                <AnimatedFeature 
+                  title="Build an Empire" 
+                  description="Develop businesses, launder money, and become the ultimate crime boss." 
+                  icon={<MoneyBriefcaseIcon size="md" />}
+                  delay={1.6}
+                />
               </div>
             </div>
-          </motion.div>
-        </div>
-      </motion.div>
-  );
-}
-
-function Feature({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
-  return (
-    <div className="flex items-start">
-      <div className="mr-4 p-2 bg-primary/10 rounded-sm text-primary">
-        {icon}
+          </div>
+        </motion.div>
       </div>
-      <div>
-        <h3 className="font-medium mb-1">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-    </div>
+    </motion.div>
   );
 }
 
