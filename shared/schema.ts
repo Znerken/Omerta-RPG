@@ -314,6 +314,8 @@ export const insertMessageSchema = createInsertSchema(messages).pick({
   content: true,
 });
 
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
 // Define types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;

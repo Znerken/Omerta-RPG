@@ -793,6 +793,163 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       return undefined;
     }
   }
+  
+  // Message-related methods
+  async getUserMessages(userId: number, limit: number = 50): Promise<Message[]> {
+    try {
+      return await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.receiverId, userId),
+            eq(messages.type, 'personal')
+          )
+        )
+        .orderBy(desc(messages.timestamp))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error in getUserMessages:", error);
+      return [];
+    }
+  }
+  
+  async getGangMessages(gangId: number, limit: number = 50): Promise<Message[]> {
+    try {
+      return await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.gangId, gangId),
+            eq(messages.type, 'gang')
+          )
+        )
+        .orderBy(desc(messages.timestamp))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error in getGangMessages:", error);
+      return [];
+    }
+  }
+  
+  async getJailMessages(limit: number = 50): Promise<Message[]> {
+    try {
+      return await db
+        .select()
+        .from(messages)
+        .where(eq(messages.type, 'jail'))
+        .orderBy(desc(messages.timestamp))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error in getJailMessages:", error);
+      return [];
+    }
+  }
+  
+  async getGlobalMessages(limit: number = 50): Promise<Message[]> {
+    try {
+      return await db
+        .select()
+        .from(messages)
+        .where(eq(messages.type, 'global'))
+        .orderBy(desc(messages.timestamp))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error in getGlobalMessages:", error);
+      return [];
+    }
+  }
+  
+  async getUnreadMessages(userId: number): Promise<Message[]> {
+    try {
+      return await db
+        .select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.receiverId, userId),
+            eq(messages.read, false),
+            eq(messages.type, 'personal')
+          )
+        )
+        .orderBy(desc(messages.timestamp));
+    } catch (error) {
+      console.error("Error in getUnreadMessages:", error);
+      return [];
+    }
+  }
+  
+  async markMessageAsRead(messageId: number): Promise<boolean> {
+    try {
+      await db
+        .update(messages)
+        .set({ read: true })
+        .where(eq(messages.id, messageId));
+      return true;
+    } catch (error) {
+      console.error("Error in markMessageAsRead:", error);
+      return false;
+    }
+  }
+  
+  async markAllMessagesAsRead(userId: number): Promise<boolean> {
+    try {
+      await db
+        .update(messages)
+        .set({ read: true })
+        .where(
+          and(
+            eq(messages.receiverId, userId),
+            eq(messages.read, false),
+            eq(messages.type, 'personal')
+          )
+        );
+      return true;
+    } catch (error) {
+      console.error("Error in markAllMessagesAsRead:", error);
+      return false;
+    }
+  }
+  
+  async createMessage(messageData: Omit<InsertMessage, 'timestamp'>): Promise<Message> {
+    try {
+      // Set default values if not provided
+      if (messageData.type === 'personal' && !messageData.receiverId) {
+        throw new Error("receiverId is required for personal messages");
+      }
+      
+      if (messageData.type === 'gang' && !messageData.gangId) {
+        throw new Error("gangId is required for gang messages");
+      }
+      
+      const [message] = await db
+        .insert(messages)
+        .values(messageData)
+        .returning();
+      
+      if (!message) {
+        throw new Error("Failed to create message");
+      }
+      
+      return message;
+    } catch (error) {
+      console.error("Error in createMessage:", error);
+      throw new Error("Message creation failed: " + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+  
+  async deleteMessage(messageId: number): Promise<boolean> {
+    try {
+      await db
+        .delete(messages)
+        .where(eq(messages.id, messageId));
+      return true;
+    } catch (error) {
+      console.error("Error in deleteMessage:", error);
+      return false;
+    }
+  }
 
   async getGangWithDetails(id: number): Promise<any | undefined> {
     try {
