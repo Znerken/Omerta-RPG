@@ -115,9 +115,38 @@ export type CasinoBetWithDetails = CasinoBet & {
   game: CasinoGame;
 };
 
+// Dice game bet details schema
+export const diceBetDetailsSchema = z.object({
+  prediction: z.enum(['higher', 'lower', 'exact']),
+  targetNumber: z.number().int().min(1).max(6),
+});
+
+// Slot machine bet details schema
+export const slotBetDetailsSchema = z.object({
+  lines: z.number().int().positive().optional(),
+});
+
+// Roulette bet details schema
+export const rouletteBetDetailsSchema = z.object({
+  betType: z.string(),
+  betValue: z.union([z.string(), z.number()]),
+});
+
+// Blackjack bet details schema
+export const blackjackBetDetailsSchema = z.object({
+  action: z.enum(['hit', 'stand', 'double', 'split']).optional(),
+});
+
+// Generic bet details schema
+export const betDetailsSchema = z.object({}).passthrough();
+
 // Bet validation schema
 export const placeBetSchema = z.object({
   gameId: z.number().positive(),
   betAmount: z.number().positive(),
-  betDetails: z.record(z.any()),
+  betDetails: z.record(z.any()).refine(val => {
+    return val !== null && typeof val === 'object';
+  }, {
+    message: "betDetails must be a non-null object"
+  }),
 });

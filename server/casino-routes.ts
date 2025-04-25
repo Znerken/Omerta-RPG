@@ -2,7 +2,14 @@ import { Express, Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { isAuthenticated, isAdmin } from './middleware/auth';
 import { CasinoStorage } from './storage-casino';
-import { placeBetSchema } from '../shared/schema-casino';
+import { 
+  placeBetSchema, 
+  diceBetDetailsSchema, 
+  slotBetDetailsSchema, 
+  rouletteBetDetailsSchema, 
+  blackjackBetDetailsSchema, 
+  betDetailsSchema 
+} from '../shared/schema-casino';
 
 // Game logic helpers
 import { processDiceGame } from './games/dice-game';
@@ -85,9 +92,53 @@ export function registerCasinoRoutes(app: Express) {
       console.log('\n=== CASINO ROUTE DEBUG ===');
       console.log('Raw request body:', JSON.stringify(req.body, null, 2));
       
-      // Validate input
+      // Validate input with base schema
       const validatedData = placeBetSchema.parse(req.body);
       const { gameId, betAmount, betDetails } = validatedData;
+      
+      // Get the game to determine the type-specific validation
+      const game = await casinoStorage.getCasinoGame(gameId);
+      if (!game) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      
+      // Validate bet details based on game type
+      let validatedBetDetails;
+      try {
+        console.log(`Game type: ${game.name}, validating bet details...`);
+        
+        switch(game.name) {
+          case 'Dice':
+            validatedBetDetails = diceBetDetailsSchema.parse(betDetails);
+            console.log('Dice bet details validated:', validatedBetDetails);
+            break;
+          case 'Slots':
+            validatedBetDetails = slotBetDetailsSchema.parse(betDetails);
+            console.log('Slots bet details validated:', validatedBetDetails);
+            break;
+          case 'Roulette':
+            validatedBetDetails = rouletteBetDetailsSchema.parse(betDetails);
+            console.log('Roulette bet details validated:', validatedBetDetails);
+            break;
+          case 'Blackjack':
+            validatedBetDetails = blackjackBetDetailsSchema.parse(betDetails);
+            console.log('Blackjack bet details validated:', validatedBetDetails);
+            break;
+          default:
+            // Use the generic schema for unknown games
+            validatedBetDetails = betDetailsSchema.parse(betDetails);
+            console.log('Generic bet details validated:', validatedBetDetails);
+        }
+      } catch (validationError) {
+        console.error('Bet details validation error:', validationError);
+        if (validationError instanceof ZodError) {
+          return handleZodError(validationError, res);
+        }
+        return res.status(400).json({ 
+          error: "Invalid bet details for this game type",
+          details: (validationError as Error).message
+        });
+      }
       
       console.log('Validated data:', JSON.stringify(validatedData, null, 2));
       console.log('betDetails type:', typeof betDetails);
@@ -95,12 +146,6 @@ export function registerCasinoRoutes(app: Express) {
       
       if (betDetails && typeof betDetails === 'object') {
         console.log('betDetails keys:', Object.keys(betDetails));
-      }
-      
-      // Check if the game exists
-      const game = await casinoStorage.getCasinoGame(gameId);
-      if (!game) {
-        return res.status(404).json({ error: "Game not found" });
       }
       
       // Check if the game is active
