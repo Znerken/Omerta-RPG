@@ -54,11 +54,13 @@ import { formatDistanceToNow } from "date-fns";
 type CasinoGame = {
   id: number;
   name: string;
-  type: string;
+  type: string; // This is actually game_type in the database
   description: string;
   minBet: number;
   maxBet: number;
   houseEdge: number;
+  isActive: boolean; // This is actually enabled in the database
+  imageUrl?: string;
 };
 
 type CasinoBet = {
@@ -797,16 +799,17 @@ export default function CasinoPage() {
                             Place your bet and test your luck!
                           </DialogDescription>
                         </DialogHeader>
-                        {activeGame?.type === "dice" && (
+                        {/* Using the type property which maps to game_type in the database */}
+                        {activeGame && activeGame.type === "dice" && (
                           <DiceGame game={activeGame} />
                         )}
-                        {activeGame?.type === "slots" && (
+                        {activeGame && activeGame.type === "slots" && (
                           <SlotMachine game={activeGame} />
                         )}
-                        {activeGame?.type === "roulette" && (
+                        {activeGame && activeGame.type === "roulette" && (
                           <Roulette game={activeGame} />
                         )}
-                        {activeGame?.type === "blackjack" && (
+                        {activeGame && activeGame.type === "blackjack" && (
                           <Blackjack game={activeGame} />
                         )}
                       </DialogContent>
