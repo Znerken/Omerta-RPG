@@ -398,7 +398,7 @@ export default function FriendSystemTestPage() {
                     <li key={table.table} className="flex items-center justify-between">
                       <span>{table.table}</span>
                       {table.exists ? (
-                        <Badge variant="success" className="bg-green-600">Exists</Badge>
+                        <Badge className="bg-green-600 text-white">Exists</Badge>
                       ) : (
                         <Badge variant="destructive">Missing</Badge>
                       )}
@@ -497,8 +497,8 @@ export default function FriendSystemTestPage() {
                       <p className="font-medium">{friend.username}</p>
                       <div className="flex items-center">
                         <Badge 
-                          variant={friend.status?.status === "online" ? "success" : "secondary"}
-                          className="text-xs"
+                          className={`text-xs ${friend.status?.status === "online" ? "bg-green-600 text-white" : ""}`}
+                          variant={friend.status?.status === "online" ? undefined : "secondary"}
                         >
                           {friend.status?.status || "offline"}
                         </Badge>
