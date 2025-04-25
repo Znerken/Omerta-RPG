@@ -1,18 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { TommyGunIcon, FedoraIcon, RevolverIcon, MoneyBriefcaseIcon, WhiskeyGlassIcon } from "@/components/ui/mafia-icons";
+import { TommyGunIcon, FedoraIcon } from "@/components/ui/mafia-icons";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion } from "framer-motion";
-// Using directly from public folder
-const mafiaCharacterImg = "/mafia-character.jpg";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -32,81 +29,9 @@ const registerSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-// Animation variants for framer-motion
-const pageVariants = {
-  initial: {
-    opacity: 0,
-    scale: 0.98,
-  },
-  in: {
-    opacity: 1,
-    scale: 1,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
-  },
-  out: {
-    opacity: 0,
-    scale: 1.02,
-    transition: {
-      duration: 0.3,
-      ease: "easeIn",
-    },
-  },
-};
-
-const formVariants = {
-  hidden: {
-    opacity: 0,
-    y: 20,
-  },
-  visible: (custom: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: custom * 0.1,
-      duration: 0.4,
-      ease: "easeOut",
-    },
-  }),
-};
-
-const iconVariants = {
-  initial: {
-    rotate: 0,
-    scale: 1,
-  },
-  hover: {
-    rotate: 15,
-    scale: 1.1,
-    transition: {
-      type: "spring",
-      stiffness: 500,
-      damping: 10,
-    },
-  },
-  tap: {
-    rotate: -15,
-    scale: 0.95,
-  },
-  success: {
-    rotate: [0, 10, -10, 0],
-    scale: [1, 1.2, 1.2, 1],
-    transition: {
-      duration: 0.4,
-      times: [0, 0.3, 0.6, 1],
-    },
-  },
-};
-
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
-  const [showGunshot, setShowGunshot] = useState(false);
-  const [showSpotlight, setShowSpotlight] = useState(false);
-  const [showSmoke, setShowSmoke] = useState(false);
-  const [animateIcon, setAnimateIcon] = useState(false);
   
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -126,519 +51,211 @@ export default function AuthPage() {
     },
   });
   
-  // Handle tab changes with animations
-  const handleTabChange = (newTab: "login" | "register") => {
-    setShowSmoke(true);
-    setTimeout(() => {
-      setActiveTab(newTab);
-      setShowSmoke(false);
-    }, 300);
-  };
-  
-  // Trigger animations on form submit
   const onLoginSubmit = (data: LoginFormData) => {
-    setShowGunshot(true);
-    setAnimateIcon(true);
-    
-    setTimeout(() => {
-      setShowGunshot(false);
-      loginMutation.mutate(data);
-    }, 600);
-    
-    setTimeout(() => {
-      setAnimateIcon(false);
-    }, 1000);
+    loginMutation.mutate(data);
   };
   
   const onRegisterSubmit = (data: RegisterFormData) => {
-    setShowSpotlight(true);
-    setAnimateIcon(true);
-    
-    setTimeout(() => {
-      setShowSpotlight(false);
-      const { username, email, password } = data;
-      registerMutation.mutate({ username, email, password });
-    }, 600);
-    
-    setTimeout(() => {
-      setAnimateIcon(false);
-    }, 1000);
+    const { username, email, password } = data;
+    registerMutation.mutate({ username, email, password });
   };
-  
-  // Trigger spotlight on page load
-  useEffect(() => {
-    setShowSpotlight(true);
-    setTimeout(() => setShowSpotlight(false), 2000);
-  }, []);
   
   // Redirect to home if logged in
   if (user) {
     return <Redirect to="/" />;
   }
   
-  // Prepare login and register content
-  const loginContent = (
-    <TabsContent value="login" key="login-tab">
-      <Form {...loginForm}>
-        <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={1}
-          >
-            <FormField
-              control={loginForm.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Enter your alias" 
-                      {...field} 
-                      className="backdrop-blur-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
-          
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={2}
-          >
-            <FormField
-              control={loginForm.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="Enter your password" 
-                      {...field} 
-                      className="backdrop-blur-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
-          
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={3}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Button 
-              type="submit" 
-              className="w-full relative overflow-hidden"
-              disabled={loginMutation.isPending}
-            >
-              <motion.span className="relative z-10 flex items-center justify-center">
-                {loginMutation.isPending ? (
-                  <>Verifying... <WhiskeyGlassIcon className="ml-2 animate-spin" size="sm" /></>
-                ) : (
-                  <>Enter the Underworld <TommyGunIcon className="ml-2" size="sm" /></>
-                )}
-              </motion.span>
-            </Button>
-          </motion.div>
-        </form>
-      </Form>
-    </TabsContent>
-  );
-
-  const registerContent = (
-    <TabsContent value="register" key="register-tab">
-      <Form {...registerForm}>
-        <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={1}
-          >
-            <FormField
-              control={registerForm.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="Choose your alias" 
-                      {...field} 
-                      className="backdrop-blur-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
-          
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={2}
-          >
-            <FormField
-              control={registerForm.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="your@email.com" 
-                      {...field} 
-                      className="backdrop-blur-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
-          
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={3}
-          >
-            <FormField
-              control={registerForm.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="Create a password" 
-                      {...field} 
-                      className="backdrop-blur-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
-          
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={4}
-          >
-            <FormField
-              control={registerForm.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="password" 
-                      placeholder="Confirm your password" 
-                      {...field} 
-                      className="backdrop-blur-sm"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
-          
-          <motion.div
-            variants={formVariants}
-            initial="hidden"
-            animate="visible"
-            custom={5}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Button 
-              type="submit" 
-              className="w-full relative overflow-hidden"
-              disabled={registerMutation.isPending}
-            >
-              <span className="relative z-10 flex items-center justify-center">
-                {registerMutation.isPending ? (
-                  <>Creating... <WhiskeyGlassIcon className="ml-2 animate-spin" size="sm" /></>
-                ) : (
-                  <>Join the Family <FedoraIcon className="ml-2" size="sm" /></>
-                )}
-              </span>
-            </Button>
-          </motion.div>
-        </form>
-      </Form>
-    </TabsContent>
-  );
-  
   return (
-    <motion.div 
-      className="h-screen w-full flex items-center justify-center relative"
-      initial="initial"
-      animate="in"
-      exit="out"
-      variants={pageVariants}
-    >
-      {/* Special effects overlays */}
-      <div className={`spotlight-effect w-full h-full absolute top-0 left-0 ${showSpotlight ? 'active' : ''}`}></div>
-      <div className={`gunshot-effect w-full h-full absolute top-0 left-0 ${showGunshot ? 'active' : ''}`}></div>
-      
-      <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8 z-10">
+    <div className="h-screen w-full flex items-center justify-center">
+      <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8">
         {/* Left column: Auth forms */}
-        <motion.div 
-          className="w-full md:w-2/5 flex flex-col justify-center"
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          <Card className={`card-mafia shadow-dramatic p-8 relative overflow-hidden ${showSmoke ? 'smoke-effect active' : ''}`}>
-            <motion.div 
-              className="mb-8 flex items-center justify-center"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.4 }}
-            >
-              <motion.div
-                variants={iconVariants}
-                initial="initial"
-                animate={animateIcon ? "success" : "initial"}
-                whileHover="hover"
-                whileTap="tap"
-                className="mr-4"
-              >
-                <FedoraIcon size="lg" color="primary" />
-              </motion.div>
+        <div className="flex-1 flex flex-col justify-center">
+          <Card className="card-mafia shadow-dramatic p-8">
+            <div className="mb-8 flex items-center justify-center">
+              <FedoraIcon size="lg" color="primary" className="mr-4" />
               <div>
-                <motion.h1 
-                  className="text-4xl font-heading text-gold-gradient mb-2"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.6, duration: 0.4 }}
-                >
-                  Mafia Empire
-                </motion.h1>
-                <motion.p 
-                  className="text-muted-foreground typing-effect"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8, duration: 0.4 }}
-                >
-                  Enter the criminal underworld.
-                </motion.p>
+                <h1 className="text-4xl font-heading text-gold-gradient mb-2">Mafia Empire</h1>
+                <p className="text-muted-foreground">Enter the criminal underworld.</p>
               </div>
-            </motion.div>
+            </div>
             
-            <Tabs 
-              value={activeTab} 
-              onValueChange={(v) => handleTabChange(v as "login" | "register")} 
-              className="w-full"
-            >
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8">
-                <TabsTrigger value="login">
-                  <motion.span 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.9 }}
-                    className="flex items-center"
-                  >
-                    <RevolverIcon size="sm" className="mr-2" /> Login
-                  </motion.span>
-                </TabsTrigger>
-                <TabsTrigger value="register">
-                  <motion.span 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.0 }}
-                    className="flex items-center"
-                  >
-                    <MoneyBriefcaseIcon size="sm" className="mr-2" /> Register
-                  </motion.span>
-                </TabsTrigger>
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
               
-              {/* Display content based on active tab */}
-              {activeTab === "login" ? loginContent : registerContent}
+              <TabsContent value="login">
+                <Form {...loginForm}>
+                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
+                    <FormField
+                      control={loginForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your alias" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={loginForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Enter your password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={loginMutation.isPending}
+                    >
+                      {loginMutation.isPending ? "Verifying..." : "Enter the Underworld"}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+              
+              <TabsContent value="register">
+                <Form {...registerForm}>
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
+                    <FormField
+                      control={registerForm.control}
+                      name="username"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Username</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Choose your alias" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="your@email.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Create a password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Confirm your password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={registerMutation.isPending}
+                    >
+                      {registerMutation.isPending ? "Creating..." : "Join the Family"}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
             </Tabs>
-            
-            {/* Crime tape border effect that appears on errors */}
-            {(loginForm.formState.errors.username || 
-              loginForm.formState.errors.password ||
-              registerForm.formState.errors.username ||
-              registerForm.formState.errors.email ||
-              registerForm.formState.errors.password ||
-              registerForm.formState.errors.confirmPassword) && (
-              <motion.div 
-                className="absolute inset-0 pointer-events-none border-crime-scene animate-crime-tape"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              ></motion.div>
-            )}
           </Card>
-        </motion.div>
+        </div>
         
         {/* Right column: Hero section */}
-        <motion.div 
-          className="w-full md:w-3/5 hidden md:flex flex-col justify-center"
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-        >
-          <div className={`backdrop-mafia rounded-sm p-8 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
-            <div className="h-full flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 items-center">
-              {/* Feature descriptions - takes 1 column */}
-              <div className="space-y-4">
-                <motion.div 
-                  className="mb-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7, duration: 0.5 }}
-                >
-                  <motion.h2 
-                    className="text-4xl font-heading mb-3 text-gold-gradient"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.8, duration: 0.4 }}
-                  >
-                    Rise to Power
-                  </motion.h2>
-                  <motion.p 
-                    className="text-muted-foreground text-base"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.9, duration: 0.4 }}
-                  >
-                    Welcome to Mafia Empire, where the streets are yours for the taking.
-                  </motion.p>
-                </motion.div>
-                
-                <div className="space-y-4">
-                  <AnimatedFeature 
-                    title="Commit Crimes" 
-                    description="From petty theft to elaborate heists." 
-                    icon={<TommyGunIcon size="sm" />}
-                    delay={1.0}
-                  />
-                  
-                  <AnimatedFeature 
-                    title="Form a Gang" 
-                    description="Recruit loyal members to your organization." 
-                    icon={<FedoraIcon size="sm" />}
-                    delay={1.2}
-                  />
-                  
-                  <AnimatedFeature 
-                    title="Control Territory" 
-                    description="Expand your influence district by district." 
-                    icon={<TommyGunIcon size="sm" />}
-                    delay={1.4}
-                  />
-                  
-                  <AnimatedFeature 
-                    title="Build an Empire" 
-                    description="Become the ultimate crime boss." 
-                    icon={<MoneyBriefcaseIcon size="sm" />}
-                    delay={1.6}
-                  />
-                </div>
+        <div className="flex-1 hidden md:flex flex-col justify-center">
+          <div className="backdrop-mafia rounded-sm p-8 h-full shadow-dramatic">
+            <div className="h-full flex flex-col justify-center space-y-8">
+              <div className="mb-8">
+                <h2 className="text-3xl font-heading mb-4">Rise to Power</h2>
+                <p className="text-muted-foreground">
+                  Welcome to Mafia Empire, where the streets are yours for the taking.
+                  Build your criminal empire, form powerful alliances, and leave your mark
+                  on the underworld.
+                </p>
               </div>
               
-              {/* Mafia character image - takes 1 column */}
-              <motion.div 
-                className="flex items-center justify-center mt-6 lg:mt-0"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.0, duration: 0.6 }}
-              >
-                <motion.div
-                  className="relative overflow-hidden rounded-md w-full h-auto"
-                  whileHover={{ scale: 1.03, rotate: 1 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10 pointer-events-none rounded-md"></div>
-                  <img 
-                    src={mafiaCharacterImg} 
-                    alt="Mafia Character" 
-                    className="w-full h-auto object-cover shadow-xl min-h-[400px] max-h-[600px]"
-                  />
-                </motion.div>
-              </motion.div>
+              <div className="space-y-6">
+                <Feature 
+                  title="Commit Crimes" 
+                  description="From petty theft to elaborate heists, climb your way up the criminal ladder." 
+                  icon={<TommyGunIcon size="md" />} 
+                />
+                
+                <Feature 
+                  title="Form a Gang" 
+                  description="Recruit loyal members and establish a feared criminal organization." 
+                  icon={<FedoraIcon size="md" />} 
+                />
+                
+                <Feature 
+                  title="Control Territory" 
+                  description="Expand your influence and dominate the city district by district." 
+                  icon={<TommyGunIcon size="md" />} 
+                />
+                
+                <Feature 
+                  title="Build an Empire" 
+                  description="Develop businesses, launder money, and become the ultimate crime boss." 
+                  icon={<FedoraIcon size="md" />} 
+                />
+              </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-function AnimatedFeature({ 
-  title, 
-  description, 
-  icon, 
-  delay = 0 
-}: { 
-  title: string; 
-  description: string; 
-  icon: React.ReactNode; 
-  delay?: number;
-}) {
+function Feature({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
   return (
-    <motion.div 
-      className="flex items-start"
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay, duration: 0.4 }}
-    >
-      <motion.div 
-        className="mr-4 p-2 bg-primary/10 rounded-sm text-primary"
-        whileHover={{ 
-          scale: 1.1, 
-          rotate: 5, 
-          backgroundColor: "rgba(var(--primary) / 0.2)" 
-        }}
-        whileTap={{ scale: 0.9 }}
-      >
+    <div className="flex items-start">
+      <div className="mr-4 p-2 bg-primary/10 rounded-sm text-primary">
         {icon}
-      </motion.div>
-      <div>
-        <motion.h3 
-          className="font-medium mb-1 text-primary"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: delay + 0.2, duration: 0.3 }}
-        >
-          {title}
-        </motion.h3>
-        <motion.p 
-          className="text-sm text-muted-foreground"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: delay + 0.3, duration: 0.3 }}
-        >
-          {description}
-        </motion.p>
       </div>
-    </motion.div>
+      <div>
+        <h3 className="font-medium mb-1">{title}</h3>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+    </div>
   );
 }
