@@ -64,6 +64,86 @@ export default function ProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  // All mutations must be defined before any conditional returns
+  // Mutation for updating profile
+  const updateProfileMutation = useMutation({
+    mutationFn: async (profileData: any) => {
+      const res = await apiRequest("PATCH", "/api/user/profile", profileData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      setIsEditing(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update profile",
+        description: error.message || "There was an error updating your profile.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for uploading avatar
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const res = await fetch("/api/user/avatar", {
+        method: "POST",
+        body: formData,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      toast({
+        title: "Avatar updated",
+        description: "Your avatar has been updated successfully.",
+      });
+      setAvatarPreview(data.avatar);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to upload avatar",
+        description: error.message || "There was an error uploading your avatar.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for uploading banner
+  const uploadBannerMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("banner", file);
+      const res = await fetch("/api/user/banner", {
+        method: "POST",
+        body: formData,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      toast({
+        title: "Banner updated",
+        description: "Your banner has been updated successfully.",
+      });
+      setBannerPreview(data.bannerImage);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to upload banner",
+        description: error.message || "There was an error uploading your banner.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Update state values when profile data loads
   useEffect(() => {
@@ -156,85 +236,6 @@ export default function ProfilePage() {
   const { username, level, xp, cash, respect, stats } = userProfile;
   const nextLevelXp = userProfile.nextLevelXP || 100 * Math.pow(level, 2);
   const xpProgress = calculateLevelProgress(xp, nextLevelXp);
-
-  // Mutation for updating profile
-  const updateProfileMutation = useMutation({
-    mutationFn: async (profileData: any) => {
-      const res = await apiRequest("PATCH", "/api/user/profile", profileData);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-      });
-      setIsEditing(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to update profile",
-        description: error.message || "There was an error updating your profile.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation for uploading avatar
-  const uploadAvatarMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("avatar", file);
-      const res = await fetch("/api/user/avatar", {
-        method: "POST",
-        body: formData,
-      });
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-      toast({
-        title: "Avatar updated",
-        description: "Your avatar has been updated successfully.",
-      });
-      setAvatarPreview(data.avatar);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to upload avatar",
-        description: error.message || "There was an error uploading your avatar.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Mutation for uploading banner
-  const uploadBannerMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("banner", file);
-      const res = await fetch("/api/user/banner", {
-        method: "POST",
-        body: formData,
-      });
-      return res.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
-      toast({
-        title: "Banner updated",
-        description: "Your banner has been updated successfully.",
-      });
-      setBannerPreview(data.bannerImage);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to upload banner",
-        description: error.message || "There was an error uploading your banner.",
-        variant: "destructive",
-      });
-    },
-  });
 
   // Handle avatar file selection
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
