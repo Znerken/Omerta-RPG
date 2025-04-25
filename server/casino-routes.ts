@@ -82,9 +82,20 @@ export function registerCasinoRoutes(app: Express) {
   // Place a bet on a specific game
   app.post("/api/casino/place-bet", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      console.log('\n=== CASINO ROUTE DEBUG ===');
+      console.log('Raw request body:', JSON.stringify(req.body, null, 2));
+      
       // Validate input
       const validatedData = placeBetSchema.parse(req.body);
       const { gameId, betAmount, betDetails } = validatedData;
+      
+      console.log('Validated data:', JSON.stringify(validatedData, null, 2));
+      console.log('betDetails type:', typeof betDetails);
+      console.log('betDetails validation passed:', betDetails !== null && typeof betDetails === 'object');
+      
+      if (betDetails && typeof betDetails === 'object') {
+        console.log('betDetails keys:', Object.keys(betDetails));
+      }
       
       // Check if the game exists
       const game = await casinoStorage.getCasinoGame(gameId);

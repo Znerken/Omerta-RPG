@@ -31,14 +31,47 @@ export interface DiceResult {
  * Process a dice game bet and determine the outcome
  */
 export function processDiceGame(betAmount: number, betDetails: DiceBetDetails): DiceResult {
-  // Validate inputs
-  if (!betDetails.prediction || !betDetails.targetNumber) {
-    throw new Error('Invalid bet details');
+  console.log('=== DICE GAME DEBUG INFO ===');
+  console.log('Received bet amount:', betAmount);
+  console.log('Received bet details:', JSON.stringify(betDetails, null, 2));
+  console.log('Bet details type:', typeof betDetails);
+  
+  // Additional validation to help diagnose the issue
+  if (!betDetails) {
+    console.log('betDetails is null or undefined');
+    throw new Error('Missing bet details');
   }
   
+  if (typeof betDetails !== 'object') {
+    console.log('betDetails is not an object:', betDetails);
+    throw new Error('Bet details is not an object');
+  }
+  
+  // Validate required fields
+  if (!betDetails.prediction) {
+    console.log('Missing prediction in bet details');
+    throw new Error('Missing prediction in bet details');
+  }
+  
+  if (betDetails.targetNumber === undefined || betDetails.targetNumber === null) {
+    console.log('Missing target number in bet details');
+    throw new Error('Missing target number in bet details');
+  }
+  
+  // Validate prediction value
+  if (!['higher', 'lower', 'exact'].includes(betDetails.prediction)) {
+    console.log('Invalid prediction type:', betDetails.prediction);
+    throw new Error(`Invalid prediction type: ${betDetails.prediction}`);
+  }
+  
+  // Validate target number range
   if (betDetails.targetNumber < 1 || betDetails.targetNumber > 6) {
+    console.log('Target number out of range:', betDetails.targetNumber);
     throw new Error('Target number must be between 1 and 6');
   }
+  
+  console.log('Validation passed successfully');
+  console.log('=== END DICE GAME DEBUG INFO ===');
   
   // Generate random dice roll (1-6)
   const diceRoll = Math.floor(Math.random() * 6) + 1;

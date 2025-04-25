@@ -57,13 +57,18 @@ export class CasinoStorage {
       
       console.log('4. Executing main query...');
       
+      // Convert betDetails to JSON
+      const betDetailsJson = bet.betDetails ? JSON.stringify(bet.betDetails) : '{}';
+      console.log('4.1 betDetails converted to JSON:', betDetailsJson);
+      
       // Since our simplified query is working, let's use that approach directly
       const query = sql`
-        INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
+        INSERT INTO casino_bets (user_id, game_id, bet_amount, bet_details, status, result)
         VALUES (
           ${bet.userId}, 
           ${bet.gameId}, 
-          ${bet.betAmount}, 
+          ${bet.betAmount},
+          ${betDetailsJson}::jsonb,
           'pending',
           '{}'::jsonb
         )
@@ -139,12 +144,17 @@ export class CasinoStorage {
       // Let's try one more approach - direct SQL using Drizzle's SQL tag instead of execute
       try {
         console.log('14. Attempting direct SQL insertion with rows property check');
+        // Convert betDetails to JSON for fallback
+        const betDetailsJson = bet.betDetails ? JSON.stringify(bet.betDetails) : '{}';
+        console.log('14.1 Fallback betDetails converted to JSON:', betDetailsJson);
+        
         const directInsertResult = await db.execute(`
-          INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
+          INSERT INTO casino_bets (user_id, game_id, bet_amount, bet_details, status, result)
           VALUES (
             ${bet.userId}, 
             ${bet.gameId}, 
-            ${bet.betAmount}, 
+            ${bet.betAmount},
+            '${betDetailsJson}'::jsonb,
             'pending',
             '{}'::jsonb
           )
@@ -187,6 +197,27 @@ export class CasinoStorage {
     status: "pending" | "won" | "lost" | "canceled" | "refunded"
   ): Promise<CasinoBet | undefined> {
     try {
+      console.log('\n==== UPDATE BET RESULT DEBUG INFO ====');
+      console.log('Updating bet with ID:', id);
+      console.log('Result data:', JSON.stringify(result, null, 2));
+      console.log('Status:', status);
+      
+      // First get the current bet to check bet_details
+      const currentBet = await db.execute(sql`
+        SELECT * FROM casino_bets WHERE id = ${id}
+      `);
+      
+      if (Array.isArray(currentBet) && currentBet.length > 0) {
+        console.log('Current bet found:', JSON.stringify(currentBet[0], null, 2));
+        if (currentBet[0].bet_details) {
+          console.log('Current bet_details:', JSON.stringify(currentBet[0].bet_details, null, 2));
+        } else {
+          console.log('No bet_details found in current bet');
+        }
+      } else {
+        console.log('Could not find current bet with ID:', id);
+      }
+      
       // Using direct SQL to bypass schema mismatch issues
       const resultJson = JSON.stringify(result);
       
@@ -208,16 +239,22 @@ export class CasinoStorage {
       const updatedBet = queryResult[0];
       
       // Transform to match the expected structure
-      return {
+      const transformedBet = {
         id: updatedBet.id,
         userId: updatedBet.user_id,
         gameId: updatedBet.game_id,
         betAmount: updatedBet.bet_amount,
+        betDetails: updatedBet.bet_details || {},
         status: updatedBet.status,
         result: updatedBet.result,
         createdAt: updatedBet.created_at,
         settledAt: updatedBet.settled_at
       };
+      
+      console.log('Updated bet with details:', JSON.stringify(transformedBet, null, 2));
+      console.log('==== END UPDATE BET RESULT DEBUG INFO ====\n');
+      
+      return transformedBet;
     } catch (error) {
       console.error('Error updating bet result:', error);
       return undefined;
