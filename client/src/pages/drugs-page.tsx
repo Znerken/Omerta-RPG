@@ -236,86 +236,137 @@ function InventoryTab() {
         ) : userDrugs && userDrugs.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {userDrugs.map((drug) => (
-              <Card key={drug.id} className="overflow-hidden border-2 hover:border-primary/50 transition-all duration-200">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle>{drug.name}</CardTitle>
-                    <Badge variant={getRiskBadgeVariant(drug.riskLevel)}>
-                      Risk: {drug.riskLevel}
-                    </Badge>
+              <Card key={drug.id} className="group overflow-hidden border-2 hover:border-primary/50 transition-all duration-200 relative bg-black/40">
+                {/* Pseudo-glow effect on hover */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                {/* Risk level indicator ribbon */}
+                <div className={`absolute -right-8 top-4 rotate-45 w-32 text-center text-xs font-bold py-1 ${getRiskLevelColor(drug.riskLevel)}`}>
+                  RISK: {drug.riskLevel}/10
+                </div>
+
+                <CardHeader className="pb-2 relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-2 rounded-full">
+                      <Pill className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent">
+                        {drug.name}
+                      </CardTitle>
+                      <CardDescription className="line-clamp-1 text-xs">{drug.description}</CardDescription>
+                    </div>
                   </div>
-                  <CardDescription className="line-clamp-2">{drug.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="pb-2">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center">
-                        <Package className="h-4 w-4 mr-1" /> Quantity
-                      </span>
-                      <span className="font-medium">{drug.quantity}</span>
+                
+                <CardContent className="pb-2 relative z-10">
+                  <div className="space-y-3">
+                    {/* Stats grid */}
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="bg-black/30 rounded p-2 flex flex-col items-center justify-center">
+                        <Package className="h-4 w-4 mb-1 text-primary/80" />
+                        <span className="font-bold text-sm">{drug.quantity}</span>
+                        <span className="text-[10px] text-muted-foreground">Quantity</span>
+                      </div>
+                      
+                      <div className="bg-black/30 rounded p-2 flex flex-col items-center justify-center">
+                        <Timer className="h-4 w-4 mb-1 text-primary/80" />
+                        <span className="font-bold text-sm">{drug.durationHours}h</span>
+                        <span className="text-[10px] text-muted-foreground">Duration</span>
+                      </div>
+                      
+                      <div className="bg-black/30 rounded p-2 flex flex-col items-center justify-center">
+                        <AlertCircle className="h-4 w-4 mb-1 text-primary/80" />
+                        <span className="font-bold text-sm">{drug.addictionRate}%</span>
+                        <span className="text-[10px] text-muted-foreground">Addiction</span>
+                      </div>
                     </div>
                     
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center">
-                        <Timer className="h-4 w-4 mr-1" /> Duration
-                      </span>
-                      <span className="font-medium">{drug.durationHours} hours</span>
-                    </div>
+                    <Separator className="my-2 bg-primary/20" />
                     
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center">
-                        <AlertCircle className="h-4 w-4 mr-1" /> Addiction Rate
-                      </span>
-                      <span className="font-medium">{drug.addictionRate}%</span>
-                    </div>
-                    
-                    <Separator className="my-2" />
-                    
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {drug.strengthBonus > 0 && (
-                        <div className="flex items-center text-green-500">
-                          <ArrowUpDown className="h-3 w-3 mr-1" /> +{drug.strengthBonus} Strength
-                        </div>
-                      )}
-                      {drug.stealthBonus > 0 && (
-                        <div className="flex items-center text-green-500">
-                          <ArrowUpDown className="h-3 w-3 mr-1" /> +{drug.stealthBonus} Stealth
-                        </div>
-                      )}
-                      {drug.charismaBonus > 0 && (
-                        <div className="flex items-center text-green-500">
-                          <ArrowUpDown className="h-3 w-3 mr-1" /> +{drug.charismaBonus} Charisma
-                        </div>
-                      )}
-                      {drug.intelligenceBonus > 0 && (
-                        <div className="flex items-center text-green-500">
-                          <ArrowUpDown className="h-3 w-3 mr-1" /> +{drug.intelligenceBonus} Intelligence
-                        </div>
-                      )}
-                      {drug.cashGainBonus > 0 && (
-                        <div className="flex items-center text-green-500">
-                          <ArrowUpDown className="h-3 w-3 mr-1" /> +{drug.cashGainBonus}% Cash
-                        </div>
-                      )}
+                    {/* Bonus effects */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs uppercase font-semibold text-primary/70 mb-2">Effects</h4>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        {drug.strengthBonus > 0 && (
+                          <div className="flex items-center bg-black/20 px-2 py-1 rounded">
+                            <div className="mr-1.5 bg-green-500/20 p-0.5 rounded">
+                              <ArrowUpDown className="h-3 w-3 text-green-500" />
+                            </div>
+                            <span className="text-green-400">+{drug.strengthBonus} Strength</span>
+                          </div>
+                        )}
+                        {drug.stealthBonus > 0 && (
+                          <div className="flex items-center bg-black/20 px-2 py-1 rounded">
+                            <div className="mr-1.5 bg-green-500/20 p-0.5 rounded">
+                              <ArrowUpDown className="h-3 w-3 text-green-500" />
+                            </div>
+                            <span className="text-green-400">+{drug.stealthBonus} Stealth</span>
+                          </div>
+                        )}
+                        {drug.charismaBonus > 0 && (
+                          <div className="flex items-center bg-black/20 px-2 py-1 rounded">
+                            <div className="mr-1.5 bg-green-500/20 p-0.5 rounded">
+                              <ArrowUpDown className="h-3 w-3 text-green-500" />
+                            </div>
+                            <span className="text-green-400">+{drug.charismaBonus} Charisma</span>
+                          </div>
+                        )}
+                        {drug.intelligenceBonus > 0 && (
+                          <div className="flex items-center bg-black/20 px-2 py-1 rounded">
+                            <div className="mr-1.5 bg-green-500/20 p-0.5 rounded">
+                              <ArrowUpDown className="h-3 w-3 text-green-500" />
+                            </div>
+                            <span className="text-green-400">+{drug.intelligenceBonus} Intelligence</span>
+                          </div>
+                        )}
+                        {drug.cashGainBonus > 0 && (
+                          <div className="flex items-center bg-black/20 px-2 py-1 rounded">
+                            <div className="mr-1.5 bg-green-500/20 p-0.5 rounded">
+                              <ArrowUpDown className="h-3 w-3 text-green-500" />
+                            </div>
+                            <span className="text-green-400">+{drug.cashGainBonus}% Cash</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
+                
+                <CardFooter className="relative z-10">
                   <Button 
-                    className="w-full" 
+                    className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20" 
                     onClick={() => useDrugMutation.mutate(drug.id)}
                     disabled={useDrugMutation.isPending}
                   >
-                    Use Drug
+                    {useDrugMutation.isPending ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                    ) : (
+                      <>Use Drug</>
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
             ))}
           </div>
         ) : (
-          <Card className="border border-dashed">
-            <CardContent className="pt-6 text-center">
-              <p className="text-muted-foreground">You don't have any drugs in your inventory.</p>
+          <Card className="border-2 border-dashed border-primary/20 bg-black/40 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50"></div>
+            <CardContent className="pt-10 pb-10 text-center relative z-10">
+              <div className="flex flex-col items-center justify-center gap-4">
+                <div className="rounded-full bg-black/50 p-4 border border-primary/30">
+                  <PackageOpen className="h-10 w-10 text-primary/60" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Empty Inventory</h3>
+                  <p className="text-muted-foreground">You don't have any drugs in your inventory yet.</p>
+                </div>
+                <Button variant="outline" className="mt-2 border-primary/40 text-primary hover:bg-primary/10">
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Visit the Market
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -333,22 +384,59 @@ function InventoryTab() {
         ) : userIngredients && userIngredients.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {userIngredients.map((item) => (
-              <Card key={item.id} className="flex items-center p-4 space-x-4">
-                <div className="bg-primary/10 p-3 rounded-lg">
-                  <Beaker className="h-6 w-6" />
+              <Card key={item.id} className="overflow-hidden bg-black/40 group hover:border-primary/30 transition-all duration-200 relative">
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="flex items-center p-4 space-x-4 relative z-10">
+                  <div className="bg-gradient-to-br from-primary/20 to-primary/5 p-3 rounded-full">
+                    <Beaker className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-base">{item.ingredient.name}</h3>
+                    <div className="flex items-center mt-1">
+                      <Package className="h-3 w-3 mr-1 text-primary/70" />
+                      <p className="text-xs text-muted-foreground">{item.quantity} units</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <Badge 
+                      className={`
+                        ${item.ingredient.rarity <= 3 ? 'bg-green-500/20 text-green-200 hover:bg-green-500/30' : 
+                          item.ingredient.rarity <= 6 ? 'bg-amber-500/20 text-amber-200 hover:bg-amber-500/30' : 
+                          'bg-red-500/20 text-red-200 hover:bg-red-500/30'}
+                      `}
+                    >
+                      Rarity: {item.ingredient.rarity}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground mt-1">${item.ingredient.price}/unit</span>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">{item.ingredient.name}</h3>
-                  <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
-                </div>
-                <Badge variant="outline">Rarity: {item.ingredient.rarity}</Badge>
+                
+                {item.ingredient.rarity >= 7 && (
+                  <div className="absolute -right-8 top-3 rotate-45 w-32 text-center text-xs font-bold py-0.5 bg-purple-600/80 text-white">
+                    RARE
+                  </div>
+                )}
               </Card>
             ))}
           </div>
         ) : (
-          <Card className="border border-dashed">
-            <CardContent className="pt-6 text-center">
-              <p className="text-muted-foreground">You don't have any ingredients in your inventory.</p>
+          <Card className="border-2 border-dashed border-primary/20 bg-black/40 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50"></div>
+            <CardContent className="pt-10 pb-10 text-center relative z-10">
+              <div className="flex flex-col items-center justify-center gap-4">
+                <div className="rounded-full bg-black/50 p-4 border border-primary/30">
+                  <Beaker className="h-10 w-10 text-primary/60" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-1">Empty Ingredients</h3>
+                  <p className="text-muted-foreground">You need to acquire ingredients for drug production.</p>
+                </div>
+                <Button variant="outline" className="mt-2 border-primary/40 text-primary hover:bg-primary/10">
+                  <Search className="mr-2 h-4 w-4" />
+                  Scavenge for Ingredients
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -1372,6 +1460,13 @@ function getRiskBadgeVariant(riskLevel: number): "default" | "secondary" | "dest
   if (riskLevel <= 3) return "default";
   if (riskLevel <= 6) return "secondary";
   return "destructive";
+}
+
+function getRiskLevelColor(riskLevel: number): string {
+  if (riskLevel <= 3) return "bg-green-500/80 text-white";
+  if (riskLevel <= 6) return "bg-amber-500/80 text-white";
+  if (riskLevel <= 8) return "bg-orange-500/80 text-white";
+  return "bg-red-500/80 text-white";
 }
 
 function getDealStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" | "success" {
