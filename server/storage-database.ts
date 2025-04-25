@@ -13,6 +13,14 @@ import {
   UserWithStats,
   UserWithGang,
   UserWithFinancials,
+  Achievement,
+  UserAchievement,
+  InsertUserAchievement,
+  AchievementWithUnlocked,
+  Challenge,
+  ChallengeProgress,
+  ChallengeWithProgress,
+  CrimeWithHistory,
   CrimeWithHistory,
   ItemWithDetails,
   GangWithMembers,
@@ -349,16 +357,440 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     }
   }
   
-  // Add some achievement methods
+  // Achievement methods
+  async getAchievementsWithUnlocked(userId: number): Promise<AchievementWithUnlocked[]> {
+    try {
+      // Get all achievements
+      const allAchievements = await db
+        .select()
+        .from(achievements);
+      
+      // Get user's unlocked achievements
+      const userAchievementResults = await db
+        .select()
+        .from(userAchievements)
+        .where(eq(userAchievements.userId, userId));
+      
+      // Create a map for quick lookup
+      const unlockedMap = new Map(
+        userAchievementResults.map(ua => [ua.achievementId, ua])
+      );
+      
+      // Combine data into the expected format
+      return allAchievements.map(achievement => ({
+        ...achievement,
+        unlocked: unlockedMap.has(achievement.id),
+        unlockedAt: unlockedMap.get(achievement.id)?.unlockedAt,
+        viewed: unlockedMap.get(achievement.id)?.viewed || false
+      }));
+    } catch (error) {
+      console.error("Error in getAchievementsWithUnlocked:", error);
+      return [];
+    }
+  }
+  
   async getUnviewedAchievements(userId: number): Promise<AchievementWithUnlocked[]> {
     try {
-      // This is a simplified version that just returns an empty array
-      // since we don't have the full achievements implementation
+      // This will get achievements that the user has unlocked but not viewed
       console.log(`Getting unviewed achievements for user ${userId}`);
-      return [];
+      
+      // Get user's unviewed achievements
+      const userAchievementResults = await db
+        .select()
+        .from(userAchievements)
+        .where(
+          and(
+            eq(userAchievements.userId, userId),
+            eq(userAchievements.viewed, false)
+          )
+        );
+      
+      if (userAchievementResults.length === 0) {
+        return [];
+      }
+      
+      // Get the full achievement details for each one
+      const achievementIds = userAchievementResults.map(ua => ua.achievementId);
+      const achievementResults = await db
+        .select()
+        .from(achievements)
+        .where(sql`id = ANY(${achievementIds})`);
+      
+      // Create a map for quick lookup
+      const userAchievementMap = new Map(
+        userAchievementResults.map(ua => [ua.achievementId, ua])
+      );
+      
+      // Combine data into the expected format
+      return achievementResults.map(achievement => ({
+        ...achievement,
+        unlocked: true,
+        unlockedAt: userAchievementMap.get(achievement.id)?.unlockedAt,
+        viewed: false
+      }));
     } catch (error) {
       console.error("Error in getUnviewedAchievements:", error);
       return [];
+    }
+  }
+  
+  async getAchievement(id: number): Promise<Achievement | undefined> {
+    try {
+      const [achievement] = await db
+        .select()
+        .from(achievements)
+        .where(eq(achievements.id, id));
+      return achievement;
+    } catch (error) {
+      console.error("Error in getAchievement:", error);
+      return undefined;
+    }
+  }
+  
+  async unlockAchievement(userId: number, achievementId: number): Promise<UserAchievement | undefined> {
+    try {
+      // Check if user already has this achievement
+      const [existingAchievement] = await db
+        .select()
+        .from(userAchievements)
+        .where(
+          and(
+            eq(userAchievements.userId, userId),
+            eq(userAchievements.achievementId, achievementId)
+          )
+        );
+      
+      if (existingAchievement) {
+        return existingAchievement;
+      }
+      
+      // Create new achievement record
+      const [userAchievement] = await db
+        .insert(userAchievements)
+        .values({
+          userId,
+          achievementId,
+          viewed: false
+        })
+        .returning();
+      
+      return userAchievement;
+    } catch (error) {
+      console.error("Error in unlockAchievement:", error);
+      return undefined;
+    }
+  }
+  
+  // Challenge methods
+  async getAllChallenges(): Promise<Challenge[]> {
+    try {
+      return await db
+        .select()
+        .from(challenges)
+        .orderBy(desc(challenges.startDate));
+    } catch (error) {
+      console.error("Error in getAllChallenges:", error);
+      return [];
+    }
+  }
+  
+  async getActiveChallenges(): Promise<Challenge[]> {
+    try {
+      const now = new Date();
+      return await db
+        .select()
+        .from(challenges)
+        .where(
+          and(
+            lte(challenges.startDate, now),
+            // Check if the end date is in the future or null
+            sql`(${challenges.endDate} IS NULL OR ${challenges.endDate} >= ${now})`
+          )
+        )
+        .orderBy(desc(challenges.startDate));
+    } catch (error) {
+      console.error("Error in getActiveChallenges:", error);
+      return [];
+    }
+  }
+  
+  async getChallenge(id: number): Promise<Challenge | undefined> {
+    try {
+      const [challenge] = await db
+        .select()
+        .from(challenges)
+        .where(eq(challenges.id, id));
+      return challenge;
+    } catch (error) {
+      console.error("Error in getChallenge:", error);
+      return undefined;
+    }
+  }
+  
+  async getChallengesWithProgress(userId: number): Promise<ChallengeWithProgress[]> {
+    try {
+      // Get active challenges
+      const activeChallenges = await this.getActiveChallenges();
+      
+      // Get user's progress for all challenges
+      const userProgressResults = await db
+        .select()
+        .from(challengeProgress)
+        .where(eq(challengeProgress.userId, userId));
+      
+      // Create a map for quick lookup
+      const progressMap = new Map(
+        userProgressResults.map(p => [p.challengeId, p])
+      );
+      
+      // Combine data into the expected format
+      return activeChallenges.map(challenge => {
+        const progress = progressMap.get(challenge.id);
+        return {
+          ...challenge,
+          progress,
+          completed: progress?.completed || false,
+          claimed: progress?.claimed || false,
+          currentValue: progress?.currentValue || 0
+        };
+      });
+    } catch (error) {
+      console.error("Error in getChallengesWithProgress:", error);
+      return [];
+    }
+  }
+  
+  async getChallengeProgress(userId: number, challengeId: number): Promise<ChallengeProgress | undefined> {
+    try {
+      const [progress] = await db
+        .select()
+        .from(challengeProgress)
+        .where(
+          and(
+            eq(challengeProgress.userId, userId),
+            eq(challengeProgress.challengeId, challengeId)
+          )
+        );
+      return progress;
+    } catch (error) {
+      console.error("Error in getChallengeProgress:", error);
+      return undefined;
+    }
+  }
+  
+  async createChallengeProgress(progress: InsertChallengeProgress): Promise<ChallengeProgress> {
+    try {
+      const [result] = await db
+        .insert(challengeProgress)
+        .values(progress)
+        .returning();
+      
+      if (!result) {
+        throw new Error("Failed to create challenge progress");
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error in createChallengeProgress:", error);
+      throw new Error("Challenge progress creation failed: " + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+  
+  async updateChallengeProgress(userId: number, challengeId: number, data: Partial<ChallengeProgress>): Promise<ChallengeProgress | undefined> {
+    try {
+      const [result] = await db
+        .update(challengeProgress)
+        .set(data)
+        .where(
+          and(
+            eq(challengeProgress.userId, userId),
+            eq(challengeProgress.challengeId, challengeId)
+          )
+        )
+        .returning();
+      return result;
+    } catch (error) {
+      console.error("Error in updateChallengeProgress:", error);
+      return undefined;
+    }
+  }
+  
+  // Crime-related methods
+  async getAllCrimes(): Promise<Crime[]> {
+    try {
+      return await db
+        .select()
+        .from(crimes)
+        .orderBy(asc(crimes.minCashReward));
+    } catch (error) {
+      console.error("Error in getAllCrimes:", error);
+      return [];
+    }
+  }
+  
+  async getCrime(id: number): Promise<Crime | undefined> {
+    try {
+      const [crime] = await db
+        .select()
+        .from(crimes)
+        .where(eq(crimes.id, id));
+      return crime;
+    } catch (error) {
+      console.error("Error in getCrime:", error);
+      return undefined;
+    }
+  }
+  
+  async getCrimesWithHistory(userId: number): Promise<CrimeWithHistory[]> {
+    try {
+      // Get all crimes
+      const allCrimes = await this.getAllCrimes();
+      
+      // Get user's crime history
+      const userHistoryResults = await db
+        .select()
+        .from(crimeHistory)
+        .where(eq(crimeHistory.userId, userId))
+        .orderBy(desc(crimeHistory.timestamp));
+      
+      // Create a map for quick lookup (get latest attempt per crime)
+      const historyMap = new Map<number, CrimeHistory>();
+      
+      for (const history of userHistoryResults) {
+        if (!historyMap.has(history.crimeId)) {
+          historyMap.set(history.crimeId, history);
+        }
+      }
+      
+      // Get user stats
+      const stats = await this.getStatsByUserId(userId);
+      
+      if (!stats) {
+        return allCrimes.map(crime => ({
+          ...crime,
+          lastPerformed: undefined,
+          successChance: 0,
+        }));
+      }
+      
+      // Combine data into the expected format
+      return allCrimes.map(crime => {
+        const lastPerformed = historyMap.get(crime.id);
+        
+        // Calculate success chance based on user stats and crime weights
+        const successChance = this.calculateCrimeSuccessChance(crime, stats);
+        
+        return {
+          ...crime,
+          lastPerformed,
+          successChance
+        };
+      });
+    } catch (error) {
+      console.error("Error in getCrimesWithHistory:", error);
+      return [];
+    }
+  }
+  
+  // Helper function to calculate crime success chance
+  calculateCrimeSuccessChance(crime: Crime, stats: Stat): number {
+    const strengthFactor = (stats.strength / 100) * crime.strengthWeight;
+    const stealthFactor = (stats.stealth / 100) * crime.stealthWeight;
+    const charismaFactor = (stats.charisma / 100) * crime.charismaWeight;
+    const intelligenceFactor = (stats.intelligence / 100) * crime.intelligenceWeight;
+    
+    const successChance = Math.min(
+      95, // Cap at 95%
+      Math.round((strengthFactor + stealthFactor + charismaFactor + intelligenceFactor) * 100)
+    );
+    
+    return successChance;
+  }
+  
+  async getCrimeHistoryByUserId(userId: number, limit: number = 10): Promise<CrimeHistory[]> {
+    try {
+      const historyResults = await db
+        .select()
+        .from(crimeHistory)
+        .where(eq(crimeHistory.userId, userId))
+        .orderBy(desc(crimeHistory.timestamp))
+        .limit(limit);
+      
+      return historyResults;
+    } catch (error) {
+      console.error("Error in getCrimeHistoryByUserId:", error);
+      return [];
+    }
+  }
+  
+  async createCrimeHistory(crimeHistoryData: InsertCrimeHistory): Promise<CrimeHistory> {
+    try {
+      const [result] = await db
+        .insert(crimeHistory)
+        .values(crimeHistoryData)
+        .returning();
+      
+      if (!result) {
+        throw new Error("Failed to create crime history");
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error in createCrimeHistory:", error);
+      throw new Error("Crime history creation failed: " + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+  
+  // Stats-related methods
+  async getStatsByUserId(userId: number): Promise<Stat | undefined> {
+    try {
+      const [statResult] = await db
+        .select()
+        .from(stats)
+        .where(eq(stats.userId, userId));
+      
+      // If stats don't exist for this user, create default stats
+      if (!statResult) {
+        // Create default stats for this user
+        const defaultStats = {
+          userId,
+          strength: 10,
+          stealth: 10,
+          charisma: 10,
+          intelligence: 10,
+          strengthTrainingCooldown: null,
+          stealthTrainingCooldown: null,
+          charismaTrainingCooldown: null,
+          intelligenceTrainingCooldown: null
+        };
+        
+        const [newStats] = await db
+          .insert(stats)
+          .values(defaultStats)
+          .returning();
+        
+        return newStats;
+      }
+      
+      return statResult;
+    } catch (error) {
+      console.error("Error in getStatsByUserId:", error);
+      return undefined;
+    }
+  }
+  
+  async updateStats(userId: number, statData: Partial<Stat>): Promise<Stat | undefined> {
+    try {
+      const [result] = await db
+        .update(stats)
+        .set(statData)
+        .where(eq(stats.userId, userId))
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error("Error in updateStats:", error);
+      return undefined;
     }
   }
 
