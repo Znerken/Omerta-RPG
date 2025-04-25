@@ -66,14 +66,15 @@ export function StatusIndicator({
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
-      return apiRequest("PUT", "/api/social/status", { status: newStatus });
+      return apiRequest("POST", "/api/social/status", { status: newStatus });
     },
-    onSuccess: () => {
+    onSuccess: (_, newStatus) => {
       toast({
         title: "Status updated",
-        description: `Your status is now set to ${status}`,
+        description: `Your status is now set to ${newStatus}`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
     },
     onError: (error: any) => {
       toast({
