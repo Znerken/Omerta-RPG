@@ -161,9 +161,15 @@ export const NotificationList: React.FC = () => {
       }
       
       // For all other friend notifications
-      if (!notification.data || !notification.data.userId || !notification.data.username) {
-        console.error("Invalid notification data:", notification);
+      if (!notification.data) {
+        console.error("Missing notification data:", notification);
         return null;
+      }
+      
+      // Log invalid data but still attempt to render with fallbacks
+      if (!notification.data.userId || !notification.data.username) {
+        console.log("Invalid notification data:", notification);
+        // Continue with rendering using fallbacks
       }
       
       return (

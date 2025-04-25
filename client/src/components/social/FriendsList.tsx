@@ -214,10 +214,10 @@ export function FriendsList() {
               <ScrollArea className="h-[350px]">
                 <div className="space-y-1">
                   {filteredFriends?.map(friend => (
-                    <React.Fragment key={friend.id}>
+                    <div key={friend.id}>
                       <FriendIndicator friend={friend} />
                       <Separator />
-                    </React.Fragment>
+                    </div>
                   ))}
                 </div>
               </ScrollArea>

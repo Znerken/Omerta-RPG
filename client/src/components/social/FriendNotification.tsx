@@ -46,7 +46,7 @@ export const FriendNotification: React.FC<FriendNotificationProps> = ({
       case "friend_removed":
         return `${username} has removed you from their friends list.`;
       case "friend_status":
-        return `${username} is now ${status || 'offline'}.`;
+        return `${username || 'A user'} is now ${status || 'offline'}.`;
       default:
         return "";
     }
