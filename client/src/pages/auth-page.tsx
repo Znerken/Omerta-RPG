@@ -407,7 +407,7 @@ export default function AuthPage() {
       <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8 z-10">
         {/* Left column: Auth forms */}
         <motion.div 
-          className="flex-1 flex flex-col justify-center"
+          className="w-full md:w-2/5 flex flex-col justify-center"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
@@ -500,15 +500,15 @@ export default function AuthPage() {
         
         {/* Right column: Hero section */}
         <motion.div 
-          className="flex-1 hidden md:flex flex-col justify-center"
+          className="w-full md:w-3/5 hidden md:flex flex-col justify-center"
           initial={{ opacity: 0, x: 50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
         >
           <div className={`backdrop-mafia rounded-sm p-6 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
-            <div className="h-full flex flex-col lg:grid lg:grid-cols-5 lg:gap-4 items-center">
-              {/* Feature descriptions - takes 3 columns */}
-              <div className="col-span-3 space-y-4">
+            <div className="h-full flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 items-center">
+              {/* Feature descriptions - takes 1 column */}
+              <div className="space-y-4">
                 <motion.div 
                   className="mb-4"
                   initial={{ opacity: 0, y: 20 }}
@@ -564,15 +564,15 @@ export default function AuthPage() {
                 </div>
               </div>
               
-              {/* Mafia character image - takes 2 columns */}
+              {/* Mafia character image - takes 1 column */}
               <motion.div 
-                className="col-span-2 flex items-center justify-center hidden lg:flex"
+                className="flex items-center justify-center mt-6 lg:mt-0"
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 1.0, duration: 0.6 }}
               >
                 <motion.div
-                  className="relative overflow-hidden rounded-md max-h-96"
+                  className="relative overflow-hidden rounded-md w-full h-auto"
                   whileHover={{ scale: 1.03, rotate: 1 }}
                   transition={{ type: "spring", stiffness: 300 }}
                 >
@@ -580,7 +580,7 @@ export default function AuthPage() {
                   <img 
                     src={mafiaCharacterImg} 
                     alt="Mafia Character" 
-                    className="w-full h-full object-cover shadow-xl max-h-80"
+                    className="w-full h-auto object-cover shadow-xl min-h-[400px] max-h-[550px]"
                   />
                 </motion.div>
               </motion.div>
