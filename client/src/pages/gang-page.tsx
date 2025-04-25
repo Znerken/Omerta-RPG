@@ -66,26 +66,6 @@ export default function GangPage() {
     queryKey: ["/api/user/profile"],
   });
   
-  // Log the profile data to debug more extensively
-  useEffect(() => {
-    if (userProfile) {
-      console.log("===== GANG MEMBERSHIP DEBUG =====");
-      console.log("User Profile Data:", userProfile);
-      console.log("Direct gangId:", userProfile.gangId);
-      console.log("Gang Member Data:", userProfile.gangMember);
-      console.log("Gang Data:", userProfile.gang);
-      console.log("In Gang from API?", userProfile.inGang);
-      console.log("Gang Rank from API:", userProfile.gangRank);
-      
-      // Also log derived values
-      console.log("userGangId (derived):", userGangId);
-      console.log("Derived gang details:", gangDetails);
-      console.log("Is In Gang (derived):", isInGang);
-      console.log("User Gang (derived):", userGang);
-      console.log("=================================");
-    }
-  }, [userProfile, gangDetails, userGangId, isInGang, userGang]);
-  
   // Get gang membership information from multiple fields to be resilient
   // Also check if user has gangId set directly
   const gangMember = userProfile?.gangMember;
@@ -100,6 +80,26 @@ export default function GangPage() {
     queryKey: ["/api/gangs", userGangId],
     enabled: !!userGangId, // Only run this query if user has a gang ID
   });
+
+  // Log the profile data to debug more extensively
+  useEffect(() => {
+    if (userProfile) {
+      console.log("===== GANG MEMBERSHIP DEBUG =====");
+      console.log("User Profile Data:", userProfile);
+      console.log("Direct gangId:", userProfile.gangId);
+      console.log("Gang Member Data:", userProfile.gangMember);
+      console.log("Gang Data:", userProfile.gang);
+      console.log("In Gang from API?", userProfile.inGang);
+      console.log("Gang Rank from API:", userProfile.gangRank);
+      
+      // Also log derived values
+      console.log("userGangId (derived):", userGangId);
+      console.log("Derived gang details:", gangDetails);
+      console.log("Is In Gang (derived):", inGang);
+      console.log("User Gang (derived):", userGang);
+      console.log("=================================");
+    }
+  }, [userProfile, gangDetails, userGangId, inGang, userGang]);
 
   // Create form for gang creation
   const form = useForm<CreateGangValues>({
@@ -183,8 +183,7 @@ export default function GangPage() {
   // Get user's gang rank if they're in a gang
   const userGangRank = gangRank;
   
-  // Use either the detailed gang info or the basic info from user's profile
-  const userGang = gangDetails || gang || null;
+  // This variable is already defined above
   
   // Check if still loading
   const isLoading = userLoading || gangsLoading || profileLoading;
