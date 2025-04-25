@@ -30,6 +30,8 @@ export const NotificationList: React.FC = () => {
         return <Check className="h-4 w-4 text-indigo-500" />;
       case "friend_status":
         return <Users className="h-4 w-4 text-blue-500" />;
+      case "friend_removed":
+        return <UserMinus className="h-4 w-4 text-red-500" />;
       default:
         return <AlertCircle className="h-4 w-4 text-blue-500" />;
     }

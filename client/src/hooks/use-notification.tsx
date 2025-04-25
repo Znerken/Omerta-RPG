@@ -104,7 +104,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
           addNotification(
             "Friend Removed", 
             `${data.username} has removed you from their friends list`, 
-            "warning",
+            "friend_removed",
             {
               userId: data.userId,
               username: data.username,
