@@ -4,13 +4,13 @@ import { Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { TommyGunIcon, FedoraIcon, RevolverIcon, MoneyBriefcaseIcon, DiceIcon, WhiskeyGlassIcon } from "@/components/ui/mafia-icons";
+import { TommyGunIcon, FedoraIcon, RevolverIcon, MoneyBriefcaseIcon, WhiskeyGlassIcon } from "@/components/ui/mafia-icons";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion, AnimatePresence, MotionConfig } from "framer-motion";
+import { motion } from "framer-motion";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -175,7 +175,6 @@ export default function AuthPage() {
   }
   
   return (
-    <MotionConfig reducedMotion="user">
       <motion.div 
         className="h-screen w-full flex items-center justify-center relative"
         initial="initial"
@@ -260,8 +259,7 @@ export default function AuthPage() {
                   </TabsTrigger>
                 </TabsList>
                 
-                <AnimatePresence mode="wait">
-                  {activeTab === "login" && (
+                {activeTab === "login" && (
                     <TabsContent value="login" key="login-tab">
                       <Form {...loginForm}>
                         <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
@@ -343,7 +341,7 @@ export default function AuthPage() {
                     </TabsContent>
                   )}
                   
-                  {activeTab === "register" && (
+                {activeTab === "register" && (
                     <TabsContent value="register" key="register-tab">
                       <Form {...registerForm}>
                         <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
@@ -475,7 +473,7 @@ export default function AuthPage() {
                       </Form>
                     </TabsContent>
                   )}
-                </AnimatePresence>
+
               </Tabs>
               
               {/* Crime tape border effect that appears on errors */}
@@ -564,7 +562,6 @@ export default function AuthPage() {
           </motion.div>
         </div>
       </motion.div>
-    </MotionConfig>
   );
 }
 

@@ -109,19 +109,7 @@ function AppRouter() {
       
       <Route path="/admin">
         {() => (
-          <ProtectedRoute path="/admin" component={() => {
-            // Only render the admin page if the user is an admin
-            const { user } = useAuth();
-            if (!user?.isAdmin) {
-              return <ProtectedPage component={() => (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                  <h1 className="text-2xl font-bold">Access Denied</h1>
-                  <p className="text-gray-400">You don't have permission to access this page.</p>
-                </div>
-              )} />
-            }
-            return <ProtectedPage component={AdminPage} />;
-          }} />
+          <ProtectedRoute path="/admin" component={() => <ProtectedPage component={AdminPage} />} />
         )}
       </Route>
       
