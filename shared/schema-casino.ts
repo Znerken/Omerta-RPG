@@ -27,14 +27,13 @@ export const casinoBetStatusEnum = pgEnum('casino_bet_status', [
 export const casinoGames = pgTable('casino_games', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
-  type: casinoGameTypeEnum('type').notNull(),
+  type: text('game_type').notNull(),
   description: text('description'),
-  isActive: boolean('is_active').default(true).notNull(),
+  isActive: boolean('enabled').default(true).notNull(),
   minBet: integer('min_bet').default(10).notNull(),
   maxBet: integer('max_bet').default(10000).notNull(),
   houseEdge: real('house_edge').default(0.05).notNull(), // 5% house edge
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  imageUrl: text('image_url'),
 });
 
 // Casino Bets
