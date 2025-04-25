@@ -8,9 +8,11 @@ import { registerAchievementRoutes } from "./achievement-routes";
 import { registerDrugRoutes } from "./drug-routes";
 import { registerCasinoRoutes } from "./casino-routes";
 import { registerProfileRoutes } from "./profile-routes";
+import { registerSocialRoutes, setNotifyUserFunction } from "./social-routes";
 import challengeRoutes from "./challenge-routes";
 import gangRoutes from "./gang-routes";
 import { WebSocketServer } from "ws";
+import WebSocket from "ws";
 import { z } from "zod";
 import { calculateRequiredXP } from "../shared/gameUtils";
 import { eq } from "drizzle-orm";
@@ -44,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register profile routes
   registerProfileRoutes(app);
-
+  
   // Create HTTP server
   const httpServer = createServer(app);
 
@@ -53,6 +55,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Track client connections by user ID
   const clients = new Map<number, Set<WebSocket>>();
+
+  // Send a notification to a specific user
+  function notifyUser(userId: number, type: string, data: any) {
+    if (!clients.has(userId)) {
+      console.log(`No active connections for user ${userId}`);
+      return;
+    }
+    
+    const userClients = clients.get(userId)!;
+    const message = JSON.stringify({ type, data });
+    
+    userClients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  }
+
+  // Register social system routes and pass the notification function
+  registerSocialRoutes(app);
+  setNotifyUserFunction(notifyUser);
   
   // WebSocket handling
   wss.on('connection', (ws, req) => {
@@ -132,7 +155,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Broadcast to all connected clients
   function broadcast(type: string, data: any) {
-    const WebSocket = require('ws');
     wss.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({ type, data }));
@@ -140,23 +162,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
-  // Send a notification to a specific user
-  function notifyUser(userId: number, type: string, data: any) {
-    if (!clients.has(userId)) {
-      console.log(`No active connections for user ${userId}`);
-      return;
-    }
-    
-    const userClients = clients.get(userId)!;
-    const message = JSON.stringify({ type, data });
-    
-    userClients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(message);
-      }
-    });
-  }
-
   // Player API Routes
   app.get("/api/dashboard", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
@@ -181,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gangRank: userWithGang?.gangRank
         },
         recentActivity: recentCrimes,
-        topPlayers: topPlayers.map(p => {
+        topPlayers: topPlayers.map((p: any) => {
           const { password, ...player } = p;
           return player;
         })
@@ -309,11 +314,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xp: user.xp + xpReward
         });
         
+        let levelUp = false;
         // Check for level up
         if (updatedUser) {
           const newLevel = Math.floor(1 + Math.sqrt(updatedUser.xp / 100));
           if (newLevel > updatedUser.level) {
             await storage.updateUser(userId, { level: newLevel });
+            levelUp = true;
           }
         }
         
@@ -334,7 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           xpReward,
           cooldownEnd,
           message: "Crime successful!",
-          levelUp: newLevel > updatedUser?.level
+          levelUp
         });
       } else {
         // Check if user got caught
@@ -390,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Stats API Routes
+  // User stats route
   app.get("/api/stats", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
     
@@ -402,61 +409,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/stats/train/:stat", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    const validStats = ["strength", "stealth", "charisma", "intelligence"];
-    const stat = req.params.stat.toLowerCase();
-    
-    if (!validStats.includes(stat)) {
-      return res.status(400).json({ message: "Invalid stat" });
-    }
-    
+  // Auto-release jailed users if their time has expired
+  // This should be moved to a dedicated scheduled task in production
+  app.get("/api/jail/check-release", async (req, res) => {
     try {
-      const userId = req.user.id;
-      const userStats = await storage.getStatsByUserId(userId);
-      
-      if (!userStats) {
-        return res.status(404).json({ message: "User stats not found" });
-      }
-      
-      const cooldownField = `${stat}TrainingCooldown` as keyof typeof userStats;
-      const statField = stat as keyof typeof userStats;
-      
+      // Get all jailed users
+      const jailedUsers = await storage.getJailedUsers();
       const now = new Date();
-      const cooldownTime = userStats[cooldownField] as Date;
       
-      if (cooldownTime && cooldownTime > now) {
-        return res.status(400).json({ 
-          message: "Training on cooldown",
-          nextAvailableAt: cooldownTime
-        });
+      let releasedCount = 0;
+      
+      // Check each user
+      for (const user of jailedUsers) {
+        if (user.jailTimeEnd && user.jailTimeEnd <= now) {
+          console.log(`Auto-releasing user ${user.id} from jail`);
+          const releasedUser = await storage.releaseFromJail(user.id);
+          
+          if (releasedUser) {
+            releasedCount++;
+          }
+        }
       }
       
-      // Calculate cooldown (30 minutes)
-      const cooldownEnd = new Date(now.getTime() + 30 * 60 * 1000);
-      
-      // Increase stat
-      const currentValue = userStats[statField] as number;
-      const updateData: Partial<typeof userStats> = {
-        [statField]: Math.min(100, currentValue + 1), // Cap at 100
-        [cooldownField]: cooldownEnd
-      };
-      
-      const updatedStats = await storage.updateStats(userId, updateData);
-      
-      res.json({
-        success: true,
-        newValue: updatedStats?.[statField],
-        cooldownEnd,
-        message: `${stat.charAt(0).toUpperCase() + stat.slice(1)} increased by 1 point!`
+      res.json({ 
+        success: true, 
+        message: `Released ${releasedCount} users from jail`,
+        releasedCount
       });
     } catch (error) {
-      res.status(500).json({ message: "Failed to train stat" });
+      console.error("Error checking jail releases:", error);
+      res.status(500).json({ message: "Failed to check jail releases" });
     }
   });
   
-  // Jail API Routes
+  // Get user's jail status
   app.get("/api/jail/status", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
     
@@ -467,696 +453,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Check if jail time is expired but user is still marked as jailed
-      if (user.isJailed && user.jailTimeEnd && new Date() > new Date(user.jailTimeEnd)) {
-        console.log(`[DEBUG] User ${user.id} jail time has expired. Automatically releasing from jail.`);
-        // Release the user from jail
-        const releasedUser = await storage.releaseFromJail(user.id);
-        
-        if (releasedUser) {
-          console.log(`[DEBUG] User ${user.id} successfully released from jail.`);
-          return res.json({
-            isJailed: false,
-            jailTimeEnd: null,
-            autoReleased: true
-          });
-        }
+      if (!user.isJailed) {
+        return res.json({
+          isJailed: false
+        });
       }
       
-      res.json({
-        isJailed: user.isJailed,
+      return res.json({
+        isJailed: true,
         jailTimeEnd: user.jailTimeEnd
       });
     } catch (error) {
-      console.error("Error in jail status:", error);
+      console.error("Error getting jail status:", error);
       res.status(500).json({ message: "Failed to get jail status" });
     }
   });
   
-  // API to auto-release users from jail when their time is up
-  app.post("/api/jail/auto-release", async (req, res) => {
-    try {
-      // Get all jailed users
-      const jailedUsers = await storage.getJailedUsers();
-      console.log(`[DEBUG] Found ${jailedUsers.length} jailed users`);
-      
-      const now = new Date();
-      let releasedCount = 0;
-      
-      // Check each jailed user
-      for (const user of jailedUsers) {
-        if (user.jailTimeEnd && new Date(user.jailTimeEnd) <= now) {
-          console.log(`[DEBUG] Auto-releasing user ${user.id} from jail. Time expired at ${user.jailTimeEnd}`);
-          await storage.releaseFromJail(user.id);
-          releasedCount++;
-        }
-      }
-      
-      res.json({
-        success: true,
-        message: `Released ${releasedCount} users from jail`,
-        releasedCount,
-        totalJailed: jailedUsers.length
-      });
-    } catch (error) {
-      console.error("Error in auto-release:", error);
-      res.status(500).json({ message: "Failed to auto-release users" });
-    }
-  });
-  
-  app.post("/api/jail/escape", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const user = await storage.getUser(req.user.id);
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      if (!user.isJailed) {
-        return res.status(400).json({ message: "You are not in jail" });
-      }
-      
-      // 50% chance of escape
-      const escaped = Math.random() >= 0.5;
-      
-      if (escaped) {
-        // Release from jail
-        await storage.releaseFromJail(user.id);
-        
-        res.json({
-          success: true,
-          message: "You successfully escaped from jail!"
-        });
-      } else {
-        // Failed escape attempt - extend jail time by 5 minutes
-        const currentJailEnd = user.jailTimeEnd || new Date();
-        const newJailEnd = new Date(currentJailEnd.getTime() + 5 * 60 * 1000);
-        
-        await storage.updateUser(user.id, {
-          jailTimeEnd: newJailEnd
-        });
-        
-        res.json({
-          success: false,
-          jailTimeEnd: newJailEnd,
-          message: "Escape attempt failed! Your jail time has been extended."
-        });
-      }
-    } catch (error) {
-      console.error("Error in jail escape:", error);
-      res.status(500).json({ message: "Failed to attempt jail escape" });
-    }
-  });
-  
-  // Gang API Routes
-  app.get("/api/gangs", async (req, res) => {
-    try {
-      const gangs = await storage.getAllGangs();
-      res.json(gangs);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch gangs" });
-    }
-  });
-  
-  app.get("/api/gangs/:id", async (req, res) => {
-    try {
-      const gangId = parseInt(req.params.id);
-      const gang = await storage.getGangWithMembers(gangId);
-      
-      if (!gang) {
-        return res.status(404).json({ message: "Gang not found" });
-      }
-      
-      res.json(gang);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch gang details" });
-    }
-  });
-  
-  app.post("/api/gangs", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const { name, tag, description } = req.body;
-      
-      // Validate input
-      if (!name || !tag) {
-        return res.status(400).json({ message: "Gang name and tag are required" });
-      }
-      
-      // Check if user is already in a gang
-      const existingMembership = await storage.getGangMember(req.user.id);
-      if (existingMembership) {
-        return res.status(400).json({ message: "You are already in a gang" });
-      }
-      
-      // Check if gang name or tag already exists
-      const existingGangByName = await storage.getGangByName(name);
-      if (existingGangByName) {
-        return res.status(400).json({ message: "Gang name already exists" });
-      }
-      
-      const existingGangByTag = await storage.getGangByTag(tag);
-      if (existingGangByTag) {
-        return res.status(400).json({ message: "Gang tag already exists" });
-      }
-      
-      // Create gang
-      const gang = await storage.createGang({
-        name,
-        tag,
-        description,
-        ownerId: req.user.id,
-        logo: req.body.logo,
-      });
-      
-      res.status(201).json(gang);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to create gang" });
-    }
-  });
-  
-  app.post("/api/gangs/:id/join", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const gangId = parseInt(req.params.id);
-      const userId = req.user.id;
-      
-      // Check if gang exists
-      const gang = await storage.getGang(gangId);
-      if (!gang) {
-        return res.status(404).json({ message: "Gang not found" });
-      }
-      
-      // Check if user is already in a gang
-      const existingMembership = await storage.getGangMember(userId);
-      if (existingMembership) {
-        return res.status(400).json({ message: "You are already in a gang" });
-      }
-      
-      // Add user to gang
-      const member = await storage.addGangMember({
-        gangId,
-        userId,
-        rank: "Member"
-      });
-      
-      res.json({
-        success: true,
-        message: `You have joined ${gang.name}`,
-        gangMember: member
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to join gang" });
-    }
-  });
-  
-  app.post("/api/gangs/:id/leave", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const gangId = parseInt(req.params.id);
-      const userId = req.user.id;
-      
-      // Check if user is in this gang
-      const membership = await storage.getGangMember(userId);
-      if (!membership || membership.gang.id !== gangId) {
-        return res.status(400).json({ message: "You are not a member of this gang" });
-      }
-      
-      // Check if user is the owner
-      if (membership.gang.ownerId === userId) {
-        return res.status(400).json({ message: "Gang owner cannot leave. Transfer ownership first or disband the gang." });
-      }
-      
-      // Remove user from gang
-      await storage.removeGangMember(userId, gangId);
-      
-      res.json({
-        success: true,
-        message: "You have left the gang"
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to leave gang" });
-    }
-  });
-  
-  app.post("/api/gangs/:id/bank", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const gangId = parseInt(req.params.id);
-      const userId = req.user.id;
-      const { action, amount } = req.body;
-      
-      if (!action || !amount || isNaN(amount) || amount <= 0) {
-        return res.status(400).json({ message: "Valid action and amount are required" });
-      }
-      
-      // Check if user is in this gang
-      const membership = await storage.getGangMember(userId);
-      if (!membership || membership.gang.id !== gangId) {
-        return res.status(400).json({ message: "You are not a member of this gang" });
-      }
-      
-      // Get user and gang
-      const user = await storage.getUser(userId);
-      const gang = await storage.getGang(gangId);
-      
-      if (!user || !gang) {
-        return res.status(404).json({ message: "User or gang not found" });
-      }
-      
-      if (action === "deposit") {
-        // Check if user has enough money
-        if (user.cash < amount) {
-          return res.status(400).json({ message: "You don't have enough cash" });
-        }
-        
-        // Update user and gang
-        await storage.updateUser(userId, { cash: user.cash - amount });
-        await storage.updateGang(gangId, { bankBalance: gang.bankBalance + amount });
-        
-        res.json({
-          success: true,
-          message: `Deposited $${amount} to gang bank`,
-          newBalance: gang.bankBalance + amount
-        });
-      } else if (action === "withdraw") {
-        // Check if gang has enough money
-        if (gang.bankBalance < amount) {
-          return res.status(400).json({ message: "Gang bank doesn't have enough cash" });
-        }
-        
-        // Only boss or officers can withdraw
-        if (membership.rank !== "Boss" && membership.rank !== "Officer") {
-          return res.status(403).json({ message: "Only Bosses and Officers can withdraw from the gang bank" });
-        }
-        
-        // Update user and gang
-        await storage.updateUser(userId, { cash: user.cash + amount });
-        await storage.updateGang(gangId, { bankBalance: gang.bankBalance - amount });
-        
-        res.json({
-          success: true,
-          message: `Withdrew $${amount} from gang bank`,
-          newBalance: gang.bankBalance - amount
-        });
-      } else {
-        return res.status(400).json({ message: "Invalid action. Use 'deposit' or 'withdraw'" });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to process gang bank transaction" });
-    }
-  });
-  
-  // Inventory API Routes
-  app.get("/api/inventory", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const inventory = await storage.getUserInventory(req.user.id);
-      res.json(inventory);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch inventory" });
-    }
-  });
-  
-  app.get("/api/items", async (req, res) => {
-    try {
-      const items = await storage.getAllItems();
-      res.json(items);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch items" });
-    }
-  });
-  
-  app.post("/api/items/:id/buy", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const itemId = parseInt(req.params.id);
-      const userId = req.user.id;
-      
-      // Get item and user
-      const item = await storage.getItem(itemId);
-      const user = await storage.getUser(userId);
-      
-      if (!item) {
-        return res.status(404).json({ message: "Item not found" });
-      }
-      
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      // Check if user has enough money
-      if (user.cash < item.price) {
-        return res.status(400).json({ message: "Not enough cash to buy this item" });
-      }
-      
-      // Update user cash
-      await storage.updateUser(userId, { cash: user.cash - item.price });
-      
-      // Add item to inventory
-      await storage.addItemToInventory({
-        userId,
-        itemId,
-        quantity: 1
-      });
-      
-      res.json({
-        success: true,
-        message: `You bought ${item.name}`,
-        remainingCash: user.cash - item.price
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to buy item" });
-    }
-  });
-  
-  app.post("/api/inventory/:id/equip", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const itemId = parseInt(req.params.id);
-      const userId = req.user.id;
-      
-      // Get user inventory
-      const inventory = await storage.getUserInventory(userId);
-      const inventoryItem = inventory.find(i => i.id === itemId);
-      
-      if (!inventoryItem) {
-        return res.status(404).json({ message: "Item not found in your inventory" });
-      }
-      
-      // Find the inventory record
-      const userInventoryItem = Array.from((storage as any).userInventory.values())
-        .find((inv: any) => inv.userId === userId && inv.itemId === itemId);
-      
-      if (!userInventoryItem) {
-        return res.status(404).json({ message: "Inventory record not found" });
-      }
-      
-      // Toggle equipped status
-      const newEquipStatus = !userInventoryItem.equipped;
-      
-      // If equipping, unequip other items of the same type
-      if (newEquipStatus && inventoryItem.type !== 'consumable') {
-        const sameTypeItems = inventory.filter(i => 
-          i.type === inventoryItem.type && i.id !== itemId
-        );
-        
-        for (const item of sameTypeItems) {
-          const inventoryRecord = Array.from((storage as any).userInventory.values())
-            .find((inv: any) => inv.userId === userId && inv.itemId === item.id);
-          
-          if (inventoryRecord && inventoryRecord.equipped) {
-            await storage.updateInventoryItem(inventoryRecord.id, { equipped: false });
-          }
-        }
-      }
-      
-      // Update item equipped status
-      await storage.updateInventoryItem(userInventoryItem.id, { equipped: newEquipStatus });
-      
-      res.json({
-        success: true,
-        message: newEquipStatus ? `Equipped ${inventoryItem.name}` : `Unequipped ${inventoryItem.name}`,
-        equipped: newEquipStatus
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Failed to equip/unequip item" });
-    }
-  });
-  
-  // Message API Routes
-  app.get("/api/messages/unread", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const userId = req.user.id;
-      const unreadMessages = await storage.getUnreadMessages(userId);
-      res.json(unreadMessages);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch unread messages" });
-    }
-  });
-  
-  app.post("/api/messages/read/all", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const userId = req.user.id;
-      const success = await storage.markAllMessagesAsRead(userId);
-      
-      if (success) {
-        // Send WebSocket notification about updated unread count (which is now 0)
-        notifyUser(userId, "unreadMessages", { count: 0 });
-        res.json({ success: true, message: "All messages marked as read" });
-      } else {
-        res.status(500).json({ message: "Failed to mark messages as read" });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to mark messages as read" });
-    }
-  });
-  
-  app.post("/api/messages/:id/read", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const messageId = parseInt(req.params.id);
-      const userId = req.user.id;
-      
-      const success = await storage.markMessageAsRead(messageId);
-      
-      if (success) {
-        // Get the new unread count and notify via WebSocket
-        const unreadMessages = await storage.getUnreadMessages(userId);
-        notifyUser(userId, "unreadMessages", { count: unreadMessages.length });
-        
-        res.json({ success: true, message: "Message marked as read" });
-      } else {
-        res.status(500).json({ message: "Failed to mark message as read" });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to mark message as read" });
-    }
-  });
-
-  app.get("/api/messages", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const type = req.query.type as string;
-      const userId = req.user.id;
-      
-      let messages: any[] = [];
-      
-      switch (type) {
-        case "personal":
-          messages = await storage.getUserMessages(userId);
-          break;
-        case "gang":
-          const membership = await storage.getGangMember(userId);
-          if (membership) {
-            messages = await storage.getGangMessages(membership.gang.id);
-          }
-          break;
-        case "jail":
-          messages = await storage.getJailMessages();
-          break;
-        case "global":
-          messages = await storage.getGlobalMessages();
-          break;
-        default:
-          messages = await storage.getUserMessages(userId);
-      }
-      
-      res.json(messages);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch messages" });
-    }
-  });
-  
-  app.post("/api/messages", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const { type, content, receiverId, gangId } = req.body;
-      const senderId = req.user.id;
-      
-      if (!type || !content) {
-        return res.status(400).json({ message: "Message type and content are required" });
-      }
-      
-      // Validate message type
-      const validTypes = ["personal", "gang", "jail", "global"];
-      if (!validTypes.includes(type)) {
-        return res.status(400).json({ message: "Invalid message type" });
-      }
-      
-      // Validate specifics based on type
-      if (type === "personal" && !receiverId) {
-        return res.status(400).json({ message: "Receiver ID is required for personal messages" });
-      }
-      
-      if (type === "gang") {
-        // Check if user is in a gang
-        const membership = await storage.getGangMember(senderId);
-        if (!membership) {
-          return res.status(400).json({ message: "You are not in a gang" });
-        }
-        
-        // Use the user's gang ID if not specified
-        const finalGangId = gangId || membership.gang.id;
-        
-        // Create message
-        const message = await storage.createMessage({
-          senderId,
-          type,
-          content,
-          gangId: finalGangId
-        });
-        
-        return res.status(201).json(message);
-      }
-      
-      if (type === "jail") {
-        // Check if user is in jail
-        const user = await storage.getUser(senderId);
-        if (!user?.isJailed) {
-          return res.status(400).json({ message: "You must be in jail to send jail messages" });
-        }
-      }
-      
-      // Create message
-      const message = await storage.createMessage({
-        senderId,
-        receiverId: type === "personal" ? receiverId : undefined,
-        type,
-        content
-      });
-      
-      // Notify the receiver based on message type
-      if (type === "personal" && receiverId) {
-        // Send notification to specific user
-        notifyUser(receiverId, "newMessage", {
-          messageId: message.id,
-          senderId,
-          senderName: req.user.username,
-          receiverId,
-          type: "personal",
-          content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
-        });
-        
-        // Also update unread count
-        const unreadMessages = await storage.getUnreadMessages(receiverId);
-        notifyUser(receiverId, "unreadMessages", {
-          count: unreadMessages.length
-        });
-      } else if (type === "gang" && gangId) {
-        // Get all gang members to notify them individually
-        try {
-          const gangWithMembers = await storage.getGangWithDetails(gangId);
-          if (gangWithMembers && gangWithMembers.members) {
-            for (const member of gangWithMembers.members) {
-              if (member.id !== senderId) { // Don't notify the sender
-                notifyUser(member.id, "newGangMessage", {
-                  messageId: message.id,
-                  senderId,
-                  senderName: req.user.username,
-                  gangId,
-                  gangName: gangWithMembers.name,
-                  type: "gang",
-                  content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
-                });
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Error notifying gang members:", err);
-        }
-      } else if (type === "global") {
-        // Broadcast to everyone
-        broadcast("globalMessage", {
-          messageId: message.id,
-          senderId,
-          senderName: req.user.username,
-          type: "global",
-          content: content.substring(0, 50) + (content.length > 50 ? '...' : '')
-        });
-      }
-      
-      res.status(201).json(message);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to send message" });
-    }
-  });
-  
-  // Leaderboard API Routes
-  app.get("/api/leaderboard", async (req, res) => {
-    try {
-      const type = req.query.type as string || "level";
-      const limit = parseInt(req.query.limit as string || "10");
-      
-      let leaderboard: any[] = [];
-      
-      switch (type) {
-        case "cash":
-          leaderboard = await storage.getTopUsersByCash(limit);
-          break;
-        case "respect":
-          leaderboard = await storage.getTopUsersByRespect(limit);
-          break;
-        case "gangs":
-          leaderboard = await storage.getTopGangs(limit);
-          break;
-        case "level":
-        default:
-          leaderboard = await storage.getTopUsersByLevel(limit);
-      }
-      
-      // Remove sensitive information from user records
-      if (type !== "gangs") {
-        leaderboard = leaderboard.map(entry => {
-          const { password, ...safeEntry } = entry;
-          return safeEntry;
-        });
-      }
-      
-      res.json(leaderboard);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch leaderboard" });
-    }
-  });
-  
-  // Admin API Routes
-  app.get("/api/admin/users", async (req, res) => {
-    if (!req.isAuthenticated() || !req.user.isAdmin) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
-    
-    try {
-      const users = Array.from((storage as any).users.values());
-      
-      // Remove sensitive information
-      const safeUsers = users.map(user => {
-        const { password, ...safeUser } = user;
-        return safeUser;
-      });
-      
-      res.json(safeUsers);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-  
-  // Add admin specific routes here
-
   return httpServer;
 }

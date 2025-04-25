@@ -19,6 +19,7 @@ import {
   InsertMessage,
   UserWithStats,
   UserWithGang,
+  UserWithStatus,
   CrimeWithHistory,
   ItemWithDetails,
   GangWithMembers,
@@ -49,7 +50,12 @@ import {
   Achievement,
   UserAchievement,
   InsertUserAchievement,
-  AchievementWithUnlocked
+  AchievementWithUnlocked,
+  // Social types
+  UserFriend,
+  UserStatus,
+  InsertUserFriend,
+  InsertUserStatus
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -190,6 +196,32 @@ export interface IStorage {
   updateChallengeProgress(userId: number, challengeId: number, data: Partial<ChallengeProgress>): Promise<ChallengeProgress | undefined>;
   createChallengeReward(reward: InsertChallengeReward): Promise<ChallengeReward>;
   getUserChallengeRewards(userId: number, limit?: number): Promise<ChallengeReward[]>;
+  
+  // Social Methods - Friends
+  getUserFriends(userId: number): Promise<UserWithStatus[]>;
+  getFriendRequest(userId: number, friendId: number): Promise<UserFriend | undefined>;
+  sendFriendRequest(data: InsertUserFriend): Promise<UserFriend>;
+  updateFriendRequest(userId: number, friendId: number, status: string): Promise<UserFriend | undefined>;
+  removeFriend(userId: number, friendId: number): Promise<boolean>;
+  
+  // Social Methods - Status
+  getUserStatus(userId: number): Promise<UserStatus | undefined>;
+  getUserWithStatus(userId: number, currentUserId: number): Promise<UserWithStatus | undefined>;
+  createUserStatus(data: InsertUserStatus): Promise<UserStatus>;
+  updateUserStatus(userId: number, data: Partial<UserStatus>): Promise<UserStatus | undefined>;
+  getOnlineUsers(limit?: number): Promise<UserWithStatus[]>;
+  getUserFriends(userId: number): Promise<UserWithStatus[]>;
+  getUserWithStatus(userId: number, currentUserId: number): Promise<UserWithStatus | undefined>;
+  getFriendRequest(userId: number, friendId: number): Promise<UserFriend | undefined>;
+  sendFriendRequest(userId: number, friendId: number): Promise<UserFriend>;
+  updateFriendRequest(id: number, status: string): Promise<UserFriend | undefined>;
+  removeFriend(userId: number, friendId: number): Promise<boolean>;
+  
+  // Social Methods - Status
+  getUserStatus(userId: number): Promise<UserStatus | undefined>;
+  createUserStatus(status: InsertUserStatus): Promise<UserStatus>;
+  updateUserStatus(userId: number, status: Partial<UserStatus>): Promise<UserStatus | undefined>;
+  getOnlineUsers(): Promise<(User & { status: UserStatus })[]>;
 }
 
 // Use the DatabaseStorage for all operations
