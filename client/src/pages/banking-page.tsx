@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { useNotification } from "@/hooks/use-notification";
 import {
   Card,
   CardContent,
@@ -111,6 +112,7 @@ type AccountWithTransactions = BankAccount & {
 export default function BankingPage() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { addNotification } = useNotification();
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [isCreateAccountOpen, setIsCreateAccountOpen] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
@@ -187,12 +189,23 @@ export default function BankingPage() {
       const res = await apiRequest("POST", `/api/banking/accounts/${selectedAccountId}/deposit`, data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts", selectedAccountId] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] }); // Update user cash
       setIsDepositOpen(false);
       depositForm.reset();
+      
+      // Add notification
+      addNotification({
+        id: Date.now().toString(),
+        title: "Deposit Successful",
+        message: `You deposited ${formatCurrency(depositForm.getValues().amount)} to your account.`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
       toast({
         title: "Deposit Successful",
         description: "Your money has been deposited successfully.",
@@ -221,12 +234,23 @@ export default function BankingPage() {
       const res = await apiRequest("POST", `/api/banking/accounts/${selectedAccountId}/withdraw`, data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts", selectedAccountId] });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] }); // Update user cash
       setIsWithdrawOpen(false);
       withdrawForm.reset();
+      
+      // Add notification
+      addNotification({
+        id: Date.now().toString(),
+        title: "Withdrawal Successful",
+        message: `You withdrew ${formatCurrency(withdrawForm.getValues().amount)} from your account.`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
       toast({
         title: "Withdrawal Successful",
         description: "Your money has been withdrawn successfully.",
@@ -263,6 +287,17 @@ export default function BankingPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts", transferForm.getValues().fromAccountId] });
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts", transferForm.getValues().toAccountId] });
       setIsTransferOpen(false);
+      
+      // Add notification
+      addNotification({
+        id: Date.now().toString(),
+        title: "Transfer Successful",
+        message: `You transferred ${formatCurrency(transferForm.getValues().amount)} between accounts.`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
       transferForm.reset();
       toast({
         title: "Transfer Successful",
@@ -299,6 +334,17 @@ export default function BankingPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts", sendMoneyForm.getValues().accountId] });
       setIsSendMoneyOpen(false);
+      
+      // Add notification
+      addNotification({
+        id: Date.now().toString(),
+        title: "Payment Sent",
+        message: `You sent ${formatCurrency(sendMoneyForm.getValues().amount)} to ${sendMoneyForm.getValues().recipientUsername}.`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
       sendMoneyForm.reset();
       toast({
         title: "Payment Successful",
