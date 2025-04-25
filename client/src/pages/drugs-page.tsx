@@ -7,8 +7,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ProtectedPage } from "@/lib/protected-route";
-import MafiaLayout from "@/components/layout/mafia-layout";
+import { ProtectedRoute } from "@/lib/protected-route";
+import { MafiaLayout } from "@/components/layout/mafia-layout";
 import { Progress } from "@/components/ui/progress";
 import { 
   Pill, 
@@ -144,51 +144,47 @@ type Territory = {
 
 export default function DrugsPage() {
   return (
-    <ProtectedPage>
-      <MafiaLayout title="Drug Operations" description="Manufacture, distribute, and control the drug trade">
-        <div className="container mx-auto px-4 py-8">
-          <Tabs defaultValue="inventory" className="w-full">
-            <TabsList className="grid grid-cols-5 w-full mb-8">
-              <TabsTrigger value="inventory" className="text-lg py-3">
-                <Pill className="mr-2 h-5 w-5" /> Inventory
-              </TabsTrigger>
-              <TabsTrigger value="labs" className="text-lg py-3">
-                <FlaskConical className="mr-2 h-5 w-5" /> Labs
-              </TabsTrigger>
-              <TabsTrigger value="market" className="text-lg py-3">
-                <Package className="mr-2 h-5 w-5" /> Market
-              </TabsTrigger>
-              <TabsTrigger value="territories" className="text-lg py-3">
-                <MapPin className="mr-2 h-5 w-5" /> Territories
-              </TabsTrigger>
-              <TabsTrigger value="effects" className="text-lg py-3">
-                <Activity className="mr-2 h-5 w-5" /> Effects
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="inventory" className="space-y-6">
-              <InventoryTab />
-            </TabsContent>
-            
-            <TabsContent value="labs" className="space-y-6">
-              <LabsTab />
-            </TabsContent>
-            
-            <TabsContent value="market" className="space-y-6">
-              <MarketTab />
-            </TabsContent>
-            
-            <TabsContent value="territories" className="space-y-6">
-              <TerritoriesTab />
-            </TabsContent>
-            
-            <TabsContent value="effects" className="space-y-6">
-              <EffectsTab />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </MafiaLayout>
-    </ProtectedPage>
+    <div className="container mx-auto px-4 py-8">
+      <Tabs defaultValue="inventory" className="w-full">
+        <TabsList className="grid grid-cols-5 w-full mb-8">
+          <TabsTrigger value="inventory" className="text-lg py-3">
+            <Pill className="mr-2 h-5 w-5" /> Inventory
+          </TabsTrigger>
+          <TabsTrigger value="labs" className="text-lg py-3">
+            <FlaskConical className="mr-2 h-5 w-5" /> Labs
+          </TabsTrigger>
+          <TabsTrigger value="market" className="text-lg py-3">
+            <Package className="mr-2 h-5 w-5" /> Market
+          </TabsTrigger>
+          <TabsTrigger value="territories" className="text-lg py-3">
+            <MapPin className="mr-2 h-5 w-5" /> Territories
+          </TabsTrigger>
+          <TabsTrigger value="effects" className="text-lg py-3">
+            <Activity className="mr-2 h-5 w-5" /> Effects
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="inventory" className="space-y-6">
+          <InventoryTab />
+        </TabsContent>
+        
+        <TabsContent value="labs" className="space-y-6">
+          <LabsTab />
+        </TabsContent>
+        
+        <TabsContent value="market" className="space-y-6">
+          <MarketTab />
+        </TabsContent>
+        
+        <TabsContent value="territories" className="space-y-6">
+          <TerritoriesTab />
+        </TabsContent>
+        
+        <TabsContent value="effects" className="space-y-6">
+          <EffectsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
