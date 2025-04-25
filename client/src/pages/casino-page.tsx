@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MafiaLayout } from "@/components/layout/mafia-layout";
 import {
   Card,
   CardContent,
@@ -960,6 +959,5 @@ export default function CasinoPage() {
 
         <BetResultDialog />
       </div>
-    </MafiaLayout>
   );
 }
