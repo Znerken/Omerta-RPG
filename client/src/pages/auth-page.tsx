@@ -10,7 +10,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import luxuryStudyBg from "@assets/gen-mafia-study-luxury-dark-wood-leather-mahogany-desk.webp";
+import gangsterBg from "@assets/gen-mafia-gangster-organized-crime-suit-man-photoreali.webp";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -69,14 +69,17 @@ export default function AuthPage() {
   return (
     <div 
       className="min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.85)), url(${luxuryStudyBg})` }}
+      style={{ 
+        backgroundImage: `linear-gradient(to right, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.7) 50%, rgba(0, 0, 0, 0.4) 100%), url(${gangsterBg})`,
+        backgroundPosition: "right center"
+      }}
     >
       <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8">
         {/* Left column: Auth forms */}
         <div className="flex-1 flex flex-col justify-center z-10">
-          <Card className="card-mafia backdrop-blur-sm shadow-dramatic p-8 border border-primary/20">
+          <Card className="card-mafia backdrop-blur-sm shadow-dramatic p-8 border border-gold/20">
             <div className="mb-8 flex items-center justify-center">
-              <FedoraIcon size="lg" color="primary" className="mr-4" />
+              <FedoraIcon size="lg" color="gold" className="mr-4" />
               <div>
                 <h1 className="text-4xl font-heading text-gold-gradient mb-2">Mafia Empire</h1>
                 <p className="text-muted-foreground">Enter the criminal underworld.</p>
@@ -205,12 +208,14 @@ export default function AuthPage() {
         </div>
         
         {/* Right column: Hero section */}
-        <div className="flex-1 hidden md:flex flex-col justify-center z-10">
-          <div className="backdrop-blur-sm bg-black/30 rounded-sm p-8 h-full shadow-dramatic border border-gold/20">
+        <div className="flex-1 hidden md:flex flex-col justify-center z-10 pl-8">
+          <div className="backdrop-blur-sm bg-black/20 rounded-sm p-8 h-full shadow-dramatic border-l-4 border-gold/40">
             <div className="h-full flex flex-col justify-center space-y-8">
               <div className="mb-8">
-                <h2 className="text-3xl font-heading mb-4 text-gold-gradient">Rise to Power</h2>
-                <p className="text-muted-foreground">
+                <div className="inline-block mb-3 pb-1 border-b-2 border-gold/40">
+                  <h2 className="text-3xl font-heading text-gold-gradient">Rise to Power</h2>
+                </div>
+                <p className="text-muted-foreground text-base">
                   Welcome to Mafia Empire, where the streets are yours for the taking.
                   Build your criminal empire, form powerful alliances, and leave your mark
                   on the underworld.
