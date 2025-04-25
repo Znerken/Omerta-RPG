@@ -858,4 +858,140 @@ export function registerDrugRoutes(app: Express) {
       res.status(500).json({ error: "Failed to seed drug data" });
     }
   });
+  
+  // New endpoint to create recipes only
+  app.post("/api/dev/create-recipes", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const allDrugs = await drugStorage.getAllDrugs();
+      
+      // Create the ingredients if they don't exist
+      const ingredients = [
+        {
+          name: "Basic Chemical",
+          description: "A common chemical found in many household products",
+          price: 100,
+          rarity: 1,
+        },
+        {
+          name: "Synthetic Compound",
+          description: "A manufactured compound used in pharmaceutical applications",
+          price: 250,
+          rarity: 3,
+        },
+        {
+          name: "Rare Extract",
+          description: "An exotic plant extract with unique properties",
+          price: 500,
+          rarity: 5,
+        },
+        {
+          name: "Crystalline Powder",
+          description: "A refined powder that serves as a base for many drugs",
+          price: 750,
+          rarity: 6,
+        },
+        {
+          name: "Exotic Mineral",
+          description: "A rare mineral with unusual chemical properties",
+          price: 1000,
+          rarity: 7,
+        },
+        {
+          name: "Forbidden Substance",
+          description: "A tightly controlled substance with powerful effects",
+          price: 2000,
+          rarity: 9,
+        },
+      ];
+      
+      for (const ingredient of ingredients) {
+        const existing = await drugStorage.getIngredientByName(ingredient.name);
+        if (!existing) {
+          await drugStorage.createDrugIngredient(ingredient);
+        }
+      }
+      
+      // Get updated ingredients with IDs
+      const allIngredients = await drugStorage.getAllIngredients();
+      
+      // Return early if no drugs or ingredients
+      if (allDrugs.length === 0 || allIngredients.length === 0) {
+        return res.status(400).json({ 
+          error: "Cannot create recipes: missing drugs or ingredients",
+          drugCount: allDrugs.length,
+          ingredientCount: allIngredients.length
+        });
+      }
+      
+      // Map drug names to IDs for easier reference
+      const drugMap = {};
+      for (const drug of allDrugs) {
+        drugMap[drug.name] = drug.id;
+      }
+      
+      // Map ingredient names to IDs
+      const ingredientMap = {};
+      for (const ingredient of allIngredients) {
+        ingredientMap[ingredient.name] = ingredient.id;
+      }
+      
+      // Define recipes for each drug
+      const recipes = [
+        // Stardust
+        { drugId: drugMap["Stardust"], ingredientId: ingredientMap["Basic Chemical"], quantity: 2 },
+        { drugId: drugMap["Stardust"], ingredientId: ingredientMap["Rare Extract"], quantity: 1 },
+        
+        // Shade
+        { drugId: drugMap["Shade"], ingredientId: ingredientMap["Basic Chemical"], quantity: 1 },
+        { drugId: drugMap["Shade"], ingredientId: ingredientMap["Synthetic Compound"], quantity: 2 },
+        
+        // Titan
+        { drugId: drugMap["Titan"], ingredientId: ingredientMap["Synthetic Compound"], quantity: 2 },
+        { drugId: drugMap["Titan"], ingredientId: ingredientMap["Crystalline Powder"], quantity: 1 },
+        
+        // Brainwave
+        { drugId: drugMap["Brainwave"], ingredientId: ingredientMap["Rare Extract"], quantity: 2 },
+        { drugId: drugMap["Brainwave"], ingredientId: ingredientMap["Exotic Mineral"], quantity: 1 },
+        
+        // Fortunate
+        { drugId: drugMap["Fortunate"], ingredientId: ingredientMap["Crystalline Powder"], quantity: 2 },
+        { drugId: drugMap["Fortunate"], ingredientId: ingredientMap["Exotic Mineral"], quantity: 1 },
+        
+        // Blend
+        { drugId: drugMap["Blend"], ingredientId: ingredientMap["Basic Chemical"], quantity: 1 },
+        { drugId: drugMap["Blend"], ingredientId: ingredientMap["Rare Extract"], quantity: 1 },
+        { drugId: drugMap["Blend"], ingredientId: ingredientMap["Exotic Mineral"], quantity: 1 },
+        
+        // Phantom
+        { drugId: drugMap["Phantom"], ingredientId: ingredientMap["Synthetic Compound"], quantity: 1 },
+        { drugId: drugMap["Phantom"], ingredientId: ingredientMap["Exotic Mineral"], quantity: 2 },
+        
+        // Kingmaker
+        { drugId: drugMap["Kingmaker"], ingredientId: ingredientMap["Rare Extract"], quantity: 1 },
+        { drugId: drugMap["Kingmaker"], ingredientId: ingredientMap["Crystalline Powder"], quantity: 1 },
+        { drugId: drugMap["Kingmaker"], ingredientId: ingredientMap["Forbidden Substance"], quantity: 2 },
+      ];
+      
+      // Create each recipe
+      let createdCount = 0;
+      for (const recipe of recipes) {
+        if (recipe.drugId && recipe.ingredientId) {
+          await drugStorage.createRecipe(recipe);
+          createdCount++;
+        }
+      }
+      
+      // Check how many recipes we have now
+      const recipeCount = await drugStorage.getRecipeCount();
+      
+      res.json({ 
+        message: `Successfully created ${createdCount} recipes. Total recipes: ${recipeCount}`,
+        drugMap,
+        ingredientMap
+      });
+    } catch (error) {
+      console.error("Error creating recipes:", error);
+      res.status(500).json({ error: "Failed to create recipes: " + error.message });
+    }
+  });
 }
