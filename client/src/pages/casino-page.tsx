@@ -140,6 +140,7 @@ export default function CasinoPage() {
   const [activeGame, setActiveGame] = useState<CasinoGame | null>(null);
   const [betResult, setBetResult] = useState<any | null>(null);
   const [showBetResult, setShowBetResult] = useState(false);
+  const [userBalance, setUserBalance] = useState<number>(0);
 
   // Fetch casino games
   const {
@@ -604,6 +605,34 @@ export default function CasinoPage() {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="action"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Action</FormLabel>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an action" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="bet">Bet</SelectItem>
+                    <SelectItem value="hit">Hit</SelectItem>
+                    <SelectItem value="stand">Stand</SelectItem>
+                    <SelectItem value="double">Double</SelectItem>
+                    <SelectItem value="split">Split</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <Button
             type="submit"
             disabled={placeBetMutation.isPending}
@@ -614,350 +643,304 @@ export default function CasinoPage() {
             ) : (
               <DollarSign className="h-4 w-4 mr-2" />
             )}
-            Deal
+            {form.watch("action") === "bet" ? "Place Bet" : form.watch("action")}
           </Button>
         </form>
       </Form>
     );
   };
 
-  // Result Dialog
+  // Bet result dialog
   const BetResultDialog = () => {
     if (!betResult) return null;
 
-    const { bet } = betResult;
-    const result = bet.result;
+    const handleClose = () => {
+      setShowBetResult(false);
+      setBetResult(null);
+    };
 
     return (
-      <Dialog open={showBetResult} onOpenChange={setShowBetResult}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showBetResult} onOpenChange={handleClose}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {result.win ? "You Won!" : "You Lost"}
+            <DialogTitle className={betResult?.bet?.result?.win ? "text-green-500" : "text-red-500"}>
+              {betResult?.bet?.result?.win ? "You Won!" : "You Lost!"}
             </DialogTitle>
             <DialogDescription>
-              {result.win
-                ? `You won $${result.amount}`
-                : `You lost $${bet.betAmount}`}
+              {betResult?.bet?.result?.win
+                ? `Congratulations! You won $${betResult?.bet?.result?.amount}`
+                : `Better luck next time! You lost $${betResult?.bet?.betAmount}`}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
-            {result.details && (
-              <div className="space-y-2">
-                {bet.game.type === "dice" && (
-                  <div>
-                    <p>Dice rolled: <strong>{result.details.diceValue}</strong></p>
-                    <p>Your prediction: <strong>{result.details.prediction} than {result.details.targetNumber}</strong></p>
-                    <p>Result: <strong>{result.details.success ? "Success" : "Failure"}</strong></p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-medium">Game</h4>
+                <p className="text-sm">{betResult?.bet?.game?.name}</p>
+              </div>
+              <div>
+                <h4 className="text-sm font-medium">Bet Amount</h4>
+                <p className="text-sm">${betResult?.bet?.betAmount}</p>
+              </div>
+            </div>
+
+            {betResult?.bet?.result?.details && (
+              <div>
+                <h4 className="text-sm font-medium">Details</h4>
+                {betResult.bet.game.type === "dice" && (
+                  <div className="text-sm">
+                    <p>Your prediction: {betResult.bet.result.details.prediction}</p>
+                    <p>Target number: {betResult.bet.result.details.targetNumber}</p>
+                    <p>Result: {betResult.bet.result.details.result}</p>
                   </div>
                 )}
-
-                {bet.game.type === "slots" && (
-                  <div>
-                    <p className="font-semibold">Slot Results:</p>
-                    <div className="grid grid-cols-3 gap-2 mt-2 font-mono">
-                      {result.details.reels.map((reel: string[], i: number) => (
-                        <div key={i} className="space-y-1">
-                          {reel.map((symbol: string, j: number) => (
-                            <div key={j} className="bg-secondary p-1 rounded text-center">
-                              {symbol}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                    <p className="mt-3">Winning Lines: {result.details.payLines.filter((line: any) => line.win).length}</p>
-                    <p>Total Win: ${result.details.totalWin}</p>
+                {betResult.bet.game.type === "slots" && (
+                  <div className="text-sm">
+                    <p>Lines: {betResult.bet.result.details.lines}</p>
+                    <p>Symbols: {betResult.bet.result.details.symbols?.join(", ")}</p>
+                    <p>Matches: {betResult.bet.result.details.matches}</p>
                   </div>
                 )}
-
-                {bet.game.type === "roulette" && (
-                  <div>
-                    <p>Number: <strong>{result.details.number}</strong></p>
-                    <p>Color: <strong className={result.details.color === "red" ? "text-red-500" : result.details.color === "black" ? "text-black" : "text-green-500"}>
-                      {result.details.color}
-                    </strong></p>
-                    <p>Bet Type: <strong>{result.details.betType}</strong></p>
-                    <p>Payout: <strong>{result.details.payout}:1</strong></p>
+                {betResult.bet.game.type === "roulette" && (
+                  <div className="text-sm">
+                    <p>Bet type: {betResult.bet.result.details.betType}</p>
+                    <p>Numbers: {betResult.bet.result.details.numbers?.join(", ")}</p>
+                    <p>Result: {betResult.bet.result.details.result}</p>
                   </div>
                 )}
-
-                {bet.game.type === "blackjack" && (
-                  <div>
-                    <p>Player Hand: <strong>{result.details.playerHandValues[0]}</strong></p>
-                    <p>Dealer Hand: <strong>{result.details.dealerHandValue}</strong></p>
-                    <p>Outcome: <strong>{result.details.outcome}</strong></p>
-                    {result.details.blackjack && <p className="text-green-500 font-bold">BLACKJACK!</p>}
-                    {result.details.bust && <p className="text-red-500 font-bold">BUST!</p>}
+                {betResult.bet.game.type === "blackjack" && (
+                  <div className="text-sm">
+                    <p>Player hand: {betResult.bet.result.details.playerHand?.join(", ")}</p>
+                    <p>Dealer hand: {betResult.bet.result.details.dealerHand?.join(", ")}</p>
+                    <p>Player score: {betResult.bet.result.details.playerScore}</p>
+                    <p>Dealer score: {betResult.bet.result.details.dealerScore}</p>
                   </div>
                 )}
               </div>
             )}
           </div>
 
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowBetResult(false)}
-            >
-              Close
-            </Button>
-            <Button type="button" onClick={() => setShowBetResult(false)}>
-              Play Again
-            </Button>
+          <DialogFooter>
+            <Button onClick={handleClose}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     );
   };
 
-  if (gamesLoading) {
-    return (
-      <MafiaLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="h-8 w-8 animate-spin text-border" />
-        </div>
-      </MafiaLayout>
-    );
-  }
-
-  if (gamesError) {
-    return (
-      <MafiaLayout>
-        <div className="text-center py-10">
-          <h2 className="text-2xl font-bold text-red-500">
-            Error loading casino games
-          </h2>
-          <p className="mt-2">Please try again later</p>
-        </div>
-      </MafiaLayout>
-    );
-  }
-
+  // Render the main casino page
   return (
-    <MafiaLayout>
-      <div className="container mx-auto py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold">Mafia Casino</h1>
-          <p className="text-muted-foreground mt-2">
-            Test your luck and win big in our exclusive underground casino.
-          </p>
-        </div>
+    <div className="container py-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight">Casino</h1>
+        <Button size="sm" variant="outline">
+          <DollarSign className="h-4 w-4 mr-2" />
+          ${userBalance || 0}
+        </Button>
+      </div>
 
-        <Tabs defaultValue="games" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="games">Games</TabsTrigger>
-            <TabsTrigger value="history">Bet History</TabsTrigger>
-            <TabsTrigger value="stats">Your Stats</TabsTrigger>
-          </TabsList>
+      <Tabs defaultValue="games">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="games">Games</TabsTrigger>
+          <TabsTrigger value="bets">Your Bets</TabsTrigger>
+          <TabsTrigger value="stats">Statistics</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="games" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <TabsContent value="games" className="space-y-6">
+          {gamesLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-border" />
+            </div>
+          ) : games?.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {games?.map((game: CasinoGame) => (
-                <Card key={game.id} className="flex flex-col">
-                  <CardHeader>
+                <Card key={game.id} className="overflow-hidden">
+                  <CardHeader className="pb-3">
                     <CardTitle>{game.name}</CardTitle>
-                    <CardDescription>
-                      {game.description || `Play ${game.name} and win big!`}
-                    </CardDescription>
+                    <CardDescription>{game.description}</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-grow">
+                  <CardContent>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span>Min Bet:</span>
-                        <span className="font-medium">${game.minBet}</span>
+                        <span className="text-muted-foreground">Min Bet:</span>
+                        <span>${game.minBet}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Max Bet:</span>
-                        <span className="font-medium">${game.maxBet}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>House Edge:</span>
-                        <span className="font-medium">
-                          {(game.houseEdge * 100).toFixed(1)}%
-                        </span>
+                        <span className="text-muted-foreground">Max Bet:</span>
+                        <span>${game.maxBet}</span>
                       </div>
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          className="w-full"
-                          onClick={() => setActiveGame(game)}
-                        >
-                          Play Now
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                          <DialogTitle>{activeGame?.name}</DialogTitle>
-                          <DialogDescription>
-                            Place your bet and test your luck!
-                          </DialogDescription>
-                        </DialogHeader>
-                        {/* Using the type property which maps to game_type in the database */}
-                        {activeGame && activeGame.type === "dice" && (
-                          <DiceGame game={activeGame} />
-                        )}
-                        {activeGame && activeGame.type === "slots" && (
-                          <SlotMachine game={activeGame} />
-                        )}
-                        {activeGame && activeGame.type === "roulette" && (
-                          <Roulette game={activeGame} />
-                        )}
-                        {activeGame && activeGame.type === "blackjack" && (
-                          <Blackjack game={activeGame} />
-                        )}
-                      </DialogContent>
-                    </Dialog>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => setActiveGame(game)}
+                      disabled={!game.isActive}
+                    >
+                      {game.isActive ? "Play Now" : "Coming Soon"}
+                    </Button>
                   </CardFooter>
                 </Card>
               ))}
             </div>
-          </TabsContent>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No casino games available
+            </div>
+          )}
 
-          <TabsContent value="history">
+          {activeGame && (
             <Card>
               <CardHeader>
-                <CardTitle>Your Recent Bets</CardTitle>
-                <CardDescription>
-                  Track your gambling history and results
-                </CardDescription>
+                <CardTitle>{activeGame.name}</CardTitle>
+                <CardDescription>{activeGame.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                {betsLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-border" />
-                  </div>
-                ) : bets?.length > 0 ? (
-                  <div className="rounded-md border">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-muted">
-                            <th className="p-2 text-left">Game</th>
-                            <th className="p-2 text-left">Amount</th>
-                            <th className="p-2 text-left">Result</th>
-                            <th className="p-2 text-left">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {bets.map((bet: CasinoBet) => (
-                            <tr
-                              key={bet.id}
-                              className="border-t hover:bg-muted/50"
-                            >
-                              <td className="p-2">{bet.game.name}</td>
-                              <td className="p-2">${bet.betAmount}</td>
-                              <td className="p-2">
-                                {bet.status === "won" ? (
-                                  <span className="text-green-500 font-medium">
-                                    +${bet.result.amount}
-                                  </span>
-                                ) : bet.status === "lost" ? (
-                                  <span className="text-red-500 font-medium">
-                                    -${bet.betAmount}
-                                  </span>
-                                ) : (
-                                  <span className="text-yellow-500 font-medium">
-                                    {bet.status}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="p-2">
-                                {formatDistanceToNow(
-                                  new Date(bet.createdAt),
-                                  { addSuffix: true }
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground">
-                    No bets yet. Start playing to see your history!
-                  </div>
-                )}
+                {activeGame.type === "dice" && <DiceGame game={activeGame} />}
+                {activeGame.type === "slots" && <SlotMachine game={activeGame} />}
+                {activeGame.type === "roulette" && <Roulette game={activeGame} />}
+                {activeGame.type === "blackjack" && <Blackjack game={activeGame} />}
               </CardContent>
+              <CardFooter className="flex justify-between">
+                <Button variant="outline" onClick={() => setActiveGame(null)}>
+                  Back to Games
+                </Button>
+              </CardFooter>
             </Card>
-          </TabsContent>
+          )}
+        </TabsContent>
 
-          <TabsContent value="stats">
-            <Card>
-              <CardHeader>
-                <CardTitle>Your Casino Statistics</CardTitle>
-                <CardDescription>
-                  Your gambling performance across all games
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {statsLoading ? (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-border" />
-                  </div>
-                ) : stats?.length > 0 ? (
-                  <div className="rounded-md border">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-muted">
-                            <th className="p-2 text-left">Game</th>
-                            <th className="p-2 text-left">Bets</th>
-                            <th className="p-2 text-left">Wagered</th>
-                            <th className="p-2 text-left">Won</th>
-                            <th className="p-2 text-left">Lost</th>
-                            <th className="p-2 text-left">Net</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stats.map((stat: CasinoStat) => (
-                            <tr
-                              key={stat.gameId}
-                              className="border-t hover:bg-muted/50"
-                            >
-                              <td className="p-2">{stat.game.name}</td>
-                              <td className="p-2">{stat.totalBets}</td>
-                              <td className="p-2">${stat.totalWagered}</td>
-                              <td className="p-2 text-green-500">
-                                ${stat.totalWon}
-                              </td>
-                              <td className="p-2 text-red-500">
-                                ${stat.totalLost}
-                              </td>
-                              <td className="p-2">
-                                <span
-                                  className={
-                                    stat.totalWon > stat.totalLost
-                                      ? "text-green-500 font-medium"
-                                      : "text-red-500 font-medium"
-                                  }
-                                >
-                                  ${stat.totalWon - stat.totalLost}
+        <TabsContent value="bets">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Bets</CardTitle>
+              <CardDescription>Your betting history</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {betsLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-border" />
+                </div>
+              ) : bets?.length > 0 ? (
+                <div className="rounded-md border">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted">
+                          <th className="p-2 text-left">Game</th>
+                          <th className="p-2 text-left">Amount</th>
+                          <th className="p-2 text-left">Result</th>
+                          <th className="p-2 text-left">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bets.map((bet: CasinoBet) => (
+                          <tr
+                            key={bet.id}
+                            className="border-t hover:bg-muted/50"
+                          >
+                            <td className="p-2">{bet.game.name}</td>
+                            <td className="p-2">${bet.betAmount}</td>
+                            <td className="p-2">
+                              {bet.result?.win ? (
+                                <span className="text-green-500 font-medium">
+                                  Won ${bet.result.amount}
                                 </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                              ) : (
+                                <span className="text-red-500 font-medium">
+                                  Lost ${bet.betAmount}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {formatDistanceToNow(new Date(bet.createdAt), {
+                                addSuffix: true,
+                              })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ) : (
-                  <div className="text-center py-6 text-muted-foreground">
-                    No stats yet. Start playing to see your statistics!
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  No bets yet. Start playing to see your betting history!
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <BetResultDialog />
-      </div>
+        <TabsContent value="stats">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Statistics</CardTitle>
+              <CardDescription>See how you're doing at our casino</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {statsLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-border" />
+                </div>
+              ) : stats?.length > 0 ? (
+                <div className="rounded-md border">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted">
+                          <th className="p-2 text-left">Game</th>
+                          <th className="p-2 text-left">Bets</th>
+                          <th className="p-2 text-left">Wagered</th>
+                          <th className="p-2 text-left">Won</th>
+                          <th className="p-2 text-left">Lost</th>
+                          <th className="p-2 text-left">Net</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.map((stat: CasinoStat) => (
+                          <tr
+                            key={stat.gameId}
+                            className="border-t hover:bg-muted/50"
+                          >
+                            <td className="p-2">{stat.game.name}</td>
+                            <td className="p-2">{stat.totalBets}</td>
+                            <td className="p-2">${stat.totalWagered}</td>
+                            <td className="p-2 text-green-500">
+                              ${stat.totalWon}
+                            </td>
+                            <td className="p-2 text-red-500">
+                              ${stat.totalLost}
+                            </td>
+                            <td className="p-2">
+                              <span
+                                className={
+                                  stat.totalWon > stat.totalLost
+                                    ? "text-green-500 font-medium"
+                                    : "text-red-500 font-medium"
+                                }
+                              >
+                                ${stat.totalWon - stat.totalLost}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  No stats yet. Start playing to see your statistics!
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <BetResultDialog />
+    </div>
   );
 }
