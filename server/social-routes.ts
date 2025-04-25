@@ -39,7 +39,7 @@ export function registerSocialRoutes(app: Express) {
     }
   });
 
-  // Search for users by username - THIS MUST COME BEFORE THE /:userId ROUTE
+  // IMPORTANT: This specific route must come BEFORE the generic /:userId route!
   app.get("/api/social/users/search", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
     
