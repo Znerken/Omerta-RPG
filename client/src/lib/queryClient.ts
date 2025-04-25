@@ -1,11 +1,26 @@
 import { QueryClient } from "@tanstack/react-query";
 
-// Create a client
+// Create a client with default query function
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      queryFn: async ({ queryKey }) => {
+        const [url] = Array.isArray(queryKey) ? queryKey : [queryKey];
+        
+        const response = await fetch(url, {
+          credentials: "include", 
+          headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || response.statusText || "An error occurred");
+        }
+        
+        return response.json();
+      },
     },
   },
 });
