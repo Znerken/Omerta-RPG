@@ -314,3 +314,52 @@ h1, h2, h3, h4, h5, h6 {
   @apply w-2 h-2 rounded-full bg-red-500 mr-2;
   animation: status-blink 0.8s ease-in-out infinite;
 }
+
+/* Button glow effect */
+.hover\:shadow-glow:hover {
+  box-shadow: 0 0 15px rgba(var(--primary), 0.6);
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+/* Stats increase/decrease indicators */
+.stat-trend-up {
+  @apply text-green-500 flex items-center space-x-1 text-xs;
+}
+
+.stat-trend-down {
+  @apply text-red-500 flex items-center space-x-1 text-xs;
+}
+
+.stat-trend-neutral {
+  @apply text-yellow-500 flex items-center space-x-1 text-xs;
+}
+
+/* Paper texture overlay for cards */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::before {
+  content: '';
+  @apply absolute inset-0 opacity-5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* Notification counter animation */
+.notification-counter {
+  @apply absolute -top-1 -right-1 w-5 h-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full;
+  animation: notification-pulse 2s infinite;
+}
+
+@keyframes notification-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

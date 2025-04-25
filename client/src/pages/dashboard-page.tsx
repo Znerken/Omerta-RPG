@@ -89,11 +89,11 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
       <section className="mb-12">
+        <h2 className="game-section-heading">Quick Actions</h2>
         <Card className="backdrop-mafia p-6 lg:p-8">
           <div className="flex flex-col gap-8">
             <div>
-              <h2 className="text-2xl font-heading mb-2">Quick Actions</h2>
-              <p className="text-muted-foreground">What's your next move, boss?</p>
+              <p className="text-muted-foreground text-lg italic">"What's your next move, boss?"</p>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -102,6 +102,7 @@ export default function DashboardPage() {
                 description="Make some quick cash"
                 icon={<MoneyBriefcaseIcon size="lg" color="primary" />}
                 link="/crimes"
+                className="game-card"
               />
               
               <ActionCard 
@@ -109,6 +110,7 @@ export default function DashboardPage() {
                 description="Improve your abilities"
                 icon={<Dumbbell className="h-8 w-8" />}
                 link="/training"
+                className="game-card"
               />
               
               <ActionCard 
@@ -116,6 +118,7 @@ export default function DashboardPage() {
                 description="Coordinate with your crew"
                 icon={<Users className="h-8 w-8" />}
                 link="/gang"
+                className="game-card"
               />
               
               <ActionCard 
@@ -123,6 +126,7 @@ export default function DashboardPage() {
                 description="Get new equipment"
                 icon={<WhiskeyGlassIcon size="lg" />}
                 link="/inventory"
+                className="game-card"
               />
             </div>
           </div>
@@ -226,16 +230,18 @@ function ActionCard({
   title, 
   description, 
   icon, 
-  link 
+  link,
+  className
 }: { 
   title: string; 
   description: string; 
   icon: React.ReactNode; 
   link: string;
+  className?: string;
 }) {
   return (
     <Link href={link}>
-      <div className="card-mafia h-full p-5 flex flex-col hover:translate-y-[-2px] transition-all duration-200 cursor-pointer">
+      <div className={cn("card-mafia h-full p-5 flex flex-col hover:translate-y-[-2px] transition-all duration-200 cursor-pointer", className)}>
         <div className="mb-4">{icon}</div>
         <h3 className="text-lg font-medium mb-1">{title}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
@@ -312,7 +318,7 @@ function CrimeCard({
   className?: string;
 }) {
   return (
-    <Card className={cn("card-mafia overflow-hidden", className)}>
+    <Card className={cn("card-mafia overflow-hidden paper-texture", className)}>
       <div className="p-5">
         <div className="flex justify-between items-start mb-3">
           <h3 className="font-heading text-lg">{name}</h3>

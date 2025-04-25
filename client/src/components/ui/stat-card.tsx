@@ -27,7 +27,7 @@ export function StatCard({
   return (
     <Card
       className={cn(
-        "card-mafia overflow-hidden transition-all duration-200",
+        "card-mafia overflow-hidden transition-all duration-200 paper-texture",
         onClick && "cursor-pointer hover:translate-y-[-2px]",
         className
       )}
@@ -51,15 +51,14 @@ export function StatCard({
             {trend && (
               <div
                 className={cn(
-                  "flex items-center text-xs font-medium",
-                  trend === "up" && "text-green-500",
-                  trend === "down" && "text-red-500",
-                  trend === "neutral" && "text-muted-foreground"
+                  trend === "up" && "stat-trend-up",
+                  trend === "down" && "stat-trend-down",
+                  trend === "neutral" && "stat-trend-neutral"
                 )}
               >
-                {trend === "up" && <TrendingUp className="h-3 w-3 mr-1" />}
-                {trend === "down" && <TrendingDown className="h-3 w-3 mr-1" />}
-                {trendValue}
+                {trend === "up" && <TrendingUp className="h-3 w-3" />}
+                {trend === "down" && <TrendingDown className="h-3 w-3" />}
+                <span>{trendValue}</span>
               </div>
             )}
             {description && (
@@ -90,7 +89,7 @@ export function ProgressStatCard({
   return (
     <Card
       className={cn(
-        "card-mafia overflow-hidden transition-all duration-200",
+        "card-mafia overflow-hidden transition-all duration-200 paper-texture",
         onClick && "cursor-pointer hover:translate-y-[-2px]",
         className
       )}
@@ -110,7 +109,7 @@ export function ProgressStatCard({
         </div>
         
         <div className="mt-3">
-          <div className="w-full bg-muted rounded-full h-1.5 mb-1">
+          <div className="w-full bg-muted rounded-full h-1.5 mb-1 progress-bar-animated">
             <div
               className={cn("h-1.5 rounded-full", progressColor)}
               style={{ width: `${progress}%` }}
