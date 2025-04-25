@@ -88,21 +88,15 @@ export function registerDevRoutes(app: Express) {
   // Get test users for friend system testing
   app.get("/api/dev/test-users", developmentOnly, async (req, res) => {
     try {
-      const currentUser = req.user;
-      
-      // Get users that aren't the current user
-      let query = db.select({
+      // Get all users
+      const testUsers = await db.select({
         id: users.id,
         username: users.username,
         avatar: users.avatar
-      }).from(users);
+      })
+      .from(users)
+      .limit(10);
       
-      // Exclude current user if authenticated
-      if (req.isAuthenticated() && currentUser) {
-        query = query.where(eq(users.id, currentUser.id).not());
-      }
-      
-      const testUsers = await query.limit(10);
       res.json(testUsers);
     } catch (error) {
       console.error("Error getting test users:", error);
@@ -112,12 +106,10 @@ export function registerDevRoutes(app: Express) {
   
   // Create test relationships
   app.post("/api/dev/create-test-relationships", developmentOnly, async (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-    
     try {
-      const currentUserId = req.user.id;
+      // Use provided userId from request body or use current user if authenticated
+      const userId = req.body.userId || (req.isAuthenticated() ? req.user.id : 1);
+      const currentUserId = userId;
       
       // Get some test users (excluding current user)
       const testUsers = await db.select({

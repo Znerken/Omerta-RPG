@@ -48,7 +48,7 @@ export async function getUserFriends(userId: number): Promise<UserWithStatus[]> 
       .where(
         // Only include users in the friend IDs list
         friendIds.length > 0 
-          ? sql`${users.id} IN (${friendIds.join(',')})` 
+          ? sql`${users.id} IN (${sql.join(friendIds.map(id => sql`${id}`), sql`, `)})` 
           : undefined
       );
 
