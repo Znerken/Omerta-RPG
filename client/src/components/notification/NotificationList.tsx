@@ -1,7 +1,8 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Notification, useNotification } from "@/hooks/use-notification";
+import { useNotification } from "@/hooks/use-notification";
+import { Notification, NotificationType } from "@/types";
 import { format } from "date-fns";
 import { Check, Ban, AlertCircle, DollarSign, UserPlus, Users } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 export const NotificationList: React.FC = () => {
   const { notifications, markAsRead, markAllAsRead, clearNotifications } = useNotification();
 
-  const getIcon = (type: string) => {
+  const getIcon = (type: NotificationType) => {
     switch (type) {
       case "success":
         return <Check className="h-4 w-4 text-green-500" />;
