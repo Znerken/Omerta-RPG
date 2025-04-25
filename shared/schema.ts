@@ -1,7 +1,18 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Import economy types
+import * as Economy from "./schema-economy";
+
+// Session Schema for authentication
+export const sessions = pgTable("session", {
+  sid: text("sid").primaryKey(),
+  sess: text("sess").notNull(),
+  expire: timestamp("expire").notNull(),
+});
+
+// ========== Core Game Tables ==========
 // User Schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -12,6 +23,15 @@ export const users = pgTable("users", {
   xp: integer("xp").notNull().default(0),
   cash: integer("cash").notNull().default(1000),
   respect: integer("respect").notNull().default(0),
+  // Economy-related fields
+  bankBalance: integer("bank_balance").notNull().default(0),
+  investmentBalance: integer("investment_balance").notNull().default(0),
+  netWorth: integer("net_worth").notNull().default(1000), // Cash + bank + investments + assets
+  creditScore: integer("credit_score").notNull().default(500), // 300-850 range
+  taxRate: integer("tax_rate").notNull().default(15), // Percentage
+  lastIncome: timestamp("last_income"), // For passive income timing
+  lastInterest: timestamp("last_interest"), // For bank interest timing
+  // Basic user data
   avatar: text("avatar"),
   bio: text("bio"),
   isAdmin: boolean("is_admin").notNull().default(false),
@@ -228,3 +248,17 @@ export type ItemWithDetails = Item & {
 export type GangWithMembers = Gang & {
   members: (User & { rank: string })[];
 };
+
+// Re-export economy types for use in the app
+export type { 
+  BankAccount, Company, CompanyEmployee, 
+  Loan, Asset, UserAsset,
+  BankTransaction, CompanyTransaction,
+  BettingEvent, BettingOption, Bet,
+  CasinoGame, CasinoHistory
+} from "./schema-economy";
+
+export type { 
+  CompanyWithDetails, BettingEventWithOptions,
+  UserWithFinancials
+} from "./schema-economy";
