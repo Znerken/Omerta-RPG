@@ -14,6 +14,7 @@ import { CrimeWithHistory } from "@shared/schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useNotification } from "@/hooks/use-notification";
 import { TimerIcon, Briefcase, Award, AlertTriangle, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { CrimeResultModal } from "./CrimeResultModal";
@@ -26,6 +27,7 @@ export function CrimeCard({ crime }: CrimeCardProps) {
   const [showResultModal, setShowResultModal] = useState(false);
   const [crimeResult, setCrimeResult] = useState<any>(null);
   const { toast } = useToast();
+  const { addNotification } = useNotification();
   const queryClient = useQueryClient();
 
   const isCooldown = crime.lastPerformed?.nextAvailableAt && 
@@ -44,20 +46,62 @@ export function CrimeCard({ crime }: CrimeCardProps) {
       
       // Show toast notification
       if (data.success) {
+        const title = "Crime Successful!";
+        const message = `You earned ${formatCurrency(data.cashReward)} and ${data.xpReward} XP from ${crime.name}.`;
+        
+        // Add to notification system
+        addNotification({
+          id: Date.now().toString(),
+          title: title,
+          message: message,
+          type: "success",
+          read: false,
+          timestamp: new Date(),
+          data: { crimeId: crime.id, reward: data.cashReward }
+        });
+        
         toast({
-          title: "Crime Successful!",
-          description: `You earned ${formatCurrency(data.cashReward)} and ${data.xpReward} XP.`,
+          title: title,
+          description: message,
           variant: "default",
         });
       } else if (data.caught) {
+        const title = "Busted!";
+        const message = `You were caught attempting ${crime.name} and sent to jail for ${data.jailTime || 0} minutes.`;
+        
+        // Add to notification system
+        addNotification({
+          id: Date.now().toString(),
+          title: title,
+          message: message,
+          type: "error",
+          read: false,
+          timestamp: new Date(),
+          data: { crimeId: crime.id, jailTime: data.jailTime }
+        });
+        
         toast({
-          title: "Busted!",
+          title: title,
           description: "You were caught and sent to jail.",
           variant: "destructive",
         });
       } else {
+        const title = "Crime Failed";
+        const message = `You failed to execute ${crime.name} but managed to escape arrest.`;
+        
+        // Add to notification system
+        addNotification({
+          id: Date.now().toString(),
+          title: title,
+          message: message,
+          type: "warning",
+          read: false,
+          timestamp: new Date(),
+          data: { crimeId: crime.id }
+        });
+        
         toast({
-          title: "Crime Failed",
+          title: title,
           description: "You failed but managed to escape arrest.",
           variant: "destructive",
         });

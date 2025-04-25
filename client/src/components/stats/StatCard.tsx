@@ -7,6 +7,7 @@ import { Dumbbell, Footprints, BookOpen, SmilePlus, Loader2 } from "lucide-react
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useNotification } from "@/hooks/use-notification";
 
 interface StatCardProps {
   name: "strength" | "stealth" | "charisma" | "intelligence";
@@ -25,6 +26,7 @@ export function StatCard({
   progressColor,
 }: StatCardProps) {
   const { toast } = useToast();
+  const { addNotification } = useNotification();
   const queryClient = useQueryClient();
   const [isTraining, setIsTraining] = useState(false);
   
@@ -74,9 +76,27 @@ export function StatCard({
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       
+      const title = "Training Complete";
+      const message = data.message || `${name.charAt(0).toUpperCase() + name.slice(1)} increased by ${data.increase || 1} point!`;
+      
+      // Add notification
+      addNotification({
+        id: Date.now().toString(),
+        title: title,
+        message: message,
+        type: "success",
+        read: false,
+        timestamp: new Date(),
+        data: { 
+          stat: name, 
+          increase: data.increase || 1,
+          newValue: data.newValue || (value + 1)
+        }
+      });
+      
       toast({
-        title: "Training Complete",
-        description: data.message || `${name.charAt(0).toUpperCase() + name.slice(1)} increased by 1 point!`,
+        title: title,
+        description: message,
       });
     },
     onError: (error) => {
