@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Enums
-export const transactionTypeEnum = pgEnum('transaction_type', ['deposit', 'withdrawal', 'transfer', 'loan_payment', 'interest', 'company_dividend', 'betting_win', 'betting_loss', 'casino_win', 'casino_loss', 'company_investment', 'tax']);
+export const transactionTypeEnum = pgEnum('transaction_type', ['deposit', 'withdrawal', 'transfer', 'payment', 'loan_payment', 'interest', 'company_dividend', 'betting_win', 'betting_loss', 'casino_win', 'casino_loss', 'company_investment', 'tax']);
 export const companyTypeEnum = pgEnum('company_type', ['restaurant', 'casino', 'nightclub', 'gun_shop', 'protection', 'black_market', 'drug_operation', 'smuggling', 'money_laundering', 'transport']);
 export const assetTypeEnum = pgEnum('asset_type', ['vehicle', 'property', 'business', 'stock', 'luxury']);
 export const betTypeEnum = pgEnum('bet_type', ['sports', 'racing', 'fight_club', 'dice', 'custom']);
