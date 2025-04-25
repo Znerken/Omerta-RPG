@@ -130,6 +130,8 @@ export default function AdminPage() {
   const [banDialogOpen, setBanDialogOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
   const [achievementDialogOpen, setAchievementDialogOpen] = useState(false);
+  const [clearLabProductionsDialogOpen, setClearLabProductionsDialogOpen] = useState(false);
+  const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchValue, setSearchValue] = useState("");
 
@@ -216,6 +218,14 @@ export default function AdminPage() {
     queryKey: ["/api/achievements"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/achievements");
+      return await res.json();
+    },
+  });
+  
+  const { data: drugLabs, isLoading: isDrugLabsLoading } = useQuery({
+    queryKey: ["/api/user/drug-labs"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/user/drug-labs");
       return await res.json();
     },
   });
@@ -429,6 +439,47 @@ export default function AdminPage() {
     },
   });
   
+  const clearLabProductionsMutation = useMutation({
+    mutationFn: async (labId: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/drug-labs/${labId}/productions`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Productions Cleared",
+        description: "All productions for this lab have been cleared successfully.",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: Productions Cleared",
+        message: "All productions for this lab have been cleared successfully.",
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      setClearLabProductionsDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/user/drug-labs"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Clear Productions",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to clear productions: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
+  
   const grantAchievementMutation = useMutation({
     mutationFn: async ({ userId, achievementId }: { userId: number; achievementId: number }) => {
       const res = await apiRequest("POST", `/api/admin/achievements/${achievementId}/unlock`, { userId });
@@ -545,6 +596,17 @@ export default function AdminPage() {
       statsForm.setValue("intelligence", selectedUser.stats.intelligence.toString());
     }
   };
+  
+  const handleClearLabProductions = (labId: number) => {
+    setSelectedLabId(labId);
+    setClearLabProductionsDialogOpen(true);
+  };
+  
+  const onClearLabProductions = () => {
+    if (selectedLabId) {
+      clearLabProductionsMutation.mutate(selectedLabId);
+    }
+  };
 
   return (
     <>
@@ -564,6 +626,9 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="jail" className="data-[state=active]:bg-dark-surface">
             Jail
+          </TabsTrigger>
+          <TabsTrigger value="drug-labs" className="data-[state=active]:bg-dark-surface">
+            Drug Labs
           </TabsTrigger>
         </TabsList>
 
