@@ -247,7 +247,7 @@ export default function ChallengesPage() {
                 <div className="flex justify-between text-sm mb-1">
                   <span>Progress</span>
                   <span>
-                    {challenge.progress?.currentValue || 0} / {challenge.targetValue}
+                    {challenge.progress?.current_value || 0} / {challenge.requirement_value}
                   </span>
                 </div>
                 <Progress 
@@ -257,38 +257,44 @@ export default function ChallengesPage() {
               </div>
               
               {/* Challenge time remaining */}
-              <div className="text-sm text-muted-foreground mb-6 flex items-center">
+              <div className="text-sm text-muted-foreground mb-4 flex items-center">
                 <Clock className="h-4 w-4 mr-2" />
                 {getRemainingTime(challenge)}
               </div>
               
+              {/* Challenge difficulty */}
+              <div className="text-sm text-muted-foreground mb-4 flex items-center">
+                <Star className="h-4 w-4 mr-2" />
+                Difficulty: {challenge.difficulty.charAt(0).toUpperCase() + challenge.difficulty.slice(1)}
+              </div>
+              
               {/* Challenge rewards */}
               <div className="flex flex-wrap gap-3 mb-6">
-                {challenge.cashReward > 0 && (
+                {challenge.cash_reward > 0 && (
                   <div className="bg-card border border-border rounded-lg p-2 flex items-center gap-2">
                     <Coins className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm">${challenge.cashReward.toLocaleString()}</span>
+                    <span className="text-sm">${challenge.cash_reward.toLocaleString()}</span>
                   </div>
                 )}
                 
-                {challenge.xpReward > 0 && (
+                {challenge.xp_reward > 0 && (
                   <div className="bg-card border border-border rounded-lg p-2 flex items-center gap-2">
                     <Zap className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">{challenge.xpReward.toLocaleString()} XP</span>
+                    <span className="text-sm">{challenge.xp_reward.toLocaleString()} XP</span>
                   </div>
                 )}
                 
-                {challenge.respectReward > 0 && (
+                {challenge.respect_reward > 0 && (
                   <div className="bg-card border border-border rounded-lg p-2 flex items-center gap-2">
                     <Heart className="h-4 w-4 text-red-500" />
-                    <span className="text-sm">{challenge.respectReward.toLocaleString()} Respect</span>
+                    <span className="text-sm">{challenge.respect_reward.toLocaleString()} Respect</span>
                   </div>
                 )}
                 
-                {challenge.itemReward > 0 && (
+                {challenge.special_item_id && (
                   <div className="bg-card border border-border rounded-lg p-2 flex items-center gap-2">
                     <Package className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm">Item Reward</span>
+                    <span className="text-sm">Special Item</span>
                   </div>
                 )}
               </div>
