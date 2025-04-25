@@ -38,32 +38,38 @@ export default function GangPage() {
   const queryClient = useQueryClient();
 
   const { data: userProfile, isLoading: profileLoading } = useQuery({
-    queryKey: ["/api/user/profile"],
+    queryKey: ["/api/user"],
   });
 
   const { data: gangsList, isLoading: gangsLoading } = useQuery({
     queryKey: ["/api/gangs"],
   });
   
+  // Check if user has a gang 
+  const userGangId = userProfile?.gangMembership?.gangId;
+  const userGang = userProfile?.gangMembership?.gang;
+  const userGangRank = userProfile?.gangMembership?.rank;
+  const isInGang = !!userGangId;
+  
   // For users in a gang, fetch detailed data with territories, wars, and missions
   const { data: gangDetails, isLoading: gangDetailsLoading } = useQuery({
-    queryKey: ["/api/gangs", userProfile?.gang?.id],
-    enabled: !!userProfile?.gang?.id,
+    queryKey: ["/api/gangs", userGangId],
+    enabled: !!userGangId,
   });
   
   const { data: gangTerritories, isLoading: territoriesLoading } = useQuery({
     queryKey: ["/api/gangs/territories"],
-    enabled: !!userProfile?.gang?.id,
+    enabled: !!userGangId,
   });
   
   const { data: activeWars, isLoading: warsLoading } = useQuery({
     queryKey: ["/api/gangs/wars/active"],
-    enabled: !!userProfile?.gang?.id,
+    enabled: !!userGangId,
   });
   
   const { data: activeMissions, isLoading: missionsLoading } = useQuery({
     queryKey: ["/api/gangs/missions/active"],
-    enabled: !!userProfile?.gang?.id,
+    enabled: !!userGangId,
   });
 
   const form = useForm<CreateGangValues>({
@@ -196,6 +202,31 @@ export default function GangPage() {
   const handleJoinGang = (gangId: number) => {
     joinGangMutation.mutate(gangId);
   };
+  
+  // Handlers for territory control and gang wars
+  const startTerritoryAttack = (territoryId: number) => {
+    // Implement attack on territory
+    toast({
+      title: "Territory Attack",
+      description: "Your gang is preparing to attack this territory...",
+    });
+  };
+  
+  const startGangWar = (enemyGangId: number) => {
+    // Implement gang war
+    toast({
+      title: "Gang War Initiated",
+      description: "Your gang has declared war! Prepare for battle...",
+    });
+  };
+  
+  const acceptMission = (missionId: number) => {
+    // Accept mission
+    toast({
+      title: "Mission Accepted",
+      description: "Your gang has accepted this mission. Good luck!",
+    });
+  };
 
   if (profileLoading || gangsLoading) {
     return (
@@ -212,16 +243,14 @@ export default function GangPage() {
     );
   }
 
-  const userGang = userProfile?.gang;
-  const isInGang = !!userGang;
-  const userGangRank = userProfile?.gangRank;
+  // Variables already defined above
 
   return (
     <>
       <PageHeader 
         title="Gangs" 
         icon={<Users className="h-5 w-5" />}
-        description={isInGang ? `Member of ${userGang.name}` : "Join forces with other criminals"}
+        description={isInGang ? `Member of ${userGang?.name || "a gang"}` : "Join forces with other criminals"}
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
