@@ -49,7 +49,22 @@ export function JailTimer({ releaseTime, onRelease }: JailTimerProps) {
       // Check if released
       if (remaining <= 0) {
         clearInterval(interval);
-        onRelease();
+        // Auto-release through API
+        fetch('/api/jail/auto-release', { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('Auto-release check completed:', data);
+          // Notify parent component
+          onRelease();
+        })
+        .catch(error => {
+          console.error('Error during auto-release:', error);
+          // Still notify parent in case of error
+          onRelease();
+        });
       }
     }, 1000);
     

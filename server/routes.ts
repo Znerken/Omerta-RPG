@@ -463,12 +463,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      // Check if jail time is expired but user is still marked as jailed
+      if (user.isJailed && user.jailTimeEnd && new Date() > new Date(user.jailTimeEnd)) {
+        console.log(`[DEBUG] User ${user.id} jail time has expired. Automatically releasing from jail.`);
+        // Release the user from jail
+        const releasedUser = await storage.releaseFromJail(user.id);
+        
+        if (releasedUser) {
+          console.log(`[DEBUG] User ${user.id} successfully released from jail.`);
+          return res.json({
+            isJailed: false,
+            jailTimeEnd: null,
+            autoReleased: true
+          });
+        }
+      }
+      
       res.json({
         isJailed: user.isJailed,
         jailTimeEnd: user.jailTimeEnd
       });
     } catch (error) {
+      console.error("Error in jail status:", error);
       res.status(500).json({ message: "Failed to get jail status" });
+    }
+  });
+  
+  // API to auto-release users from jail when their time is up
+  app.post("/api/jail/auto-release", async (req, res) => {
+    try {
+      // Get all jailed users
+      const jailedUsers = await storage.getJailedUsers();
+      console.log(`[DEBUG] Found ${jailedUsers.length} jailed users`);
+      
+      const now = new Date();
+      let releasedCount = 0;
+      
+      // Check each jailed user
+      for (const user of jailedUsers) {
+        if (user.jailTimeEnd && new Date(user.jailTimeEnd) <= now) {
+          console.log(`[DEBUG] Auto-releasing user ${user.id} from jail. Time expired at ${user.jailTimeEnd}`);
+          await storage.releaseFromJail(user.id);
+          releasedCount++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        message: `Released ${releasedCount} users from jail`,
+        releasedCount,
+        totalJailed: jailedUsers.length
+      });
+    } catch (error) {
+      console.error("Error in auto-release:", error);
+      res.status(500).json({ message: "Failed to auto-release users" });
     }
   });
   
@@ -513,6 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
     } catch (error) {
+      console.error("Error in jail escape:", error);
       res.status(500).json({ message: "Failed to attempt jail escape" });
     }
   });

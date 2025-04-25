@@ -1080,6 +1080,41 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
   }
 
   // Gang Member methods
+  // Get all jailed users
+  async getJailedUsers(): Promise<User[]> {
+    try {
+      return await db
+        .select()
+        .from(users)
+        .where(eq(users.isJailed, true));
+    } catch (error) {
+      console.error("Error in getJailedUsers:", error);
+      return [];
+    }
+  }
+  
+  // Release a user from jail
+  async releaseFromJail(userId: number): Promise<User | undefined> {
+    try {
+      console.log(`[DEBUG] Releasing user ${userId} from jail`);
+      
+      const [user] = await db
+        .update(users)
+        .set({
+          isJailed: false,
+          jailTimeEnd: null
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      console.log(`[DEBUG] User release result:`, user);
+      return user;
+    } catch (error) {
+      console.error("Error in releaseFromJail:", error);
+      return undefined;
+    }
+  }
+  
   async getGangMember(userId: number): Promise<(GangMember & { gang: Gang }) | undefined> {
     try {
       console.log(`[DEBUG] getGangMember called for userId: ${userId}`);
