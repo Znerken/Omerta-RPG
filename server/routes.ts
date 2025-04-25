@@ -12,6 +12,9 @@ import gangRoutes from "./gang-routes";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { calculateRequiredXP } from "../shared/gameUtils";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import { gangMembers } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // sets up /api/register, /api/login, /api/logout, /api/user
@@ -128,6 +131,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         level: gangRecord.gang.level
       } : null);
       
+      // Check multiple sources of gang membership
+      const hasGangMember = !!gangMember;
+      const hasGangRecord = !!gangRecord;
+      const hasUserGangId = !!userWithStats?.gangId;
+      
       // Format response with all user data including explicit gang membership
       // Include both gangMember and direct gang info for compatibility
       const profileData = {
@@ -138,9 +146,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rank: gangRecord.rank,
           gang: gangData
         } : null),
-        inGang: !!(gangMember || gangRecord),
+        inGang: !!(hasGangMember || hasGangRecord || hasUserGangId),
         gang: gangData,
-        gangRank: gangMember?.rank || gangRecord?.rank || "Member"
+        gangRank: gangMember?.rank || gangRecord?.rank || "Member",
+        // Include these fields for debugging
+        _debug: {
+          hasGangMember,
+          hasGangRecord,
+          hasUserGangId,
+          userGangId: userWithStats?.gangId
+        }
       };
       
       console.log("===== FULL PROFILE RESPONSE =====");
