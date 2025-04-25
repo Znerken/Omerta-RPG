@@ -505,7 +505,7 @@ export default function AuthPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
         >
-          <div className={`backdrop-mafia rounded-sm p-6 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
+          <div className={`backdrop-mafia rounded-sm p-8 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
             <div className="h-full flex flex-col lg:grid lg:grid-cols-2 lg:gap-4 items-center">
               {/* Feature descriptions - takes 1 column */}
               <div className="space-y-4">
@@ -516,7 +516,7 @@ export default function AuthPage() {
                   transition={{ delay: 0.7, duration: 0.5 }}
                 >
                   <motion.h2 
-                    className="text-3xl font-heading mb-2"
+                    className="text-4xl font-heading mb-3 text-gold-gradient"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.4 }}
@@ -524,7 +524,7 @@ export default function AuthPage() {
                     Rise to Power
                   </motion.h2>
                   <motion.p 
-                    className="text-muted-foreground text-sm"
+                    className="text-muted-foreground text-base"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.9, duration: 0.4 }}
@@ -580,7 +580,7 @@ export default function AuthPage() {
                   <img 
                     src={mafiaCharacterImg} 
                     alt="Mafia Character" 
-                    className="w-full h-auto object-cover shadow-xl min-h-[400px] max-h-[550px]"
+                    className="w-full h-auto object-cover shadow-xl min-h-[400px] max-h-[600px]"
                   />
                 </motion.div>
               </motion.div>
@@ -623,7 +623,7 @@ function AnimatedFeature({
       </motion.div>
       <div>
         <motion.h3 
-          className="font-medium mb-1"
+          className="font-medium mb-1 text-primary"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: delay + 0.2, duration: 0.3 }}
