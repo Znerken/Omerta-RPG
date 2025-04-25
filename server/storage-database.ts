@@ -405,11 +405,11 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
   async getGangMember(userId: number): Promise<(GangMember & { gang: Gang }) | undefined> {
     try {
       console.log(`[DEBUG] getGangMember called for userId: ${userId}`);
-      // The column in the database is user_id, not userId
+      // The column in the database is userId, not user_id
       const [gangMember] = await db
         .select()
         .from(gangMembers)
-        .where(eq(gangMembers.user_id, userId));
+        .where(eq(gangMembers.userId, userId));
       
       if (!gangMember) {
         console.log("No gang member found for user:", userId);
