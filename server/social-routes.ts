@@ -197,7 +197,7 @@ export function registerSocialRoutes(app: Express) {
         );
         
         // Check if there's a friend request
-        const request = friendRequests.find(r => 
+        const request = userFriendRequests.find(r => 
           (r.senderId === currentUserId && r.receiverId === user.id) ||
           (r.senderId === user.id && r.receiverId === currentUserId)
         );
