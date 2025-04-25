@@ -73,11 +73,14 @@ export default function GangPage() {
     }
   }, [userProfile]);
   
-  // Get gang member information
+  // Get gang membership information from multiple fields to be resilient
   const gangMember = userProfile?.gangMember;
+  const inGang = userProfile?.inGang || false;
+  const gang = userProfile?.gang;
+  const gangRank = userProfile?.gangRank || "Member";
   
   // Fetch gang details if user is in a gang
-  const userGangId = gangMember?.gang?.id;
+  const userGangId = gang?.id;
   const { data: gangDetails, isLoading: gangDetailsLoading } = useQuery({
     queryKey: ["/api/gangs", userGangId],
     enabled: !!userGangId, // Only run this query if user has a gang
@@ -159,14 +162,14 @@ export default function GangPage() {
     joinGangMutation.mutate(gangId);
   };
 
-  // Check if user is in a gang
-  const isInGang = !!gangMember;
+  // Check if user is in a gang (using the direct property from server)
+  const isInGang = inGang;
   
   // Get user's gang rank if they're in a gang
-  const userGangRank = gangMember?.rank || "Member";
+  const userGangRank = gangRank;
   
   // Use either the detailed gang info or the basic info from user's profile
-  const userGang = gangDetails || (gangMember?.gang ?? null);
+  const userGang = gangDetails || gang || null;
   
   // Check if still loading
   const isLoading = userLoading || gangsLoading || profileLoading;

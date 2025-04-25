@@ -108,10 +108,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gangMember = await storage.getGangMember(userId);
       
       // Format response with all user data including explicit gang membership
+      // Include both gangMember and direct gang info for compatibility
       const profileData = {
         ...userWithStats,
-        gangMember: gangMember || null
+        gangMember: gangMember || null,
+        inGang: !!gangMember,
+        gang: gangMember?.gang || null,
+        gangRank: gangMember?.rank || null
       };
+      
+      console.log("Profile response with gang data:", { 
+        gangMember: gangMember ? true : false,
+        gangId: gangMember?.gangId || null,
+        gangName: gangMember?.gang?.name || null
+      });
       
       res.json(profileData);
     } catch (error) {
