@@ -23,7 +23,8 @@ import {
   getUserStatus,
   updateUserStatus,
   createUserStatus,
-  getOnlineUsers
+  getOnlineUsers,
+  getUserWithStatus
 } from "./social-database";
 
 // Get reference to the notifyUser function from routes.ts
@@ -264,7 +265,7 @@ export function registerSocialRoutes(app: Express) {
           return res.status(404).json({ message: "User not found" });
         }
         
-        const status = await storage.getUserStatus(targetUserId) || {
+        const status = await getUserStatus(targetUserId) || {
           id: 0, // Placeholder ID for frontend
           userId: targetUserId,
           status: "offline",
@@ -282,7 +283,7 @@ export function registerSocialRoutes(app: Express) {
       }
       
       try {
-        const userWithStatus = await storage.getUserWithStatus(targetUserId, currentUserId);
+        const userWithStatus = await getUserWithStatus(targetUserId, currentUserId);
         if (!userWithStatus) {
           return res.status(404).json({ message: "User not found" });
         }
@@ -536,11 +537,11 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Check if user already has a status record
-      let userStatus = await storage.getUserStatus(req.user.id);
+      let userStatus = await getUserStatus(req.user.id);
       
       if (userStatus) {
         // Update existing status
-        userStatus = await storage.updateUserStatus(req.user.id, {
+        userStatus = await updateUserStatus(req.user.id, {
           status,
           lastActive: new Date(),
           lastLocation: lastLocation || userStatus.lastLocation
@@ -553,11 +554,11 @@ export function registerSocialRoutes(app: Express) {
           lastLocation
         });
         
-        userStatus = await storage.createUserStatus(validatedData);
+        userStatus = await createUserStatus(validatedData);
       }
       
       // Get user's friends to notify them about status change
-      const friends = await storage.getUserFriends(req.user.id);
+      const friends = await getUserFriends(req.user.id);
       
       // Notify friends of status change
       friends.forEach(friend => {
@@ -588,12 +589,12 @@ export function registerSocialRoutes(app: Express) {
     try {
       // If user is admin, return all online users
       if (req.user.isAdmin) {
-        const onlineUsers = await storage.getOnlineUsers();
+        const onlineUsers = await getOnlineUsers();
         return res.json(onlineUsers);
       }
       
       // Otherwise return only friends who are online
-      const friends = await storage.getUserFriends(req.user.id);
+      const friends = await getUserFriends(req.user.id);
       const onlineFriends = friends.filter(friend => 
         friend.status && friend.status.status === "online"
       );

@@ -1,7 +1,13 @@
 import { db } from "./db";
 import { users, userStatus, userFriends, friendRequests } from "@shared/schema";
 import { eq, and, or, desc, asc, isNull, ne } from "drizzle-orm";
-import { UserWithStatus, UserStatus, UserFriend, FriendRequest, InsertUserStatus, InsertFriendRequest, InsertUserFriend } from "@shared/schema";
+import { UserWithStatus, UserStatus, UserFriend, FriendRequest, InsertUserStatus, InsertFriendRequest, InsertUserFriend, User } from "@shared/schema";
+
+// Get user by ID
+export async function getUser(id: number): Promise<User | undefined> {
+  const [user] = await db.select().from(users).where(eq(users.id, id));
+  return user || undefined;
+}
 
 // Friend methods
 export async function getUserFriends(userId: number): Promise<UserWithStatus[]> {
