@@ -112,9 +112,9 @@ export function registerCasinoRoutes(app: Express) {
             validatedBetDetails = diceBetDetailsSchema.parse(betDetails);
             console.log('Dice bet details validated:', validatedBetDetails);
             break;
-          case 'Slots':
+          case 'Slot Machine':
             validatedBetDetails = slotBetDetailsSchema.parse(betDetails);
-            console.log('Slots bet details validated:', validatedBetDetails);
+            console.log('Slot Machine bet details validated:', validatedBetDetails);
             break;
           case 'Roulette':
             validatedBetDetails = rouletteBetDetailsSchema.parse(betDetails);
@@ -188,7 +188,7 @@ export function registerCasinoRoutes(app: Express) {
           console.log('Processing Dice Game...');
           result = processDiceGame(betAmount, betDetails);
           break;
-        case 'Slots':
+        case 'Slot Machine':
           console.log('Processing Slot Machine...');
           result = processSlotMachine(betAmount, betDetails);
           break;
