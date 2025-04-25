@@ -157,9 +157,20 @@ export default function BankingPage() {
       const res = await apiRequest("POST", "/api/banking/accounts", data);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (account) => {
       queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts"] });
       setIsCreateAccountOpen(false);
+      
+      // Add notification
+      addNotification({
+        id: Date.now().toString(),
+        title: "Account Created",
+        message: `Your new ${account.accountType.charAt(0).toUpperCase() + account.accountType.slice(1)} Account has been created successfully.`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
       createAccountForm.reset();
       toast({
         title: "Account Created",

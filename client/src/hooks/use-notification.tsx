@@ -17,7 +17,7 @@ export interface Notification {
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
-  addNotification: (title: string, message: string, type: NotificationType, data?: any) => void;
+  addNotification: (titleOrNotification: string | Partial<Notification>, message?: string, type?: NotificationType, data?: any) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
@@ -31,32 +31,54 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const addNotification = useCallback((title: string, message: string, type: NotificationType, data?: any) => {
-    const id = Date.now().toString();
-    const newNotification: Notification = {
-      id,
-      title,
-      message,
-      type,
-      timestamp: new Date(),
-      read: false,
-      data
-    };
+  const addNotification = useCallback((
+    titleOrNotification: string | Partial<Notification>, 
+    message?: string, 
+    type?: NotificationType, 
+    data?: any
+  ) => {
+    let newNotification: Notification;
+    
+    // Check if the first argument is a string (title) or an object (partial notification)
+    if (typeof titleOrNotification === 'string') {
+      const id = Date.now().toString();
+      newNotification = {
+        id,
+        title: titleOrNotification,
+        message: message || '',
+        type: type || 'info',
+        timestamp: new Date(),
+        read: false,
+        data
+      };
+    } else {
+      // It's a partial notification object
+      const id = titleOrNotification.id || Date.now().toString();
+      newNotification = {
+        id,
+        title: titleOrNotification.title || 'Notification',
+        message: titleOrNotification.message || '',
+        type: titleOrNotification.type || 'info',
+        timestamp: titleOrNotification.timestamp || new Date(),
+        read: titleOrNotification.read ?? false,
+        data: titleOrNotification.data
+      };
+    }
     
     setNotifications(prev => [newNotification, ...prev]);
     
     // Show toast notification
     toast({
-      title: title,
-      description: message,
-      variant: type === "error" ? "destructive" : "default"
+      title: newNotification.title,
+      description: newNotification.message,
+      variant: newNotification.type === "error" ? "destructive" : "default"
     });
     
     // Different icons based on notification type
     // (We don't use this in the toast due to type constraints,
     // but we use it in the notification list component)
     
-    return id;
+    return newNotification.id;
   }, [toast]);
 
   const markAsRead = useCallback((id: string) => {
