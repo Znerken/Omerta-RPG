@@ -1,8 +1,8 @@
 import { Express } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
-import { eq, and, or } from "drizzle-orm";
-import { insertUserFriendSchema, insertUserStatusSchema, userFriends } from "@shared/schema";
+import { eq, and, or, sql } from "drizzle-orm";
+import { insertUserFriendSchema, insertUserStatusSchema, userFriends, users } from "@shared/schema";
 import { z } from "zod";
 
 // Get reference to the notifyUser function from routes.ts
@@ -345,60 +345,73 @@ export function registerSocialRoutes(app: Express) {
         return res.status(400).json({ message: "Search query must be at least 3 characters" });
       }
       
-      // Get users matching the search query
-      const users = await storage.getAllUsers(1, 10, searchQuery);
-      const currentUserId = req.user.id;
+      console.log(`Searching for users with query: "${searchQuery}"`);
       
-      if (!users || users.length === 0) {
+      // Direct database query to find matching users
+      const matchingUsers = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          avatar: users.avatar,
+        })
+        .from(users)
+        .where(
+          sql`LOWER(${users.username}) LIKE LOWER(${'%' + searchQuery + '%'})`
+        )
+        .limit(10);
+      
+      console.log(`Found ${matchingUsers.length} users matching query`);
+      
+      if (matchingUsers.length === 0) {
         return res.json([]);
       }
       
-      // For each user, check if they are already a friend
-      const resultsWithFriendStatus = await Promise.all(users.map(async (user) => {
-        // Skip self in results
+      const currentUserId = req.user.id;
+      
+      // Get all friendship relations for the current user in a single query
+      const friendships = await db
+        .select()
+        .from(userFriends)
+        .where(
+          or(
+            eq(userFriends.userId, currentUserId),
+            eq(userFriends.friendId, currentUserId)
+          )
+        );
+      
+      console.log(`Found ${friendships.length} friendship records for user ${currentUserId}`);
+      
+      // Map results to include friendship status
+      const resultsWithFriendStatus = matchingUsers.map(user => {
+        // Skip self
         if (user.id === currentUserId) {
           return null;
         }
         
-        let friendStatus = null;
-        let isFriend = false;
+        // Find friendship record if any
+        const friendship = friendships.find(f => 
+          (f.userId === currentUserId && f.friendId === user.id) ||
+          (f.userId === user.id && f.friendId === currentUserId)
+        );
         
-        // Get friendship info if available
-        try {
-          // Try to get friendship directly
-          const friendship = await db
-            .select()
-            .from(userFriends)
-            .where(
-              or(
-                and(
-                  eq(userFriends.userId, currentUserId),
-                  eq(userFriends.friendId, user.id)
-                ),
-                and(
-                  eq(userFriends.userId, user.id),
-                  eq(userFriends.friendId, currentUserId)
-                )
-              )
-            ).limit(1);
-          
-          if (friendship && friendship.length > 0) {
-            isFriend = friendship[0].status === "accepted";
-            friendStatus = friendship[0].status;
-          }
-        } catch (error) {
-          console.error(`Error getting friendship status for user ${user.id}:`, error);
-        }
+        const isFriend = friendship ? friendship.status === "accepted" : false;
+        const friendStatus = friendship ? friendship.status : null;
         
-        // Return user with friendship info
         return {
           id: user.id,
           username: user.username,
           avatar: user.avatar,
-          isFriend: isFriend,
-          friendStatus: friendStatus
+          isFriend,
+          friendStatus,
+          status: {
+            id: 0,
+            userId: user.id,
+            status: "unknown", // We're not loading status here for performance
+            lastActive: null,
+            lastLocation: null
+          }
         };
-      }));
+      });
       
       // Filter out null results (self)
       const filteredResults = resultsWithFriendStatus.filter(u => u !== null);
