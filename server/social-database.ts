@@ -1,21 +1,18 @@
 import { db } from "./db";
-import { users, userStatus, userFriends } from "@shared/schema";
+import { users, userStatus, userFriends, friendRequests } from "@shared/schema";
 import { eq, and, or, desc, asc, isNull, ne } from "drizzle-orm";
-import { UserWithStatus, UserStatus, UserFriend, InsertUserStatus } from "@shared/schema";
+import { UserWithStatus, UserStatus, UserFriend, FriendRequest, InsertUserStatus, InsertFriendRequest, InsertUserFriend } from "@shared/schema";
 
 // Friend methods
 export async function getUserFriends(userId: number): Promise<UserWithStatus[]> {
-  // Find all accepted friend relationships (in either direction)
+  // Find all friendships (in either direction)
   const friendships = await db
     .select()
     .from(userFriends)
     .where(
-      and(
-        or(
-          eq(userFriends.userId, userId),
-          eq(userFriends.friendId, userId)
-        ),
-        eq(userFriends.status, "accepted")
+      or(
+        eq(userFriends.userId, userId),
+        eq(userFriends.friendId, userId)
       )
     );
 
@@ -42,24 +39,45 @@ export async function getUserFriends(userId: number): Promise<UserWithStatus[]> 
       userId => userId.in(users.id, friendIds)
     );
 
+  // Get friend requests for these users
+  const requests = await db
+    .select()
+    .from(friendRequests)
+    .where(
+      or(
+        and(
+          eq(friendRequests.senderId, userId),
+          // @ts-ignore - type is correct
+          receiverId => receiverId.in(friendRequests.receiverId, friendIds)
+        ),
+        and(
+          // @ts-ignore - type is correct
+          senderId => senderId.in(friendRequests.senderId, friendIds),
+          eq(friendRequests.receiverId, userId)
+        )
+      )
+    );
+
   // Format the results as UserWithStatus
   return friendUsers.map(({ user, status }) => {
-    // Determine if they're a friend and the status of the friendship
-    const friendship = friendships.find(fs => 
-      fs.userId === user.id || fs.friendId === user.id
+    // Find friend request if any
+    const request = requests.find(req => 
+      (req.senderId === userId && req.receiverId === user.id) ||
+      (req.senderId === user.id && req.receiverId === userId)
     );
 
     return {
       ...user,
       status: status || {
+        id: 0, // Placeholder ID for frontend
         userId: user.id,
         status: "offline",
         lastActive: new Date(),
         lastLocation: null
       },
       isFriend: true,
-      friendStatus: "accepted",
-      friendRequest: friendship
+      friendStatus: request ? request.status : undefined,
+      friendRequest: request || undefined
     };
   });
 }
@@ -68,7 +86,7 @@ export async function getFriendRequest(
   userId: number | null, 
   friendId: number | null, 
   requestId?: number
-): Promise<UserFriend | undefined> {
+): Promise<FriendRequest | undefined> {
   try {
     // Validate inputs
     if (requestId !== undefined && isNaN(requestId)) {
@@ -90,19 +108,25 @@ export async function getFriendRequest(
       // Find by ID
       const [request] = await db
         .select()
-        .from(userFriends)
-        .where(eq(userFriends.id, requestId));
+        .from(friendRequests)
+        .where(eq(friendRequests.id, requestId));
       
       return request;
     } else if (userId && friendId) {
-      // Find by user pair
+      // Find by user pair (check both directions)
       const [request] = await db
         .select()
-        .from(userFriends)
+        .from(friendRequests)
         .where(
-          and(
-            eq(userFriends.userId, userId),
-            eq(userFriends.friendId, friendId)
+          or(
+            and(
+              eq(friendRequests.senderId, userId),
+              eq(friendRequests.receiverId, friendId)
+            ),
+            and(
+              eq(friendRequests.senderId, friendId),
+              eq(friendRequests.receiverId, userId)
+            )
           )
         );
       
@@ -116,14 +140,14 @@ export async function getFriendRequest(
 }
 
 export async function sendFriendRequest(
-  userId: number, 
-  friendId: number
-): Promise<UserFriend> {
+  senderId: number, 
+  receiverId: number
+): Promise<FriendRequest> {
   const [request] = await db
-    .insert(userFriends)
+    .insert(friendRequests)
     .values({
-      userId,
-      friendId,
+      senderId,
+      receiverId,
       status: "pending",
       createdAt: new Date()
     })
@@ -135,25 +159,70 @@ export async function sendFriendRequest(
 export async function updateFriendRequest(
   requestId: number, 
   status: string
-): Promise<UserFriend | undefined> {
+): Promise<FriendRequest | undefined> {
   const [updated] = await db
-    .update(userFriends)
+    .update(friendRequests)
     .set({ 
       status,
       updatedAt: new Date()
     })
-    .where(eq(userFriends.id, requestId))
+    .where(eq(friendRequests.id, requestId))
     .returning();
   
   return updated;
+}
+
+// Accept a friend request and create friendship
+export async function acceptFriendRequest(requestId: number): Promise<{ request: FriendRequest, friendship: UserFriend }> {
+  // 1. Update the request status to 'accepted'
+  const [updatedRequest] = await db
+    .update(friendRequests)
+    .set({ 
+      status: "accepted",
+      updatedAt: new Date()
+    })
+    .where(eq(friendRequests.id, requestId))
+    .returning();
+  
+  if (!updatedRequest) {
+    throw new Error(`Friend request with ID ${requestId} not found`);
+  }
+  
+  // 2. Create the friendship record
+  const [friendship] = await db
+    .insert(userFriends)
+    .values({
+      userId: updatedRequest.senderId,
+      friendId: updatedRequest.receiverId,
+      createdAt: new Date()
+    })
+    .returning();
+  
+  return { request: updatedRequest, friendship };
 }
 
 export async function removeFriend(
   userId: number, 
   friendId: number
 ): Promise<boolean> {
-  // Handle bidirectional friendship - could be stored in either direction
-  const deleteResult = await db
+  // 1. Delete any friend requests between these users
+  await db
+    .delete(friendRequests)
+    .where(
+      or(
+        and(
+          eq(friendRequests.senderId, userId),
+          eq(friendRequests.receiverId, friendId)
+        ),
+        and(
+          eq(friendRequests.senderId, friendId),
+          eq(friendRequests.receiverId, userId)
+        )
+      )
+    );
+  
+  // 2. Delete the friendship
+  await db
     .delete(userFriends)
     .where(
       or(
@@ -168,7 +237,37 @@ export async function removeFriend(
       )
     );
   
-  return true; // Drizzle doesn't return count info easily
+  return true;
+}
+
+// Get pending friend requests for a user
+export async function getPendingFriendRequests(userId: number): Promise<FriendRequest[]> {
+  const requests = await db
+    .select()
+    .from(friendRequests)
+    .where(
+      and(
+        eq(friendRequests.receiverId, userId),
+        eq(friendRequests.status, "pending")
+      )
+    );
+  
+  return requests;
+}
+
+// Get sent friend requests by a user
+export async function getSentFriendRequests(userId: number): Promise<FriendRequest[]> {
+  const requests = await db
+    .select()
+    .from(friendRequests)
+    .where(
+      and(
+        eq(friendRequests.senderId, userId),
+        eq(friendRequests.status, "pending")
+      )
+    );
+  
+  return requests;
 }
 
 // Status methods
@@ -203,7 +302,7 @@ export async function getUserWithStatus(
     return undefined;
   }
   
-  // Get friendship status (if any)
+  // Check if they are friends
   const [friendship] = await db
     .select()
     .from(userFriends)
@@ -220,7 +319,36 @@ export async function getUserWithStatus(
       )
     );
   
-  const isFriend = friendship && friendship.status === "accepted";
+  // Check if there's a friend request
+  const [friendRequest] = await db
+    .select()
+    .from(friendRequests)
+    .where(
+      or(
+        and(
+          eq(friendRequests.senderId, currentUserId),
+          eq(friendRequests.receiverId, targetUserId)
+        ),
+        and(
+          eq(friendRequests.senderId, targetUserId),
+          eq(friendRequests.receiverId, currentUserId)
+        )
+      )
+    );
+  
+  const isFriend = !!friendship; // Existence of friendship record means they are friends
+  let friendStatus = undefined;
+  
+  if (isFriend) {
+    friendStatus = "friends";
+  } else if (friendRequest) {
+    // If there's a friend request, use its status
+    if (friendRequest.senderId === currentUserId) {
+      friendStatus = "sent";
+    } else {
+      friendStatus = "received";
+    }
+  }
   
   return {
     ...userResult.user,
@@ -232,8 +360,8 @@ export async function getUserWithStatus(
       lastLocation: null
     },
     isFriend,
-    friendStatus: friendship ? friendship.status : null,
-    friendRequest: friendship || null
+    friendStatus,
+    friendRequest: friendRequest
   };
 }
 
@@ -284,7 +412,7 @@ export async function getOnlineUsers(limit: number = 50): Promise<UserWithStatus
     ...user,
     status,
     isFriend: false, // Cannot determine from this query
-    friendStatus: null,
-    friendRequest: null
+    friendStatus: undefined, // Set to undefined to match our updated type
+    friendRequest: undefined // Set to undefined to match our updated type
   }));
 }
