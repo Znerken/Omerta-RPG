@@ -582,11 +582,91 @@ function LabsTab() {
   const [selectedDrug, setSelectedDrug] = useState<number | null>(null);
   const [productionQuantity, setProductionQuantity] = useState(1);
   
+  // Location options for drug labs with descriptions
+  const labLocations = [
+    "Abandoned Warehouse",
+    "Underground Bunker",
+    "Remote Farmhouse", 
+    "Suburban Basement",
+    "Industrial District",
+    "Forgotten Storage Unit",
+    "Hidden Mountain Cabin",
+    "Condemned Building",
+    "Offshore Platform",
+    "Desert Compound"
+  ];
+  
+  // Location descriptions for tooltips and UI elements
+  const locationDescriptions: Record<string, { description: string, riskModifier: number, productionModifier: number, icon: React.ReactNode }> = {
+    "Abandoned Warehouse": {
+      description: "An old warehouse in the industrial zone. Moderate risk, good production capacity.",
+      riskModifier: 0,
+      productionModifier: 10,
+      icon: <Warehouse className="h-4 w-4" />
+    },
+    "Underground Bunker": {
+      description: "Deep beneath the surface and well-hidden. Low risk but limited capacity.",
+      riskModifier: -15,
+      productionModifier: -5,
+      icon: <PackageCheck className="h-4 w-4" />
+    },
+    "Remote Farmhouse": {
+      description: "Far from the city, but harder to distribute. Low risk, low capacity.",
+      riskModifier: -10,
+      productionModifier: -10,
+      icon: <Home className="h-4 w-4" />
+    },
+    "Suburban Basement": {
+      description: "Hidden in plain sight. Moderate risk and moderate capacity.",
+      riskModifier: 5,
+      productionModifier: 0,
+      icon: <StairsDown className="h-4 w-4" />
+    },
+    "Industrial District": {
+      description: "Blends in with other businesses. Moderate risk, high capacity.",
+      riskModifier: 0,
+      productionModifier: 15,
+      icon: <Factory className="h-4 w-4" />
+    },
+    "Forgotten Storage Unit": {
+      description: "Anonymous and discreet. Low risk, moderate capacity.",
+      riskModifier: -5,
+      productionModifier: 5,
+      icon: <Package className="h-4 w-4" />
+    },
+    "Hidden Mountain Cabin": {
+      description: "Remote and difficult to access. Very low risk, very low capacity.",
+      riskModifier: -20,
+      productionModifier: -15,
+      icon: <Mountain className="h-4 w-4" />
+    },
+    "Condemned Building": {
+      description: "No one goes in, but looks suspicious. High risk, high capacity.",
+      riskModifier: 15,
+      productionModifier: 20,
+      icon: <Building className="h-4 w-4" />
+    },
+    "Offshore Platform": {
+      description: "International waters, high setup and running costs. Low risk, very high capacity.",
+      riskModifier: -10,
+      productionModifier: 25,
+      icon: <Anchor className="h-4 w-4" />
+    },
+    "Desert Compound": {
+      description: "Isolated and defensible, but attracts attention. Moderate risk, very high capacity.",
+      riskModifier: 5,
+      productionModifier: 30,
+      icon: <Nfc className="h-4 w-4" />
+    }
+  };
+  const [selectedLocation, setSelectedLocation] = useState(labLocations[0]);
+
   const handleCreateLab = () => {
     if (!newLabName) return;
     
     createLabMutation.mutate({
       name: newLabName,
+      location: selectedLocation,
       costToUpgrade: 5000, // Base cost for a new lab
     });
     
@@ -740,6 +820,56 @@ function LabsTab() {
                           onChange={(e) => setNewLabName(e.target.value)}
                           placeholder="Enter a discreet lab name..."
                         />
+                        
+                        <label htmlFor="lab-location" className="text-sm font-medium flex items-center mt-3">
+                          <MapPin className="h-4 w-4 mr-2 text-primary/70" />
+                          Location
+                        </label>
+                        <select
+                          id="lab-location"
+                          className="flex h-10 w-full rounded-md border border-primary/30 bg-black/60 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
+                          value={selectedLocation}
+                          onChange={(e) => setSelectedLocation(e.target.value)}
+                        >
+                          {labLocations.map((location) => (
+                            <option key={location} value={location}>{location}</option>
+                          ))}
+                        </select>
+                        
+                        {/* Location description */}
+                        <div className="mt-3 p-3 bg-black/30 rounded border border-primary/10 text-xs">
+                          <div className="flex items-center mb-2">
+                            <span className="mr-2">
+                              {locationDescriptions[selectedLocation].icon}
+                            </span>
+                            <span className="font-semibold">{selectedLocation}</span>
+                          </div>
+                          <p className="text-muted-foreground mb-2">{locationDescriptions[selectedLocation].description}</p>
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+                            <div className="flex items-center">
+                              <Gauge className="h-3 w-3 mr-1.5 text-red-400" />
+                              <span>
+                                Risk: 
+                                <span className={locationDescriptions[selectedLocation].riskModifier < 0 ? 'text-green-400' : 
+                                                   locationDescriptions[selectedLocation].riskModifier > 0 ? 'text-red-400' : 'text-yellow-400'}>
+                                  {' '}{locationDescriptions[selectedLocation].riskModifier > 0 ? '+' : ''}
+                                  {locationDescriptions[selectedLocation].riskModifier}%
+                                </span>
+                              </span>
+                            </div>
+                            <div className="flex items-center">
+                              <Rocket className="h-3 w-3 mr-1.5 text-blue-400" />
+                              <span>
+                                Production: 
+                                <span className={locationDescriptions[selectedLocation].productionModifier < 0 ? 'text-red-400' : 
+                                                  locationDescriptions[selectedLocation].productionModifier > 0 ? 'text-green-400' : 'text-yellow-400'}>
+                                  {' '}{locationDescriptions[selectedLocation].productionModifier > 0 ? '+' : ''}
+                                  {locationDescriptions[selectedLocation].productionModifier}%
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
@@ -815,6 +945,56 @@ function LabsTab() {
                         onChange={(e) => setNewLabName(e.target.value)}
                         placeholder="Enter a discreet lab name..."
                       />
+                      
+                      <label htmlFor="lab-location-first" className="text-sm font-medium flex items-center mt-3">
+                        <MapPin className="h-4 w-4 mr-2 text-primary/70" />
+                        Location
+                      </label>
+                      <select
+                        id="lab-location-first"
+                        className="flex h-10 w-full rounded-md border border-primary/30 bg-black/60 px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
+                        value={selectedLocation}
+                        onChange={(e) => setSelectedLocation(e.target.value)}
+                      >
+                        {labLocations.map((location) => (
+                          <option key={location} value={location}>{location}</option>
+                        ))}
+                      </select>
+                      
+                      {/* Location description */}
+                      <div className="mt-3 p-3 bg-black/30 rounded border border-primary/10 text-xs">
+                        <div className="flex items-center mb-2">
+                          <span className="mr-2">
+                            {locationDescriptions[selectedLocation].icon}
+                          </span>
+                          <span className="font-semibold">{selectedLocation}</span>
+                        </div>
+                        <p className="text-muted-foreground mb-2">{locationDescriptions[selectedLocation].description}</p>
+                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+                          <div className="flex items-center">
+                            <Gauge className="h-3 w-3 mr-1.5 text-red-400" />
+                            <span>
+                              Risk: 
+                              <span className={locationDescriptions[selectedLocation].riskModifier < 0 ? 'text-green-400' : 
+                                                locationDescriptions[selectedLocation].riskModifier > 0 ? 'text-red-400' : 'text-yellow-400'}>
+                                {' '}{locationDescriptions[selectedLocation].riskModifier > 0 ? '+' : ''}
+                                {locationDescriptions[selectedLocation].riskModifier}%
+                              </span>
+                            </span>
+                          </div>
+                          <div className="flex items-center">
+                            <Rocket className="h-3 w-3 mr-1.5 text-blue-400" />
+                            <span>
+                              Production: 
+                              <span className={locationDescriptions[selectedLocation].productionModifier < 0 ? 'text-red-400' : 
+                                                locationDescriptions[selectedLocation].productionModifier > 0 ? 'text-green-400' : 'text-yellow-400'}>
+                                {' '}{locationDescriptions[selectedLocation].productionModifier > 0 ? '+' : ''}
+                                {locationDescriptions[selectedLocation].productionModifier}%
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
