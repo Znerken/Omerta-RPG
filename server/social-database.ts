@@ -41,8 +41,9 @@ export async function getUserFriends(userId: number): Promise<UserWithStatus[]> 
       .leftJoin(userStatus, eq(users.id, userStatus.userId))
       .where(
         // Only include users in the friend IDs list
-        // @ts-ignore - type is correct
-        userId => userId.in(users.id, friendIds)
+        friendIds.length > 0 
+          ? { id: { in: friendIds } } 
+          : undefined
       );
 
     // Format the results as UserWithStatus

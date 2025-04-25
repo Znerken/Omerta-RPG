@@ -11,6 +11,20 @@ import {
   users 
 } from "@shared/schema";
 import { z } from "zod";
+import {
+  getUserFriends,
+  getPendingFriendRequests,
+  getSentFriendRequests,
+  getFriendRequest,
+  updateFriendRequest,
+  acceptFriendRequest,
+  removeFriend,
+  sendFriendRequest,
+  getUserStatus,
+  updateUserStatus,
+  createUserStatus,
+  getOnlineUsers
+} from "./social-database";
 
 // Get reference to the notifyUser function from routes.ts
 let notifyUserFn: (userId: number, event: string, data: any) => void;
@@ -38,7 +52,7 @@ export function registerSocialRoutes(app: Express) {
     
     try {
       const userId = req.user.id;
-      const friends = await storage.getUserFriends(userId);
+      const friends = await getUserFriends(userId);
       res.json(friends);
     } catch (error) {
       console.error("Error getting friends:", error);
@@ -52,7 +66,7 @@ export function registerSocialRoutes(app: Express) {
     
     try {
       const userId = req.user.id;
-      const pendingRequests = await storage.getPendingFriendRequests(userId);
+      const pendingRequests = await getPendingFriendRequests(userId);
       
       // Populate sender information
       const requestsWithSenders = await Promise.all(
@@ -82,7 +96,7 @@ export function registerSocialRoutes(app: Express) {
     
     try {
       const userId = req.user.id;
-      const sentRequests = await storage.getSentFriendRequests(userId);
+      const sentRequests = await getSentFriendRequests(userId);
       
       // Populate receiver information
       const requestsWithReceivers = await Promise.all(
@@ -322,7 +336,7 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Check if friend request already exists
-      const existingRequest = await storage.getFriendRequest(validatedData.senderId, validatedData.receiverId);
+      const existingRequest = await getFriendRequest(validatedData.senderId, validatedData.receiverId);
       if (existingRequest) {
         return res.status(400).json({ 
           message: "Friend request already exists", 
@@ -331,10 +345,10 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Check for reverse friend request (they already sent a request to current user)
-      const reverseRequest = await storage.getFriendRequest(validatedData.receiverId, validatedData.senderId);
+      const reverseRequest = await getFriendRequest(validatedData.receiverId, validatedData.senderId);
       if (reverseRequest && reverseRequest.status === "pending") {
         // Auto-accept by using our new acceptFriendRequest function
-        const result = await storage.acceptFriendRequest(reverseRequest.id);
+        const result = await acceptFriendRequest(reverseRequest.id);
         
         // Notify both users about the new friendship
         notifyUser(validatedData.senderId, "friend_accepted", {
@@ -357,7 +371,7 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Create new friend request
-      const friendRequest = await storage.sendFriendRequest(validatedData.senderId, validatedData.receiverId);
+      const friendRequest = await sendFriendRequest(validatedData.senderId, validatedData.receiverId);
       
       // Notify the target user
       notifyUser(validatedData.receiverId, "friend_request", {
@@ -394,7 +408,7 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Get the friend request
-      const friendRequest = await storage.getFriendRequest(null, null, requestId);
+      const friendRequest = await getFriendRequest(null, null, requestId);
       if (!friendRequest) {
         return res.status(404).json({ message: "Friend request not found" });
       }
@@ -406,7 +420,7 @@ export function registerSocialRoutes(app: Express) {
       
       if (status === "accepted") {
         // Accept the request - this creates the friendship record
-        const result = await storage.acceptFriendRequest(requestId);
+        const result = await acceptFriendRequest(requestId);
         
         // Notify the sender that request was accepted
         const sender = await storage.getUser(friendRequest.senderId);
@@ -425,7 +439,7 @@ export function registerSocialRoutes(app: Express) {
         });
       } else {
         // Just update the request status (rejected or blocked)
-        const updatedRequest = await storage.updateFriendRequest(requestId, status);
+        const updatedRequest = await updateFriendRequest(requestId, status);
         
         // Could notify the sender that request was rejected, but it's not always necessary
         
@@ -448,7 +462,7 @@ export function registerSocialRoutes(app: Express) {
       const requestId = parseInt(req.params.requestId);
       
       // Get the friend request
-      const friendRequest = await storage.getFriendRequest(null, null, requestId);
+      const friendRequest = await getFriendRequest(null, null, requestId);
       if (!friendRequest) {
         return res.status(404).json({ message: "Friend request not found" });
       }
@@ -490,7 +504,7 @@ export function registerSocialRoutes(app: Express) {
       const userId = req.user.id;
       const friendId = parseInt(req.params.friendId);
       
-      const removed = await storage.removeFriend(userId, friendId);
+      const removed = await removeFriend(userId, friendId);
       
       if (!removed) {
         return res.status(404).json({ message: "Friend relationship not found" });
