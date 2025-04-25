@@ -53,65 +53,39 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
-// Custom hook for drug production countdown timer with real-time updates
-function useProductionTimer(completesAt: string, startedAt: string) {
-  const [timer, setTimer] = useState({
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    progress: 0,
-    isCompleted: false
-  });
-
-  useEffect(() => {
-    const calculateTimeRemaining = () => {
-      const now = new Date();
-      const completionTime = new Date(completesAt);
-      const startTime = new Date(startedAt);
-      
-      // Check if completed
-      if (now >= completionTime) {
-        setTimer({
-          hours: 0,
-          minutes: 0,
-          seconds: 0,
-          progress: 100,
-          isCompleted: true
-        });
-        return;
-      }
-      
-      // Calculate remaining time
-      const msRemaining = Math.max(0, completionTime.getTime() - now.getTime());
-      const hours = Math.floor(msRemaining / (1000 * 60 * 60));
-      const minutes = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((msRemaining % (1000 * 60)) / 1000);
-      
-      // Calculate progress percentage
-      const totalDuration = completionTime.getTime() - startTime.getTime();
-      const elapsed = now.getTime() - startTime.getTime();
-      const progress = Math.min(100, Math.round((elapsed / totalDuration) * 100));
-      
-      setTimer({
-        hours,
-        minutes,
-        seconds,
-        progress,
-        isCompleted: false
-      });
-    };
-    
-    // Initial calculation
-    calculateTimeRemaining();
-    
-    // Update every second
-    const interval = setInterval(calculateTimeRemaining, 1000);
-    
-    // Cleanup on unmount
-    return () => clearInterval(interval);
-  }, [completesAt, startedAt]);
+// Pure utility function for timer calculations - no React hooks
+function calculateProductionTimer(completesAt: string, startedAt: string) {
+  const now = new Date();
+  const completionTime = new Date(completesAt);
+  const startTime = new Date(startedAt);
   
-  return timer;
+  // Check if completed
+  const isCompleted = now >= completionTime;
+  
+  // Calculate remaining time
+  const msRemaining = Math.max(0, completionTime.getTime() - now.getTime());
+  const hours = Math.floor(msRemaining / (1000 * 60 * 60));
+  const minutes = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((msRemaining % (1000 * 60)) / 1000);
+  
+  // Calculate progress percentage
+  const totalDuration = completionTime.getTime() - startTime.getTime();
+  const elapsed = now.getTime() - startTime.getTime();
+  const progress = Math.min(100, Math.round((elapsed / totalDuration) * 100));
+  
+  // Format countdown string
+  const countdown = isCompleted 
+    ? "Ready for collection!" 
+    : `${hours}h ${minutes}m ${seconds}s`;
+  
+  return {
+    hours,
+    minutes,
+    seconds,
+    progress,
+    isCompleted,
+    countdown
+  };
 }
 
 type Drug = {
