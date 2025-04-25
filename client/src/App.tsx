@@ -5,6 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
+import { MafiaLayout } from "@/components/layout/mafia-layout";
+import { useAuth } from "@/hooks/use-auth";
+
+// Pages
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
@@ -17,19 +21,82 @@ import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";
 import LeaderboardPage from "@/pages/leaderboard-page";
 
+// Protected route with layout wrapper
+function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
+  return (
+    <MafiaLayout>
+      <Component />
+    </MafiaLayout>
+  );
+}
+
 function Router() {
+  const { user } = useAuth();
+  
+  // Conditional rendering to avoid React hooks rule violations
+  if (user === undefined) {
+    return null; // Loading state
+  }
+  
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/" component={DashboardPage} />
-      <ProtectedRoute path="/profile" component={ProfilePage} />
-      <ProtectedRoute path="/crimes" component={CrimesPage} />
-      <ProtectedRoute path="/training" component={TrainingPage} />
-      <ProtectedRoute path="/gang" component={GangPage} />
-      <ProtectedRoute path="/jail" component={JailPage} />
-      <ProtectedRoute path="/inventory" component={InventoryPage} />
-      <ProtectedRoute path="/messages" component={MessagesPage} />
-      <ProtectedRoute path="/leaderboard" component={LeaderboardPage} />
+      
+      {/* Protected routes with layout */}
+      <Route path="/">
+        {() => (
+          <ProtectedRoute path="/" component={() => <ProtectedPage component={DashboardPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/profile">
+        {() => (
+          <ProtectedRoute path="/profile" component={() => <ProtectedPage component={ProfilePage} />} />
+        )}
+      </Route>
+      
+      <Route path="/crimes">
+        {() => (
+          <ProtectedRoute path="/crimes" component={() => <ProtectedPage component={CrimesPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/training">
+        {() => (
+          <ProtectedRoute path="/training" component={() => <ProtectedPage component={TrainingPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/gang">
+        {() => (
+          <ProtectedRoute path="/gang" component={() => <ProtectedPage component={GangPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/jail">
+        {() => (
+          <ProtectedRoute path="/jail" component={() => <ProtectedPage component={JailPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/inventory">
+        {() => (
+          <ProtectedRoute path="/inventory" component={() => <ProtectedPage component={InventoryPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/messages">
+        {() => (
+          <ProtectedRoute path="/messages" component={() => <ProtectedPage component={MessagesPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/leaderboard">
+        {() => (
+          <ProtectedRoute path="/leaderboard" component={() => <ProtectedPage component={LeaderboardPage} />} />
+        )}
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );
