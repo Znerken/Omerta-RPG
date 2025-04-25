@@ -62,13 +62,19 @@ export default function GangPage() {
   });
   
   // Fetch the gang member information directly from backend
-  const { data: gangMember, isLoading: gangMemberLoading } = useQuery({
+  const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: ["/api/user/profile"],
-    select: (data) => {
-      // Return the member information via the gangMember property (if exists)
-      return data?.gangMember;
-    }
   });
+  
+  // Log the profile data to debug
+  useEffect(() => {
+    if (userProfile) {
+      console.log("User Profile Data:", userProfile);
+    }
+  }, [userProfile]);
+  
+  // Get gang member information
+  const gangMember = userProfile?.gangMember;
   
   // Fetch gang details if user is in a gang
   const userGangId = gangMember?.gang?.id;
@@ -163,7 +169,7 @@ export default function GangPage() {
   const userGang = gangDetails || (gangMember?.gang ?? null);
   
   // Check if still loading
-  const isLoading = userLoading || gangsLoading || gangMemberLoading;
+  const isLoading = userLoading || gangsLoading || profileLoading;
   
   // If still loading, show loading state
   if (isLoading) {
