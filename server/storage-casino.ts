@@ -68,20 +68,41 @@ export class CasinoStorage {
   }
 
   async getUserBets(userId: number, limit: number = 10): Promise<CasinoBetWithDetails[]> {
-    return await db.query.casinoBets.findMany({
-      where: eq(casinoBets.userId, userId),
-      with: {
-        game: true,
-        user: {
-          columns: {
-            id: true,
-            username: true,
-          }
-        }
+    // Using direct SQL to bypass the bet_details column issue
+    const bets = await db.execute(sql`
+      SELECT 
+        cb.*,
+        cg.name as game_name,
+        cg.game_type as game_type,
+        u.id as user_id,
+        u.username as username
+      FROM casino_bets cb
+      JOIN casino_games cg ON cb.game_id = cg.id
+      JOIN users u ON cb.user_id = u.id
+      WHERE cb.user_id = ${userId}
+      ORDER BY cb.created_at DESC
+      LIMIT ${limit}
+    `);
+    
+    // Transform the result to match the expected structure
+    return bets.map((bet: any) => ({
+      id: bet.id,
+      userId: bet.user_id,
+      gameId: bet.game_id,
+      betAmount: bet.bet_amount,
+      status: bet.status,
+      result: bet.result,
+      createdAt: bet.created_at,
+      settledAt: bet.settled_at,
+      user: {
+        id: bet.user_id,
+        username: bet.username
       },
-      orderBy: [desc(casinoBets.createdAt)],
-      limit
-    });
+      game: {
+        name: bet.game_name,
+        type: bet.game_type
+      }
+    }));
   }
 
   async getRecentBets(limit: number = 10): Promise<CasinoBetWithDetails[]> {
@@ -186,12 +207,33 @@ export class CasinoStorage {
   }
 
   async getUserStats(userId: number): Promise<CasinoStat[]> {
-    return await db.query.casinoStats.findMany({
-      where: eq(casinoStats.userId, userId),
-      with: {
-        game: true,
+    // Using direct SQL to avoid schema mismatch issues
+    const stats = await db.execute(sql`
+      SELECT 
+        cs.*,
+        cg.name as game_name,
+        cg.game_type as game_type
+      FROM casino_stats cs
+      JOIN casino_games cg ON cs.game_id = cg.id
+      WHERE cs.user_id = ${userId}
+    `);
+    
+    // Transform the result to match the expected structure
+    return stats.map((stat: any) => ({
+      id: stat.id,
+      userId: stat.user_id,
+      gameId: stat.game_id,
+      totalBets: stat.total_bets,
+      totalWagered: stat.total_wagered,
+      totalWon: stat.total_won,
+      totalLost: stat.total_lost,
+      biggestWin: stat.biggest_win,
+      biggestLoss: stat.biggest_loss,
+      game: {
+        name: stat.game_name,
+        type: stat.game_type
       }
-    });
+    }));
   }
 
   async getTopWinners(limit: number = 10): Promise<any[]> {
