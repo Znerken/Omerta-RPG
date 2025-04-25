@@ -1,5 +1,6 @@
 import connectPg from "connect-pg-simple";
 import session from "express-session";
+import { SessionStore } from "express-session";
 import {
   User, InsertUser,
   Stat, InsertStat,
