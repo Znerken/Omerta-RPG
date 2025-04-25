@@ -635,7 +635,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
         lastActive: users.lastActive,
-        jailUntil: users.jailUntil,
+        jailTimeEnd: users.jailTimeEnd,
         rank: gangMembers.rank,
       })
       .from(gangMembers)
@@ -811,8 +811,8 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     const [user] = await db
       .update(users)
       .set({ 
-        jailUntil: null,
-        updatedAt: new Date()
+        jailTimeEnd: null,
+        isJailed: false
       })
       .where(eq(users.id, userId))
       .returning();
