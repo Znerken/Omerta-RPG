@@ -120,6 +120,11 @@ export function registerCasinoRoutes(app: Express) {
         return res.status(400).json({ error: "Insufficient funds to place this bet" });
       }
 
+      console.log('\n==== CASINO BET PROCESSING DEBUG ====');
+      console.log('Game:', game.name);
+      console.log('Bet Amount:', betAmount);
+      console.log('Bet Details:', JSON.stringify(betDetails, null, 2));
+      
       // Create pending bet
       const bet = await casinoStorage.createBet({
         userId: req.user.id,
@@ -128,25 +133,34 @@ export function registerCasinoRoutes(app: Express) {
         betDetails,
         status: 'pending',
       });
+      
+      console.log('Created Bet:', JSON.stringify(bet, null, 2));
 
       // Process the bet based on the game type
       let result;
       switch (game.name) {
         case 'Dice':
+          console.log('Processing Dice Game...');
           result = processDiceGame(betAmount, betDetails);
           break;
         case 'Slots':
+          console.log('Processing Slot Machine...');
           result = processSlotMachine(betAmount, betDetails);
           break;
         case 'Blackjack':
+          console.log('Processing Blackjack...');
           result = processBlackjack(betAmount, betDetails);
           break;
         case 'Roulette':
+          console.log('Processing Roulette...');
           result = processRoulette(betAmount, betDetails);
           break;
         default:
+          console.log('Unknown game type:', game.name);
           return res.status(400).json({ error: "Unknown game type" });
       }
+      
+      console.log('Game Result:', JSON.stringify(result, null, 2));
 
       // Update bet with result
       const status = result.win ? 'won' : 'lost';
