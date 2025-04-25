@@ -50,6 +50,33 @@ export default function ProfilePage() {
     queryKey: ["/api/crimes"],
   });
 
+  // Initialize all state variables at the top
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
+  const [bio, setBio] = useState("");
+  const [htmlProfile, setHtmlProfile] = useState("");
+  const [showAchievements, setShowAchievements] = useState(true);
+  const [profileTheme, setProfileTheme] = useState("dark");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  // Update state values when profile data loads
+  useEffect(() => {
+    if (userProfile) {
+      setBio(userProfile.bio || "");
+      setHtmlProfile(userProfile.htmlProfile || "");
+      setShowAchievements(userProfile.showAchievements !== false);
+      setProfileTheme(userProfile.profileTheme || "dark");
+      setAvatarPreview(userProfile.avatar || null);
+      setBannerPreview(userProfile.bannerImage || null);
+    }
+  }, [userProfile]);
+
   // Convert API crime history to activity items format
   const crimeActivities = crimeHistory?.map((crime: any) => {
     if (!crime.lastPerformed) return null;
@@ -129,20 +156,6 @@ export default function ProfilePage() {
   const { username, level, xp, cash, respect, stats } = userProfile;
   const nextLevelXp = userProfile.nextLevelXP || 100 * Math.pow(level, 2);
   const xpProgress = calculateLevelProgress(xp, nextLevelXp);
-
-  const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
-  const [bio, setBio] = useState(userProfile.bio || "");
-  const [htmlProfile, setHtmlProfile] = useState(userProfile.htmlProfile || "");
-  const [showAchievements, setShowAchievements] = useState(userProfile.showAchievements !== false);
-  const [profileTheme, setProfileTheme] = useState(userProfile.profileTheme || "dark");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(userProfile.avatar || null);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(userProfile.bannerImage || null);
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
   // Mutation for updating profile
   const updateProfileMutation = useMutation({
