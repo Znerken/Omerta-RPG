@@ -26,6 +26,16 @@ import {
   ThumbsUp,
   ArrowUpDown, // Using ArrowUpDown instead of Diff
   ServerCrash,
+  ShoppingBag,
+  Loader2,
+  BadgeInfo,
+  Shield,
+  Banknote,
+  FileSignature,
+  Factory,
+  Search,
+  Plus,
+  Minus
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -356,7 +366,7 @@ function InventoryTab() {
             <CardContent className="pt-10 pb-10 text-center relative z-10">
               <div className="flex flex-col items-center justify-center gap-4">
                 <div className="rounded-full bg-black/50 p-4 border border-primary/30">
-                  <PackageOpen className="h-10 w-10 text-primary/60" />
+                  <Package className="h-10 w-10 text-primary/60" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-1">Empty Inventory</h3>
@@ -661,63 +671,154 @@ function LabsTab() {
               ))}
               
               {/* Create new lab section */}
-              <Card className="border border-dashed">
-                <CardHeader>
-                  <CardTitle className="text-lg">Create New Lab</CardTitle>
-                  <CardDescription>Establish a new drug production facility</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-2">
-                      <label htmlFor="lab-name" className="text-sm font-medium">
-                        Lab Name
-                      </label>
-                      <input
-                        id="lab-name"
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        value={newLabName}
-                        onChange={(e) => setNewLabName(e.target.value)}
-                        placeholder="Enter lab name"
-                      />
+              <Card className="border-2 border-dashed border-primary/30 overflow-hidden bg-black/40 relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
+                
+                <CardHeader className="relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-gradient-to-br from-primary/30 to-primary/10 p-2">
+                      <FlaskConical className="h-5 w-5 text-primary" />
                     </div>
+                    <div>
+                      <CardTitle className="text-lg bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent">
+                        Create New Lab
+                      </CardTitle>
+                      <CardDescription>Establish a secure drug production facility</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="relative z-10">
+                  <div className="space-y-5">
+                    <div className="bg-black/50 p-4 rounded-md border border-primary/20">
+                      <div className="flex items-center mb-3">
+                        <BadgeInfo className="h-4 w-4 mr-2 text-primary/70" />
+                        <span className="text-xs text-muted-foreground">Establishing a lab requires careful planning and resources</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
+                        <div className="flex items-center bg-black/30 p-2 rounded">
+                          <Shield className="h-3.5 w-3.5 mr-1.5 text-blue-400/80" />
+                          <span>Security: Level 1</span>
+                        </div>
+                        <div className="flex items-center bg-black/30 p-2 rounded">
+                          <Package className="h-3.5 w-3.5 mr-1.5 text-amber-400/80" />
+                          <span>Capacity: 5 units</span>
+                        </div>
+                        <div className="flex items-center bg-black/30 p-2 rounded">
+                          <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-red-400/80" />
+                          <span>Risk: 25%</span>
+                        </div>
+                        <div className="flex items-center bg-black/30 p-2 rounded">
+                          <Banknote className="h-3.5 w-3.5 mr-1.5 text-green-400/80" />
+                          <span>Cost: $5,000</span>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <label htmlFor="lab-name" className="text-sm font-medium flex items-center">
+                          <FileSignature className="h-4 w-4 mr-2 text-primary/70" />
+                          Lab Name
+                        </label>
+                        <input
+                          id="lab-name"
+                          className="flex h-10 w-full rounded-md border border-primary/30 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
+                          value={newLabName}
+                          onChange={(e) => setNewLabName(e.target.value)}
+                          placeholder="Enter a discreet lab name..."
+                        />
+                      </div>
+                    </div>
+                    
                     <Button 
                       onClick={handleCreateLab} 
-                      className="w-full"
+                      className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20"
                       disabled={!newLabName || createLabMutation.isPending}
                     >
-                      Create Lab ($5,000)
+                      {createLabMutation.isPending ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Establishing Lab...</>
+                      ) : (
+                        <>Establish Lab ($5,000)</>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             </div>
           ) : (
-            <Card className="border border-dashed">
-              <CardHeader>
-                <CardTitle className="text-lg">No Labs Found</CardTitle>
-                <CardDescription>Create your first drug production facility</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 gap-2">
-                    <label htmlFor="lab-name" className="text-sm font-medium">
-                      Lab Name
-                    </label>
-                    <input
-                      id="lab-name"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={newLabName}
-                      onChange={(e) => setNewLabName(e.target.value)}
-                      placeholder="Enter lab name"
-                    />
+            <Card className="border-2 border-dashed border-primary/30 overflow-hidden bg-black/40 relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
+              
+              <CardHeader className="relative z-10">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-gradient-to-br from-primary/30 to-primary/10 p-2">
+                    <Factory className="h-5 w-5 text-primary" />
                   </div>
-                  <Button 
-                    onClick={handleCreateLab} 
-                    className="w-full"
-                    disabled={!newLabName || createLabMutation.isPending}
-                  >
-                    Create Lab ($5,000)
-                  </Button>
+                  <div>
+                    <CardTitle className="text-lg bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent">
+                      Your First Lab
+                    </CardTitle>
+                    <CardDescription>Start your drug empire with a secure production facility</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="relative z-10">
+                <div className="space-y-5">
+                  <div className="bg-black/50 p-4 rounded-md border border-primary/20">
+                    <div className="flex items-center mb-3">
+                      <AlertCircle className="h-4 w-4 mr-2 text-primary/70" />
+                      <span className="text-xs text-muted-foreground">A drug lab is required to begin production operations</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-4 text-xs">
+                      <div className="flex items-center bg-black/30 p-2 rounded">
+                        <Shield className="h-3.5 w-3.5 mr-1.5 text-blue-400/80" />
+                        <span>Security: Level 1</span>
+                      </div>
+                      <div className="flex items-center bg-black/30 p-2 rounded">
+                        <Package className="h-3.5 w-3.5 mr-1.5 text-amber-400/80" />
+                        <span>Capacity: 5 units</span>
+                      </div>
+                      <div className="flex items-center bg-black/30 p-2 rounded">
+                        <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-red-400/80" />
+                        <span>Risk: 25%</span>
+                      </div>
+                      <div className="flex items-center bg-black/30 p-2 rounded">
+                        <Banknote className="h-3.5 w-3.5 mr-1.5 text-green-400/80" />
+                        <span>Cost: $5,000</span>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <label htmlFor="lab-name-first" className="text-sm font-medium flex items-center">
+                        <FileSignature className="h-4 w-4 mr-2 text-primary/70" />
+                        Lab Name
+                      </label>
+                      <input
+                        id="lab-name-first"
+                        className="flex h-10 w-full rounded-md border border-primary/30 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
+                        value={newLabName}
+                        onChange={(e) => setNewLabName(e.target.value)}
+                        placeholder="Enter a discreet lab name..."
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 opacity-30 blur-lg"></div>
+                    <Button 
+                      onClick={handleCreateLab} 
+                      className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20 relative z-10"
+                      disabled={!newLabName || createLabMutation.isPending}
+                    >
+                      {createLabMutation.isPending ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Establishing Lab...</>
+                      ) : (
+                        <>Establish Lab ($5,000)</>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -753,55 +854,111 @@ function LabsTab() {
             </div>
           ) : (
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Start New Production</CardTitle>
+              <Card className="border-2 border-primary/30 overflow-hidden bg-black/40 relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
+                
+                <CardHeader className="relative z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-full bg-gradient-to-br from-primary/30 to-primary/10 p-2">
+                      <FlaskConical className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent">
+                        Start New Production
+                      </CardTitle>
+                      <CardDescription>Begin producing drugs in this lab</CardDescription>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="drug-select" className="text-sm font-medium block mb-2">
-                          Select Drug
-                        </label>
-                        <select
-                          id="drug-select"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          value={selectedDrug || ''}
-                          onChange={(e) => setSelectedDrug(parseInt(e.target.value))}
-                        >
-                          <option value="">Select a drug</option>
-                          {allDrugs?.map((drug) => (
-                            <option key={drug.id} value={drug.id}>
-                              {drug.name} (Risk Level: {drug.riskLevel})
-                            </option>
-                          ))}
-                        </select>
+                
+                <CardContent className="pb-4 relative z-10">
+                  <div className="space-y-5">
+                    <div className="bg-black/50 p-4 rounded-md border border-primary/20">
+                      <div className="flex items-center mb-3">
+                        <BadgeInfo className="h-4 w-4 mr-2 text-primary/70" />
+                        <span className="text-xs text-muted-foreground">Select a drug and quantity to begin production</span>
                       </div>
                       
-                      <div>
-                        <label htmlFor="quantity" className="text-sm font-medium block mb-2">
-                          Quantity
-                        </label>
-                        <input
-                          id="quantity"
-                          type="number"
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          value={productionQuantity}
-                          onChange={(e) => setProductionQuantity(parseInt(e.target.value))}
-                          min={1}
-                          max={10}
-                        />
+                      <div className="space-y-4">
+                        <div className="space-y-3">
+                          <label htmlFor="drug-select" className="text-sm font-medium flex items-center">
+                            <Pill className="h-4 w-4 mr-2 text-primary/70" />
+                            Select Drug
+                          </label>
+                          <select
+                            id="drug-select"
+                            className="flex h-10 w-full rounded-md border border-primary/30 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
+                            value={selectedDrug || ''}
+                            onChange={(e) => setSelectedDrug(parseInt(e.target.value))}
+                          >
+                            <option value="">Select a drug to produce</option>
+                            {allDrugs?.map((drug) => (
+                              <option key={drug.id} value={drug.id}>
+                                {drug.name} (Risk: {drug.riskLevel} | Base Price: ${drug.basePrice})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <label htmlFor="quantity" className="text-sm font-medium flex items-center">
+                            <Package className="h-4 w-4 mr-2 text-primary/70" />
+                            Production Quantity
+                          </label>
+                          <div className="flex items-center">
+                            <input
+                              id="quantity"
+                              type="number"
+                              className="flex h-10 w-full rounded-md border border-primary/30 bg-black/60 px-3 py-2 text-sm text-white placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:cursor-not-allowed disabled:opacity-50"
+                              value={productionQuantity}
+                              onChange={(e) => setProductionQuantity(parseInt(e.target.value) || 1)}
+                              min={1}
+                              max={10}
+                            />
+                            <div className="flex flex-col ml-3 space-y-1">
+                              <Button 
+                                size="icon" 
+                                variant="outline" 
+                                className="h-5 w-5 rounded-sm"
+                                onClick={() => setProductionQuantity(Math.min(10, productionQuantity + 1))}
+                              >
+                                <span className="sr-only">Increase</span>
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                size="icon" 
+                                variant="outline" 
+                                className="h-5 w-5 rounded-sm"
+                                onClick={() => setProductionQuantity(Math.max(1, productionQuantity - 1))}
+                                disabled={productionQuantity <= 1}
+                              >
+                                <span className="sr-only">Decrease</span>
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center">
+                            <AlertCircle className="h-3 w-3 mr-1.5" />
+                            Producing more units increases risk but improves efficiency
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
-                    <Button 
-                      onClick={handleStartProduction} 
-                      className="w-full"
-                      disabled={!selectedDrug || startProductionMutation.isPending}
-                    >
-                      Start Production
-                    </Button>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 opacity-30 blur-lg"></div>
+                      <Button 
+                        onClick={handleStartProduction} 
+                        className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/20 relative z-10"
+                        disabled={!selectedDrug || startProductionMutation.isPending}
+                      >
+                        {startProductionMutation.isPending ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting Production...</>
+                        ) : (
+                          <>Start Drug Production</>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
