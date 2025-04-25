@@ -20,6 +20,7 @@ import JailPage from "@/pages/jail-page";
 import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";
 import LeaderboardPage from "@/pages/leaderboard-page";
+import BankingPage from "@/pages/banking-page";
 
 // Protected route with layout wrapper
 function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
@@ -94,6 +95,12 @@ function Router() {
       <Route path="/leaderboard">
         {() => (
           <ProtectedRoute path="/leaderboard" component={() => <ProtectedPage component={LeaderboardPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/banking">
+        {() => (
+          <ProtectedRoute path="/banking" component={() => <ProtectedPage component={BankingPage} />} />
         )}
       </Route>
       
