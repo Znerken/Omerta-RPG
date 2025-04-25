@@ -585,7 +585,7 @@ export default function GangPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between bg-gray-900/30 rounded p-2">
                     <div className="flex items-center">
-                      <Badge className="bg-amber-900/20 border-amber-800/30 text-amber-400 mr-2">Leader</Badge>
+                      <Badge className="bg-amber-900/20 border-amber-800/30 text-amber-400 mr-2">Boss</Badge>
                     </div>
                     <span className="text-gray-400">Full control of gang</span>
                   </div>
@@ -676,7 +676,7 @@ export default function GangPage() {
 // Helper functions
 function getRankColorClass(rank: string): string {
   switch (rank) {
-    case "Leader":
+    case "Boss":
       return "bg-amber-900/20 border-amber-800/30 text-amber-400";
     case "Underboss":
       return "bg-purple-900/20 border-purple-800/30 text-purple-400";
@@ -689,7 +689,7 @@ function getRankColorClass(rank: string): string {
 
 function getRankIcon(rank: string) {
   switch (rank) {
-    case "Leader":
+    case "Boss":
       return <Crown className="h-3.5 w-3.5 mr-1.5" />;
     case "Underboss":
       return <Shield className="h-3.5 w-3.5 mr-1.5" />;
