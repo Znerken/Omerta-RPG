@@ -297,7 +297,7 @@ export default function ProfilePage() {
         title="Your Profile" 
         icon={<User className="h-5 w-5" />}
         description="View your character stats and activity"
-        action={
+        actions={
           isEditing ? (
             <div className="flex gap-2">
               <Button
