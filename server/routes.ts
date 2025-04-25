@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
+import { registerBankingRoutes } from "./banking-routes";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { calculateLevelXP } from "../shared/gameUtils";
@@ -9,6 +10,9 @@ import { calculateLevelXP } from "../shared/gameUtils";
 export async function registerRoutes(app: Express): Promise<Server> {
   // sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
+  
+  // Register banking and economy routes
+  registerBankingRoutes(app);
 
   // Create HTTP server
   const httpServer = createServer(app);
