@@ -161,6 +161,11 @@ export const NotificationList: React.FC = () => {
       }
       
       // For all other friend notifications
+      if (!notification.data || !notification.data.userId || !notification.data.username) {
+        console.error("Invalid notification data:", notification);
+        return null;
+      }
+      
       return (
         <FriendNotification
           key={notification.id}

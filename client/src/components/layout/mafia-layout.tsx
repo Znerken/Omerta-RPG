@@ -273,8 +273,16 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           
-          {/* Online Friends Section (Placeholder) */}
+          {/* Connection Status */}
           <div className="mt-8">
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">Connection Status</h3>
+            <div className="flex justify-center mb-4">
+              <ConnectionStatus />
+            </div>
+          </div>
+          
+          {/* Online Friends Section */}
+          <div className="mt-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-2">Online Friends</h3>
             <div className="p-4 border border-border rounded-md bg-card/50">
               <p className="text-sm text-center text-muted-foreground py-6">

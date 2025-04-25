@@ -171,7 +171,7 @@ export function registerSocialRoutes(app: Express) {
         );
       
       // Get all friend requests for the current user
-      const friendRequests = await db
+      const userFriendRequests = await db
         .select()
         .from(friendRequests)
         .where(
@@ -181,7 +181,7 @@ export function registerSocialRoutes(app: Express) {
           )
         );
       
-      console.log(`Found ${friendships.length} friendship records and ${friendRequests.length} friend requests for user ${currentUserId}`);
+      console.log(`Found ${friendships.length} friendship records and ${userFriendRequests.length} friend requests for user ${currentUserId}`);
       
       // Map results to include friendship status
       const resultsWithFriendStatus = matchingUsers.map(user => {

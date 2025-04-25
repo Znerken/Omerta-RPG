@@ -38,13 +38,15 @@ export const FriendNotification: React.FC<FriendNotificationProps> = ({
   };
 
   const getMessage = () => {
+    if (!username) return "Unknown user";
+    
     switch (type) {
       case "friend_accepted":
         return `${username} has accepted your friend request.`;
       case "friend_removed":
         return `${username} has removed you from their friends list.`;
       case "friend_status":
-        return `${username} is now ${status}.`;
+        return `${username} is now ${status || 'offline'}.`;
       default:
         return "";
     }
@@ -70,7 +72,7 @@ export const FriendNotification: React.FC<FriendNotificationProps> = ({
             <h4 className="ml-2 text-sm font-medium">{getTitle()}</h4>
           </div>
           <div className="text-xs text-muted-foreground">
-            {format(timestamp, 'HH:mm')}
+            {timestamp ? format(timestamp, 'HH:mm') : 'now'}
           </div>
         </div>
         <Separator className="my-2" />
@@ -78,7 +80,7 @@ export const FriendNotification: React.FC<FriendNotificationProps> = ({
         <div className="flex items-center gap-3 mb-2">
           <Avatar className="h-8 w-8">
             <AvatarImage src={avatar || undefined} />
-            <AvatarFallback>{username.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{username && username.charAt(0).toUpperCase() || '?'}</AvatarFallback>
           </Avatar>
           <p className="text-sm">{getMessage()}</p>
         </div>
