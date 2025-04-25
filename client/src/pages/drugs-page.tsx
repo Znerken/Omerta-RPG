@@ -494,10 +494,10 @@ function LabsTab() {
   });
   
   // Only fetch productions if we have an active lab
-  const { data: productions, isLoading: productionsLoading } = useQuery<Production[]>({
+  const { data: productions = [], isLoading: productionsLoading } = useQuery<Production[]>({
     queryKey: ['/api/user/drug-labs', activeLab, 'production'],
     enabled: activeLab !== null,
-    // Add a default empty array to avoid null references
+    // Added default empty array to avoid null references
     placeholderData: [],
   });
   
@@ -704,7 +704,7 @@ function LabsTab() {
   
   // Make sure productions is defined before we try to filter it
   const completedProductions = productions ? productions.filter(p => {
-    if (!p || !p.completesAt) return false;
+    if (!p || !p.completesAt || !p.drug) return false;
     const completesAt = new Date(p.completesAt);
     return !p.isCompleted && completesAt <= new Date();
   }) : [];
@@ -1197,7 +1197,7 @@ function LabsTab() {
                 
                 {productions && productions.length > 0 ? (
                   <div className="space-y-4">
-                    {productions.filter(p => p && !p.isCompleted).map((production) => {
+                    {productions.filter(p => p && !p.isCompleted && p.drug).map((production) => {
                       const now = new Date();
                       const completesAt = new Date(production.completesAt);
                       const isCompleted = completesAt <= now;
@@ -1236,7 +1236,7 @@ function LabsTab() {
                               </div>
                               <div>
                                 <CardTitle className="text-lg bg-gradient-to-r from-white to-primary/80 bg-clip-text text-transparent">
-                                  {production.drug.name} <span className="text-sm font-normal text-white">x{production.quantity}</span>
+                                  {production.drug?.name || "Unknown Drug"} <span className="text-sm font-normal text-white">x{production.quantity}</span>
                                 </CardTitle>
                                 <div className="flex items-center text-xs text-muted-foreground">
                                   <Clock className="h-3 w-3 mr-1.5" />
