@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CrimeCard } from "@/components/crime/CrimeCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ActivityTable } from "@/components/activity/ActivityTable";
+import { PageHeader } from "@/components/ui/page-header";
 import { Briefcase, AlertCircle, ChevronRight, Clock, DollarSign, Info, Award, Loader2 } from "lucide-react";
 
 export default function CrimesPage() {
@@ -45,7 +45,12 @@ export default function CrimesPage() {
   })).sort((a: any, b: any) => b.timestamp.getTime() - a.timestamp.getTime());
 
   return (
-    <MainLayout title="Crimes">
+    <>
+      <PageHeader 
+        title="Crimes" 
+        icon={<Briefcase className="h-5 w-5" />}
+        description="Commit crimes to earn cash and respect in the criminal underworld"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="bg-dark-surface mb-6">
@@ -241,6 +246,6 @@ export default function CrimesPage() {
           </Card>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }
