@@ -850,6 +850,118 @@ export default function BankingPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Send Money Dialog */}
+      <Dialog open={isSendMoneyOpen} onOpenChange={setIsSendMoneyOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Money to User</DialogTitle>
+            <DialogDescription>
+              Send money to another player in the game.
+            </DialogDescription>
+          </DialogHeader>
+
+          <Form {...sendMoneyForm}>
+            <form onSubmit={sendMoneyForm.handleSubmit((data) => sendMoneyMutation.mutate(data))} className="space-y-4">
+              <FormField
+                control={sendMoneyForm.control}
+                name="accountId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>From Account</FormLabel>
+                    <Select
+                      onValueChange={(value: string) => field.onChange(parseInt(value))}
+                      defaultValue={selectedAccountId?.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an account" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {accounts?.map((account) => (
+                          <SelectItem key={account.id} value={account.id.toString()}>
+                            {accountTypeNames[account.accountType as keyof typeof accountTypeNames]} - {formatCurrency(account.balance)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={sendMoneyForm.control}
+                name="recipientUsername"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Recipient Username</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Enter recipient's username"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      The username of the player you want to send money to.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={sendMoneyForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                        value={field.value}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {sendMoneyForm.watch("accountId") && accounts?.find(a => a.id === sendMoneyForm.watch("accountId"))?.balance > 0 && (
+                        <>Available balance: {formatCurrency(accounts?.find(a => a.id === sendMoneyForm.watch("accountId"))?.balance || 0)}</>
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={sendMoneyForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Message (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Add a message for the recipient"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button type="submit" disabled={sendMoneyMutation.isPending}>
+                  {sendMoneyMutation.isPending ? "Sending..." : "Send Money"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
