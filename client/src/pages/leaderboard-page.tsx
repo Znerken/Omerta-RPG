@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/hooks/use-auth";
 import { Trophy, DollarSign, Star, Users, Info, TrendingUp, Calendar, RefreshCcw } from "lucide-react";
 import { useState } from "react";
@@ -42,7 +42,12 @@ export default function LeaderboardPage() {
   const userRespectRank = findUserRank(respectLeaderboard);
 
   return (
-    <MainLayout title="Leaderboards">
+    <>
+      <PageHeader 
+        title="Leaderboards" 
+        icon={<Trophy className="h-5 w-5" />}
+        description="See who's on top in the mafia world"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="bg-dark-surface mb-6">
@@ -249,6 +254,6 @@ export default function LeaderboardPage() {
           </Card>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }

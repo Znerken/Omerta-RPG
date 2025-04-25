@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageList } from "@/components/messages/MessageList";
 import { MessageComposer } from "@/components/messages/MessageComposer";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,6 +18,7 @@ import { getInitials, formatRelativeTime } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Mail } from "lucide-react";
 import { 
   MessageSquare, 
   Users, 
@@ -148,7 +149,12 @@ export default function MessagesPage() {
     : [];
 
   return (
-    <MainLayout title="Messages">
+    <>
+      <PageHeader 
+        title="Messages" 
+        icon={<Mail className="h-5 w-5" />}
+        description="Communicate with other criminals"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Card className="bg-dark-surface mb-6">
@@ -477,6 +483,6 @@ export default function MessagesPage() {
           </Card>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { GangCard } from "@/components/gang/GangCard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -105,11 +105,16 @@ export default function GangPage() {
 
   if (profileLoading || gangsLoading) {
     return (
-      <MainLayout title="Gangs">
+      <>
+        <PageHeader 
+          title="Gangs" 
+          icon={<Users className="h-5 w-5" />}
+          description="Join forces with other criminals"
+        />
         <div className="flex items-center justify-center h-96">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
-      </MainLayout>
+      </>
     );
   }
 
@@ -118,7 +123,12 @@ export default function GangPage() {
   const userGangRank = userProfile?.gangRank;
 
   return (
-    <MainLayout title="Gangs">
+    <>
+      <PageHeader 
+        title="Gangs" 
+        icon={<Users className="h-5 w-5" />}
+        description={isInGang ? `Member of ${userGang.name}` : "Join forces with other criminals"}
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           {isInGang ? (
@@ -403,6 +413,6 @@ export default function GangPage() {
           )}
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }

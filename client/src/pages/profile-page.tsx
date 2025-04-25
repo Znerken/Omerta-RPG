@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ActivityTable } from "@/components/activity/ActivityTable";
+import { PageHeader } from "@/components/ui/page-header";
 import { 
   User, 
   DollarSign, 
@@ -74,11 +74,38 @@ export default function ProfilePage() {
   );
 
   if (profileLoading) {
-    return <MainLayout title="Your Profile">Loading profile...</MainLayout>;
+    return (
+      <>
+        <PageHeader 
+          title="Your Profile" 
+          icon={<User className="h-5 w-5" />}
+          description="View your character stats and activity"
+        />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading profile data...</p>
+          </div>
+        </div>
+      </>
+    );
   }
 
   if (!userProfile) {
-    return <MainLayout title="Your Profile">Failed to load profile data</MainLayout>;
+    return (
+      <>
+        <PageHeader 
+          title="Your Profile" 
+          icon={<User className="h-5 w-5" />}
+          description="View your character stats and activity"
+        />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-red-400">Failed to load profile data</p>
+          </div>
+        </div>
+      </>
+    );
   }
 
   const { username, level, xp, cash, respect, stats } = userProfile;
@@ -86,7 +113,12 @@ export default function ProfilePage() {
   const xpProgress = calculateLevelProgress(xp, nextLevelXp);
 
   return (
-    <MainLayout title="Your Profile">
+    <>
+      <PageHeader 
+        title="Your Profile" 
+        icon={<User className="h-5 w-5" />}
+        description="View your character stats and activity"
+      />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Profile Summary */}
         <div className="lg:col-span-1 space-y-6">
@@ -320,6 +352,6 @@ export default function ProfilePage() {
           </Card>
         </div>
       </div>
-    </MainLayout>
+    </>
   );
 }
