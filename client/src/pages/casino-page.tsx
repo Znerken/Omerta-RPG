@@ -71,7 +71,7 @@ import {
   ArrowUp, 
   ArrowDown, 
   SquareStack, 
-  CircleDot, 
+  Circle, 
   Hand, 
   Scissors,
   TrendingUp, 
@@ -1162,7 +1162,7 @@ export default function CasinoPage() {
                         </SelectItem>
                         <SelectItem value="odd">
                           <div className="flex items-center">
-                            <CircleDot className="h-4 w-4 mr-2 text-amber-500" />
+                            <Circle className="h-4 w-4 mr-2 text-amber-500" />
                             <span>Odd (1:1)</span>
                           </div>
                         </SelectItem>

@@ -801,10 +801,10 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       .select()
       .from(users)
       .where(and(
-        sql`${users.jailUntil} IS NOT NULL`,
-        sql`${users.jailUntil} > ${now}`
+        sql`${users.jailTimeEnd} IS NOT NULL`,
+        sql`${users.jailTimeEnd} > ${now}`
       ))
-      .orderBy(desc(users.jailUntil));
+      .orderBy(desc(users.jailTimeEnd));
   }
   
   async releaseFromJail(userId: number): Promise<User | undefined> {

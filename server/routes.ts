@@ -50,8 +50,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Broadcast to all connected clients
   function broadcast(type: string, data: any) {
+    const WebSocket = require('ws');
     wss.clients.forEach(client => {
-      if (client.readyState === 1) { // WebSocket.OPEN
+      if (client.readyState === WebSocket.OPEN) {
         client.send(JSON.stringify({ type, data }));
       }
     });
