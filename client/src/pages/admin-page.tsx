@@ -48,7 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp } from "lucide-react";
+import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy } from "lucide-react";
 import PageHeader from "../components/layout/page-header";
 import { PageSection } from "../components/layout/page-section";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -1376,6 +1376,85 @@ export default function AdminPage() {
                     </>
                   ) : (
                     "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Grant Achievement Dialog */}
+      <Dialog open={achievementDialogOpen} onOpenChange={setAchievementDialogOpen}>
+        <DialogContent className="bg-dark-surface border-gray-700">
+          <DialogHeader>
+            <DialogTitle>Grant Achievement</DialogTitle>
+            <DialogDescription>
+              Award an achievement to the user
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...achievementForm}>
+            <form onSubmit={achievementForm.handleSubmit(onGrantAchievementSubmit)} className="space-y-4">
+              <FormField
+                control={achievementForm.control}
+                name="achievementId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Achievement</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value ? field.value.toString() : ""}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-dark-lighter border-gray-700">
+                          <SelectValue placeholder="Select achievement" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-dark-surface border-gray-700 max-h-[300px]">
+                        {isAchievementsLoading ? (
+                          <div className="flex items-center justify-center p-4">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          </div>
+                        ) : achievements && achievements.length > 0 ? (
+                          achievements.map((achievement: any) => (
+                            <SelectItem 
+                              key={achievement.id} 
+                              value={achievement.id.toString()}
+                            >
+                              {achievement.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-center text-sm text-gray-400">No achievements available</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setAchievementDialogOpen(false)}
+                  className="bg-dark-lighter"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-primary hover:bg-primary/80"
+                  disabled={grantAchievementMutation.isPending}
+                >
+                  {grantAchievementMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                    </>
+                  ) : (
+                    "Grant Achievement"
                   )}
                 </Button>
               </DialogFooter>
