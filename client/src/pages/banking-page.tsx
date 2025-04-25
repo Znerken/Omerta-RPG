@@ -49,7 +49,7 @@ import { Separator } from "@/components/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { BanknoteIcon, ArrowUpIcon, ArrowDownIcon, ArrowRightLeftIcon, PlusIcon } from "lucide-react";
+import { BanknoteIcon, ArrowUpIcon, ArrowDownIcon, ArrowRightLeftIcon, PlusIcon, SendIcon } from "lucide-react";
 
 // Define schemas for the forms
 const createAccountSchema = z.object({
@@ -71,6 +71,13 @@ const transferSchema = z.object({
   fromAccountId: z.number().positive(),
   toAccountId: z.number().positive(),
   amount: z.number().positive(),
+  description: z.string().optional(),
+});
+
+const sendMoneySchema = z.object({
+  accountId: z.number().positive(),
+  recipientUsername: z.string().min(1, "Recipient username is required"),
+  amount: z.number().positive("Amount must be a positive number"),
   description: z.string().optional(),
 });
 
@@ -109,6 +116,7 @@ export default function BankingPage() {
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isSendMoneyOpen, setIsSendMoneyOpen] = useState(false);
 
   // Query for fetching bank accounts
   const { data: accounts, isLoading: accountsLoading } = useQuery<BankAccount[]>({
@@ -269,6 +277,42 @@ export default function BankingPage() {
       });
     },
   });
+  
+  // Form for sending money to other users
+  const sendMoneyForm = useForm<z.infer<typeof sendMoneySchema>>({
+    resolver: zodResolver(sendMoneySchema),
+    defaultValues: {
+      accountId: 0,
+      recipientUsername: "",
+      amount: 0,
+      description: "",
+    },
+  });
+  
+  // Mutation for sending money to other users
+  const sendMoneyMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof sendMoneySchema>) => {
+      const res = await apiRequest("POST", "/api/banking/send-money", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/banking/accounts", sendMoneyForm.getValues().accountId] });
+      setIsSendMoneyOpen(false);
+      sendMoneyForm.reset();
+      toast({
+        title: "Payment Successful",
+        description: "Money has been sent successfully to the recipient.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to send money",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Handle account selection
   const handleAccountSelect = (accountId: number) => {
@@ -368,7 +412,7 @@ export default function BankingPage() {
                     <div className="text-sm text-muted-foreground">Balance</div>
                     <div className="text-3xl font-bold">{formatCurrency(accountDetails.balance)}</div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button variant="outline" onClick={() => setIsDepositOpen(true)}>
                       <ArrowDownIcon className="mr-2 h-4 w-4" />
                       Deposit
@@ -380,6 +424,13 @@ export default function BankingPage() {
                     <Button variant="outline" onClick={() => setIsTransferOpen(true)}>
                       <ArrowRightLeftIcon className="mr-2 h-4 w-4" />
                       Transfer
+                    </Button>
+                    <Button variant="outline" onClick={() => {
+                      sendMoneyForm.setValue("accountId", selectedAccountId!);
+                      setIsSendMoneyOpen(true);
+                    }}>
+                      <SendIcon className="mr-2 h-4 w-4" />
+                      Send Money
                     </Button>
                   </div>
                 </div>

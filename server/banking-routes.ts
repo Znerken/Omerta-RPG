@@ -3,6 +3,14 @@ import { storage } from "./storage";
 import * as z from "zod";
 import { insertBankAccountSchema } from "../shared/schema-economy";
 
+// Validate send money schema
+const sendMoneySchema = z.object({
+  accountId: z.number(),
+  recipientUsername: z.string().min(1),
+  amount: z.number().positive(),
+  description: z.string().optional()
+});
+
 export function registerBankingRoutes(app: Express) {
   // Get user's bank accounts
   app.get("/api/banking/accounts", async (req: Request, res: Response) => {
@@ -280,6 +288,118 @@ export function registerBankingRoutes(app: Express) {
     } catch (error) {
       console.error("Error making transfer:", error);
       res.status(500).json({ message: "Failed to make transfer" });
+    }
+  });
+
+  // Send money to another user 
+  app.post("/api/banking/send-money", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+
+    try {
+      const senderId = req.user.id;
+      
+      // Validate request data
+      const validatedData = sendMoneySchema.parse(req.body);
+      const { accountId, recipientUsername, amount, description } = validatedData;
+      
+      // Check if sender account exists and belongs to user
+      const senderAccount = await storage.getBankAccountById(accountId);
+      if (!senderAccount || senderAccount.userId !== senderId) {
+        return res.status(404).json({ message: "Source account not found or not authorized" });
+      }
+      
+      // Find recipient user
+      const recipientUser = await storage.getUserByUsername(recipientUsername);
+      if (!recipientUser) {
+        return res.status(404).json({ message: "Recipient user not found" });
+      }
+      
+      // Don't allow sending to self
+      if (recipientUser.id === senderId) {
+        return res.status(400).json({ message: "Cannot send money to yourself" });
+      }
+      
+      // Check if sender has enough balance
+      if (senderAccount.balance < amount) {
+        return res.status(400).json({ message: "Insufficient funds" });
+      }
+      
+      // Check minimum balance requirement
+      if (senderAccount.balance - amount < senderAccount.minimumBalance) {
+        return res.status(400).json({ 
+          message: `Cannot send below minimum balance of $${senderAccount.minimumBalance}`
+        });
+      }
+      
+      // Find recipient's default account (first savings account)
+      const recipientAccounts = await storage.getBankAccountsByUserId(recipientUser.id);
+      
+      let recipientAccount = recipientAccounts.find(acc => acc.accountType === "savings");
+      
+      // If recipient doesn't have an account yet, create one for them
+      if (!recipientAccount) {
+        recipientAccount = await storage.createBankAccount({
+          userId: recipientUser.id,
+          accountType: "savings",
+          name: "Savings Account",
+          balance: 0,
+          interestRate: 0.001, // 0.1% daily
+          minimumBalance: 0,
+        });
+      }
+      
+      // Update sender account
+      const updatedSenderAccount = await storage.updateBankAccount(accountId, {
+        balance: senderAccount.balance - amount
+      });
+      
+      // Update recipient account
+      const updatedRecipientAccount = await storage.updateBankAccount(recipientAccount.id, {
+        balance: recipientAccount.balance + amount
+      });
+      
+      // Create transaction records
+      const senderDesc = description ? 
+        `Payment to ${recipientUsername}: ${description}` : 
+        `Payment to ${recipientUsername}`;
+      
+      const recipientDesc = description ? 
+        `Payment from ${req.user.username}: ${description}` : 
+        `Payment from ${req.user.username}`;
+      
+      const senderTransaction = await storage.createBankTransaction({
+        accountId,
+        amount: -amount,
+        balance: updatedSenderAccount!.balance,
+        type: "payment",
+        description: senderDesc,
+        targetUserId: recipientUser.id,
+        targetAccountId: recipientAccount.id,
+      });
+      
+      const recipientTransaction = await storage.createBankTransaction({
+        accountId: recipientAccount.id,
+        amount,
+        balance: updatedRecipientAccount!.balance,
+        type: "payment",
+        description: recipientDesc,
+        targetUserId: senderId,
+        targetAccountId: accountId,
+      });
+      
+      res.json({
+        success: true,
+        senderAccount: updatedSenderAccount,
+        recipientAccount: updatedRecipientAccount,
+        senderTransaction,
+        recipientTransaction
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid input", errors: error.errors });
+      }
+      console.error("Error sending money:", error);
+      res.status(500).json({ message: "Failed to send money" });
     }
   });
 
