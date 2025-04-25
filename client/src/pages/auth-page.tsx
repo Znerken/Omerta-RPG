@@ -1,59 +1,47 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { Redirect } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { TommyGunIcon, FedoraIcon } from "@/components/ui/mafia-icons";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserSchema } from "@shared/schema";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
 
-// Extend the insert schema to include password confirmation
-const registerSchema = insertUserSchema.extend({
-  confirmPassword: z.string(),
+const loginSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+const registerSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Must be a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
+  message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type RegisterFormValues = z.infer<typeof registerSchema>;
-type LoginFormValues = z.infer<typeof loginSchema>;
+type LoginFormData = z.infer<typeof loginSchema>;
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
-  const { loginMutation, registerMutation, user } = useAuth();
-  const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<string>("login");
-
-  // Redirect if already logged in
-  if (user) {
-    navigate("/");
-    return null;
-  }
-
-  const registerForm = useForm<RegisterFormValues>({
+  const { user, loginMutation, registerMutation } = useAuth();
+  const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  
+  const loginForm = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+  
+  const registerForm = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
@@ -62,78 +50,44 @@ export default function AuthPage() {
       confirmPassword: "",
     },
   });
-
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data, {
-      onSuccess: () => {
-        navigate("/");
-      },
-    });
+  
+  const onLoginSubmit = (data: LoginFormData) => {
+    loginMutation.mutate(data);
   };
-
-  const onLoginSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data, {
-      onSuccess: () => {
-        navigate("/");
-      },
-    });
+  
+  const onRegisterSubmit = (data: RegisterFormData) => {
+    const { username, email, password } = data;
+    registerMutation.mutate({ username, email, password });
   };
-
+  
+  // Redirect to home if logged in
+  if (user) {
+    return <Redirect to="/" />;
+  }
+  
   return (
-    <div className="flex min-h-screen bg-dark">
-      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-dark to-dark-surface items-center justify-center p-8">
-        <div className="max-w-md text-center">
-          <h1 className="text-4xl font-heading text-secondary mb-4">MAFIA EMPIRE</h1>
-          <p className="text-xl mb-8 text-gray-300">
-            Build your criminal empire, commit crimes, join gangs, and rise to power in the underground world.
-          </p>
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div className="bg-dark-lighter p-4 rounded-lg">
-              <h3 className="font-heading text-primary mb-2">COMMIT CRIMES</h3>
-              <p className="text-sm text-gray-400">Execute heists, robberies, and scams to earn cash and respect.</p>
+    <div className="h-screen w-full flex items-center justify-center">
+      <div className="container flex flex-col md:flex-row w-full max-w-6xl p-4 gap-8">
+        {/* Left column: Auth forms */}
+        <div className="flex-1 flex flex-col justify-center">
+          <Card className="card-mafia shadow-dramatic p-8">
+            <div className="mb-8 flex items-center justify-center">
+              <FedoraIcon size="lg" color="primary" className="mr-4" />
+              <div>
+                <h1 className="text-4xl font-heading text-gold-gradient mb-2">Mafia Empire</h1>
+                <p className="text-muted-foreground">Enter the criminal underworld.</p>
+              </div>
             </div>
-            <div className="bg-dark-lighter p-4 rounded-lg">
-              <h3 className="font-heading text-primary mb-2">JOIN GANGS</h3>
-              <p className="text-sm text-gray-400">Form alliances, build your crew, and dominate territories.</p>
-            </div>
-            <div className="bg-dark-lighter p-4 rounded-lg">
-              <h3 className="font-heading text-primary mb-2">TRAIN SKILLS</h3>
-              <p className="text-sm text-gray-400">Improve your strength, stealth, charisma, and intelligence.</p>
-            </div>
-            <div className="bg-dark-lighter p-4 rounded-lg">
-              <h3 className="font-heading text-primary mb-2">RISE TO POWER</h3>
-              <p className="text-sm text-gray-400">Climb the leaderboards and become the most feared gangster.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full md:w-1/2 flex items-center justify-center p-4 md:p-8">
-        <Card className="w-full max-w-md bg-dark-surface border-gray-700">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-heading text-secondary md:hidden">MAFIA EMPIRE</CardTitle>
-            <CardDescription>
-              Enter the criminal underworld
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-2 mb-4">
+            
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "register")} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-8">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">
                 <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-6">
                     <FormField
                       control={loginForm.control}
                       name="username"
@@ -141,11 +95,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Enter your username" 
-                              className="bg-dark-lighter border-gray-700" 
-                              {...field} 
-                            />
+                            <Input placeholder="Enter your alias" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -159,12 +109,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Enter your password" 
-                              className="bg-dark-lighter border-gray-700" 
-                              {...field} 
-                            />
+                            <Input type="password" placeholder="Enter your password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -173,16 +118,10 @@ export default function AuthPage() {
                     
                     <Button 
                       type="submit" 
-                      className="w-full bg-primary hover:bg-primary/80"
+                      className="w-full" 
                       disabled={loginMutation.isPending}
                     >
-                      {loginMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Logging In
-                        </>
-                      ) : (
-                        "Login"
-                      )}
+                      {loginMutation.isPending ? "Verifying..." : "Enter the Underworld"}
                     </Button>
                   </form>
                 </Form>
@@ -190,7 +129,7 @@ export default function AuthPage() {
               
               <TabsContent value="register">
                 <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-6">
                     <FormField
                       control={registerForm.control}
                       name="username"
@@ -198,11 +137,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Username</FormLabel>
                           <FormControl>
-                            <Input 
-                              placeholder="Choose a username" 
-                              className="bg-dark-lighter border-gray-700" 
-                              {...field} 
-                            />
+                            <Input placeholder="Choose your alias" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -216,12 +151,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Email</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="email" 
-                              placeholder="Enter your email" 
-                              className="bg-dark-lighter border-gray-700" 
-                              {...field} 
-                            />
+                            <Input placeholder="your@email.com" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -235,12 +165,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Create a password" 
-                              className="bg-dark-lighter border-gray-700" 
-                              {...field} 
-                            />
+                            <Input type="password" placeholder="Create a password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -254,12 +179,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Confirm Password</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="password" 
-                              placeholder="Confirm your password" 
-                              className="bg-dark-lighter border-gray-700" 
-                              {...field} 
-                            />
+                            <Input type="password" placeholder="Confirm your password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -268,50 +188,73 @@ export default function AuthPage() {
                     
                     <Button 
                       type="submit" 
-                      className="w-full bg-primary hover:bg-primary/80"
+                      className="w-full" 
                       disabled={registerMutation.isPending}
                     >
-                      {registerMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating Account
-                        </>
-                      ) : (
-                        "Create Account"
-                      )}
+                      {registerMutation.isPending ? "Creating..." : "Join the Family"}
                     </Button>
                   </form>
                 </Form>
               </TabsContent>
             </Tabs>
-          </CardContent>
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-gray-400">
-              {activeTab === "login" ? (
-                <>
-                  Don't have an account?{" "}
-                  <Button 
-                    variant="link" 
-                    className="p-0 text-secondary" 
-                    onClick={() => setActiveTab("register")}
-                  >
-                    Register
-                  </Button>
-                </>
-              ) : (
-                <>
-                  Already have an account?{" "}
-                  <Button 
-                    variant="link" 
-                    className="p-0 text-secondary" 
-                    onClick={() => setActiveTab("login")}
-                  >
-                    Login
-                  </Button>
-                </>
-              )}
-            </p>
-          </CardFooter>
-        </Card>
+          </Card>
+        </div>
+        
+        {/* Right column: Hero section */}
+        <div className="flex-1 hidden md:flex flex-col justify-center">
+          <div className="backdrop-mafia rounded-sm p-8 h-full shadow-dramatic">
+            <div className="h-full flex flex-col justify-center space-y-8">
+              <div className="mb-8">
+                <h2 className="text-3xl font-heading mb-4">Rise to Power</h2>
+                <p className="text-muted-foreground">
+                  Welcome to Mafia Empire, where the streets are yours for the taking.
+                  Build your criminal empire, form powerful alliances, and leave your mark
+                  on the underworld.
+                </p>
+              </div>
+              
+              <div className="space-y-6">
+                <Feature 
+                  title="Commit Crimes" 
+                  description="From petty theft to elaborate heists, climb your way up the criminal ladder." 
+                  icon={<TommyGunIcon size="md" />} 
+                />
+                
+                <Feature 
+                  title="Form a Gang" 
+                  description="Recruit loyal members and establish a feared criminal organization." 
+                  icon={<FedoraIcon size="md" />} 
+                />
+                
+                <Feature 
+                  title="Control Territory" 
+                  description="Expand your influence and dominate the city district by district." 
+                  icon={<TommyGunIcon size="md" />} 
+                />
+                
+                <Feature 
+                  title="Build an Empire" 
+                  description="Develop businesses, launder money, and become the ultimate crime boss." 
+                  icon={<FedoraIcon size="md" />} 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Feature({ title, description, icon }: { title: string; description: string; icon: React.ReactNode }) {
+  return (
+    <div className="flex items-start">
+      <div className="mr-4 p-2 bg-primary/10 rounded-sm text-primary">
+        {icon}
+      </div>
+      <div>
+        <h3 className="font-medium mb-1">{title}</h3>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </div>
   );

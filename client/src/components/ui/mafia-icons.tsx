@@ -1,214 +1,201 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-// Common props for all icon components
-interface MafiaIconProps {
+type IconProps = {
+  size?: "sm" | "md" | "lg" | "xl";
+  color?: "primary" | "secondary" | "muted" | "destructive";
   className?: string;
-  size?: "sm" | "md" | "lg";
-  color?: "primary" | "secondary" | "muted" | "white";
-}
+};
 
-// Creates the base SVG element with consistent styling
-function IconWrapper({
-  children,
-  className,
+const sizeMap = {
+  sm: "h-4 w-4",
+  md: "h-6 w-6",
+  lg: "h-8 w-8",
+  xl: "h-12 w-12",
+};
+
+const colorMap = {
+  primary: "text-primary",
+  secondary: "text-secondary",
+  muted: "text-muted-foreground",
+  destructive: "text-destructive",
+};
+
+export const TommyGunIcon = ({
   size = "md",
-  color = "primary",
-  viewBox = "0 0 24 24",
-}: MafiaIconProps & { children: React.ReactNode; viewBox?: string }) {
-  const sizeClasses = {
-    sm: "w-4 h-4",
-    md: "w-5 h-5",
-    lg: "w-6 h-6",
-  };
-
-  const colorClasses = {
-    primary: "text-primary",
-    secondary: "text-secondary",
-    muted: "text-muted-foreground",
-    white: "text-white",
-  };
-
+  color = "muted",
+  className,
+}: IconProps) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox={viewBox}
+      viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={cn(sizeClasses[size], colorClasses[color], className)}
+      className={cn(sizeMap[size], colorMap[color], className)}
     >
-      {children}
+      <path d="M10 4V2" />
+      <path d="M14 4V2" />
+      <path d="M13 15v-2" />
+      <path d="M4 22V4c0-1.1.9-2 2-2h12a2 2 0 0 1 2 2v18l-4-4H6a2 2 0 0 1-2 2v0z" />
+      <path d="m15 13-2 2 2 2 4-4-3-3-1 1" />
+      <path d="M7 9h.01" />
     </svg>
   );
-}
+};
 
-// Tommy Gun Icon
-export function TommyGunIcon(props: MafiaIconProps) {
+export const FedoraIcon = ({
+  size = "md",
+  color = "muted",
+  className,
+}: IconProps) => {
   return (
-    <IconWrapper {...props}>
-      <path d="M10 6L2 6C1.44772 6 1 6.44772 1 7V10C1 10.5523 1.44772 11 2 11H10" />
-      <path d="M10 11V6" />
-      <path d="M13 4L13 13" />
-      <path d="M13 4L22 4L22 13L13 13" />
-      <path d="M17 13L17 16" />
-      <path d="M9 9H13" />
-      <path d="M4 11L4 14" />
-    </IconWrapper>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(sizeMap[size], colorMap[color], className)}
+    >
+      <path d="M3 10c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8-8-3.6-8-8z" />
+      <path d="M3 10c0 2.2 3.6 4 8 4s8-1.8 8-4" />
+      <path d="M2 6.5C3 6 5 5 8 5c5 0 8.5 1.8 11 5.5" />
+    </svg>
   );
-}
+};
 
-// Fedora Hat Icon
-export function FedoraIcon(props: MafiaIconProps) {
+export const MoneyBriefcaseIcon = ({
+  size = "md",
+  color = "muted",
+  className,
+}: IconProps) => {
   return (
-    <IconWrapper {...props}>
-      <path d="M3 14C3 11.7909 4.79086 10 7 10H17C19.2091 10 21 11.7909 21 14V15C21 15.5523 20.5523 16 20 16H4C3.44772 16 3 15.5523 3 15V14Z" />
-      <path d="M12 10C15.3137 10 18 7.31371 18 4H6C6 7.31371 8.68629 10 12 10Z" />
-    </IconWrapper>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(sizeMap[size], colorMap[color], className)}
+    >
+      <path d="M20 7h-3a2 2 0 0 1-2-2V3a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2a2 2 0 0 1-2 2H2a2 2 0 0 0-2 2v5c0 1.1.9 2 2 2h6v-1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+      <path d="M12 12a2 2 0 0 0 0 4 2 2 0 0 0 0-4z"/>
+      <path d="M9 16v6"/>
+      <path d="M15 16v6"/>
+      <path d="M9 22h6"/>
+    </svg>
   );
-}
+};
 
-// Brass Knuckles Icon
-export function BrassKnucklesIcon(props: MafiaIconProps) {
+export const RevolverIcon = ({
+  size = "md",
+  color = "muted",
+  className,
+}: IconProps) => {
   return (
-    <IconWrapper {...props}>
-      <path d="M5 10C5 8.89543 5.89543 8 7 8H17C18.1046 8 19 8.89543 19 10V12C19 13.1046 18.1046 14 17 14H7C5.89543 14 5 13.1046 5 12V10Z" />
-      <path d="M7 14V17C7 17.5523 7.44772 18 8 18H9C9.55228 18 10 17.5523 10 17V14" />
-      <path d="M10.5 14V17C10.5 17.5523 10.9477 18 11.5 18H12.5C13.0523 18 13.5 17.5523 13.5 17V14" />
-      <path d="M14 14V17C14 17.5523 14.4477 18 15 18H16C16.5523 18 17 17.5523 17 17V14" />
-    </IconWrapper>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(sizeMap[size], colorMap[color], className)}
+    >
+      <path d="M8 6h12l-3 3H5l3-3Z" />
+      <path d="m5 9 0 9" />
+      <path d="M5 18h12a2 2 0 0 0 2-2v-1.4a2 2 0 0 0-.6-1.4l-.7-.7a2 2 0 0 1-.7-1.4V9" />
+      <path d="M11 12h.01" />
+      <path d="M13 12h.01" />
+      <path d="M15 12h.01" />
+      <path d="M17 12h.01" />
+      <path d="M2 19h3" />
+      <path d="M5 15v4" />
+      <path d="M3.5 15H9" />
+    </svg>
   );
-}
+};
 
-// Briefcase with Money Icon
-export function MoneyBriefcaseIcon(props: MafiaIconProps) {
+export const DiceIcon = ({
+  size = "md",
+  color = "muted",
+  className,
+}: IconProps) => {
   return (
-    <IconWrapper {...props}>
-      <rect x="3" y="6" width="18" height="14" rx="2" />
-      <path d="M16 6V4C16 2.89543 15.1046 2 14 2H10C8.89543 2 8 2.89543 8 4V6" />
-      <path d="M3 10H21" />
-      <path d="M12 14C12 14 13 13.5 14 14C15 14.5 16 14 16 14" />
-      <path d="M12 16C12 16 13 15.5 14 16C15 16.5 16 16 16 16" />
-      <path d="M8 14H9" />
-      <path d="M8 16H9" />
-    </IconWrapper>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(sizeMap[size], colorMap[color], className)}
+    >
+      <rect width="12" height="12" x="2" y="10" rx="2" ry="2" />
+      <path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6" />
+      <path d="M6 18h.01" />
+      <path d="M10 14h.01" />
+      <path d="M15 6h.01" />
+      <path d="M18 9h.01" />
+    </svg>
   );
-}
+};
 
-// Pistol Icon
-export function PistolIcon(props: MafiaIconProps) {
+export const WhiskeyGlassIcon = ({
+  size = "md",
+  color = "muted",
+  className,
+}: IconProps) => {
   return (
-    <IconWrapper {...props}>
-      <path d="M4 10H15L18 6H22V14H18L15 10" />
-      <path d="M4 10V14H8V10" />
-      <path d="M8 14L11 18H4L1 14" />
-    </IconWrapper>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(sizeMap[size], colorMap[color], className)}
+    >
+      <path d="M8 22h8" />
+      <path d="M7 10h10" />
+      <path d="M12 10v12" />
+      <path d="M17 10 8 2" />
+      <path d="m7 10 9-8" />
+    </svg>
   );
-}
+};
 
-// Handcuffs Icon
-export function HandcuffsIcon(props: MafiaIconProps) {
+export const FamilyIcon = ({
+  size = "md",
+  color = "muted",
+  className,
+}: IconProps) => {
   return (
-    <IconWrapper {...props}>
-      <circle cx="7" cy="14" r="3" />
-      <circle cx="17" cy="14" r="3" />
-      <path d="M10 14H14" />
-      <path d="M7 11V7C7 5.89543 7.89543 5 9 5H15C16.1046 5 17 5.89543 17 7V11" />
-    </IconWrapper>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn(sizeMap[size], colorMap[color], className)}
+    >
+      <path d="M18 21a8 8 0 0 0-16 0" />
+      <circle cx="10" cy="8" r="5" />
+      <path d="M22 20c-1.35-3.76-4.6-6.5-8.5-6.5-.57 0-1.13.05-1.67.15" />
+      <path d="M20 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+    </svg>
   );
-}
-
-// Respect/Family Icon
-export function FamilyIcon(props: MafiaIconProps) {
-  return (
-    <IconWrapper {...props}>
-      <circle cx="12" cy="7" r="4" />
-      <path d="M15.75 14H8.25C5.35 14 3 16.35 3 19.25V21H21V19.25C21 16.35 18.65 14 15.75 14Z" />
-      <circle cx="19" cy="5" r="2" />
-      <circle cx="5" cy="5" r="2" />
-    </IconWrapper>
-  );
-}
-
-// Safe/Vault Icon
-export function VaultIcon(props: MafiaIconProps) {
-  return (
-    <IconWrapper {...props}>
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 8V7" />
-      <path d="M12 17V16" />
-      <path d="M8 12H7" />
-      <path d="M17 12H16" />
-      <path d="M3 3L7 7" />
-      <path d="M17 17L21 21" />
-    </IconWrapper>
-  );
-}
-
-// Whiskey Glass Icon
-export function WhiskeyGlassIcon(props: MafiaIconProps) {
-  return (
-    <IconWrapper {...props}>
-      <path d="M8 3H16L15 14H9L8 3Z" />
-      <path d="M7 21H17" />
-      <path d="M12 14V21" />
-    </IconWrapper>
-  );
-}
-
-// Cigar Icon
-export function CigarIcon(props: MafiaIconProps) {
-  return (
-    <IconWrapper {...props}>
-      <path d="M18 12H3" />
-      <path d="M4 8H18C19.1046 8 20 8.89543 20 10V14C20 15.1046 19.1046 16 18 16H4C2.89543 16 2 15.1046 2 14V10C2 8.89543 2.89543 8 4 8Z" />
-      <path d="M20 12H22" />
-      <path d="M18 12C18 12 19 11 19 10" />
-      <path d="M18 12C18 12 19 13 19 14" />
-    </IconWrapper>
-  );
-}
-
-// Target/Hit Icon
-export function HitIcon(props: MafiaIconProps) {
-  return (
-    <IconWrapper {...props}>
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1" />
-      <path d="M12 3V6" />
-      <path d="M12 18V21" />
-      <path d="M3 12H6" />
-      <path d="M18 12H21" />
-      <path d="M19 19L21 21" />
-    </IconWrapper>
-  );
-}
-
-// Casino/Dice Icon
-export function DiceIcon(props: MafiaIconProps) {
-  return (
-    <IconWrapper {...props}>
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <circle cx="8" cy="8" r="1.5" />
-      <circle cx="16" cy="8" r="1.5" />
-      <circle cx="16" cy="16" r="1.5" />
-      <circle cx="8" cy="16" r="1.5" />
-      <circle cx="12" cy="12" r="1.5" />
-    </IconWrapper>
-  );
-}
-
-// Police/Cop Icon
-export function PoliceIcon(props: MafiaIconProps) {
-  return (
-    <IconWrapper {...props}>
-      <path d="M12 2L14 6H19L15 9L16 14L12 11L8 14L9 9L5 6H10L12 2Z" />
-      <path d="M12 11V21" />
-      <path d="M8 16H16" />
-    </IconWrapper>
-  );
-}
+};
