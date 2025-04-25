@@ -60,7 +60,8 @@ export function StatusIndicator({
 }: StatusIndicatorProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const statusClass = statusVariants({ size, status: status as any });
+  const normalizedStatus = (["online", "away", "busy", "offline"].includes(status) ? status : "offline") as keyof typeof statusColors;
+  const statusClass = statusVariants({ size, status: normalizedStatus });
   
   // Update status mutation
   const updateStatusMutation = useMutation({

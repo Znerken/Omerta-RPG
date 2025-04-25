@@ -2,18 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode, use
 import { toast, useToast } from "@/hooks/use-toast";
 import { Check, Ban, AlertCircle, DollarSign, Bell, UserPlus, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-
-export type NotificationType = "success" | "error" | "warning" | "info" | "payment" | "friend_request" | "friend_status";
-
-export interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  timestamp: Date;
-  read: boolean;
-  data?: any;
-}
+import { Notification, NotificationType } from "@/types";
 
 interface NotificationContextType {
   notifications: Notification[];

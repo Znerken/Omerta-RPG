@@ -74,9 +74,11 @@ export interface UserWithStatus {
 }
 
 // Notification types
+export type NotificationType = "success" | "error" | "warning" | "info" | "payment" | "friend_request" | "friend_status";
+
 export interface Notification {
-  id: number;
-  type: string;
+  id: string;
+  type: NotificationType;
   title: string;
   message: string;
   read: boolean;
