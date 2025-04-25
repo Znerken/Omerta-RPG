@@ -696,10 +696,12 @@ function LabsTab() {
     setProductionQuantity(1);
   };
   
-  const completedProductions = productions?.filter(p => {
+  // Make sure productions is defined before we try to filter it
+  const completedProductions = productions ? productions.filter(p => {
+    if (!p || !p.completesAt) return false;
     const completesAt = new Date(p.completesAt);
     return !p.isCompleted && completesAt <= new Date();
-  });
+  }) : [];
   
   useEffect(() => {
     if (userLabs && userLabs.length > 0 && activeLab === null) {
