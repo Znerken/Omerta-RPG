@@ -46,6 +46,8 @@ export class CasinoStorage {
   // Casino Bets
   async createBet(bet: InsertCasinoBet): Promise<CasinoBet> {
     try {
+      console.log('Attempting to create bet with data:', JSON.stringify(bet, null, 2));
+      
       // Convert to the actual database schema structure
       const formattedBet = {
         user_id: bet.userId,
@@ -55,8 +57,20 @@ export class CasinoStorage {
         result: bet.result ? JSON.stringify(bet.result) : '{}'
       };
       
+      console.log('Formatted bet for SQL:', JSON.stringify(formattedBet, null, 2));
+      
+      // Let's check the structure of the table first to understand what fields are available
+      const tableInfo = await db.execute(sql`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name = 'casino_bets'
+        ORDER BY ordinal_position;
+      `);
+      
+      console.log('Casino bets table structure:', JSON.stringify(tableInfo, null, 2));
+      
       // Using direct SQL to bypass schema mismatch issues
-      const result = await db.execute(sql`
+      const sql_query = sql`
         INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
         VALUES (
           ${formattedBet.user_id}, 
@@ -66,14 +80,22 @@ export class CasinoStorage {
           ${formattedBet.result}::jsonb
         )
         RETURNING *
-      `);
+      `;
+      
+      console.log('Executing SQL:', sql_query.sql);
+      console.log('SQL params:', JSON.stringify(sql_query.params, null, 2));
+      
+      const result = await db.execute(sql_query);
+      
+      console.log('Result from SQL execution:', JSON.stringify(result, null, 2));
       
       // Check if we have valid results
       if (!Array.isArray(result) || result.length === 0) {
-        throw new Error('Failed to create bet record');
+        throw new Error('Failed to create bet record - no results returned');
       }
       
       const newBet = result[0];
+      console.log('New bet created:', JSON.stringify(newBet, null, 2));
       
       // Transform to match the expected structure
       return {
@@ -87,8 +109,26 @@ export class CasinoStorage {
         settledAt: newBet.settled_at
       };
     } catch (error) {
-      console.error('Error creating bet:', error);
-      throw error; // Re-throw the error so the API can handle it
+      console.error('Error creating bet - FULL ERROR DETAILS:', error);
+      
+      // Let's try using a simpler query to see if we can identify the issue
+      try {
+        const insertResult = await db.execute(sql`
+          INSERT INTO casino_bets (user_id, game_id, bet_amount, status)
+          VALUES (
+            ${bet.userId}, 
+            ${bet.gameId}, 
+            ${bet.betAmount}, 
+            'pending'
+          )
+          RETURNING *
+        `);
+        console.log('Simplified query result:', JSON.stringify(insertResult, null, 2));
+      } catch (fallbackError) {
+        console.error('Even simplified insert failed:', fallbackError);
+      }
+      
+      throw new Error(`Failed to create bet: ${error.message}`);
     }
   }
 
