@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useAchievements } from "@/hooks/use-achievements";
+import { useMessages } from "@/hooks/use-messages";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { unviewedCount, hasNewAchievements } = useAchievements();
+  const { unreadCount } = useMessages();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleLogout = () => {
@@ -124,13 +126,23 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
                   {item.icon}
                   {item.name}
                   
-                  {/* Display badge for unviewed achievements */}
+                  {/* Display badges for notifications */}
                   {item.path === "/achievements" && hasNewAchievements && (
                     <Badge 
                       variant="destructive" 
                       className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
                     >
                       {unviewedCount}
+                    </Badge>
+                  )}
+                  
+                  {/* Display badge for unread messages */}
+                  {item.path === "/messages" && unreadCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                    >
+                      {unreadCount}
                     </Badge>
                   )}
                 </div>
@@ -197,6 +209,16 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
                       className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
                     >
                       {unviewedCount}
+                    </Badge>
+                  )}
+                  
+                  {/* Display badge for unread messages in mobile menu */}
+                  {item.path === "/messages" && unreadCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                    >
+                      {unreadCount}
                     </Badge>
                   )}
                 </div>
