@@ -1,5 +1,6 @@
 import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { db } from './db';
+import { users } from '../shared/schema';
 import { 
   type CasinoGame, 
   type CasinoBet, 
@@ -11,7 +12,6 @@ import {
   casinoGames,
   casinoBets,
   casinoStats,
-  users
 } from '../shared/schema-casino';
 
 export class CasinoStorage {
@@ -52,7 +52,7 @@ export class CasinoStorage {
   async updateBetResult(
     id: number, 
     result: { win: boolean; amount: number; details?: { [key: string]: any } },
-    status: string
+    status: "pending" | "won" | "lost" | "canceled" | "refunded"
   ): Promise<CasinoBet | undefined> {
     const [updatedBet] = await db
       .update(casinoBets)

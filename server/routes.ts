@@ -6,6 +6,7 @@ import { registerBankingRoutes } from "./banking-routes";
 import { registerAdminRoutes } from "./admin-routes";
 import { registerAchievementRoutes } from "./achievement-routes";
 import { registerDrugRoutes } from "./drug-routes";
+import { registerCasinoRoutes } from "./casino-routes";
 import challengeRoutes from "./challenge-routes";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
@@ -29,6 +30,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register challenge routes
   app.use("/api", challengeRoutes);
+  
+  // Register casino routes
+  registerCasinoRoutes(app);
 
   // Create HTTP server
   const httpServer = createServer(app);
