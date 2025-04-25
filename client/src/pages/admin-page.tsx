@@ -172,6 +172,13 @@ export default function AdminPage() {
       intelligence: "",
     },
   });
+  
+  const achievementForm = useForm<GrantAchievementValues>({
+    resolver: zodResolver(grantAchievementSchema),
+    defaultValues: {
+      achievementId: "",
+    },
+  });
 
   // Queries
   const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
@@ -203,6 +210,14 @@ export default function AdminPage() {
       return await res.json();
     },
     enabled: !!selectedUserId,
+  });
+  
+  const { data: achievements, isLoading: isAchievementsLoading } = useQuery({
+    queryKey: ["/api/achievements"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", "/api/achievements");
+      return await res.json();
+    },
   });
 
   // Mutations
@@ -413,6 +428,52 @@ export default function AdminPage() {
       });
     },
   });
+  
+  const grantAchievementMutation = useMutation({
+    mutationFn: async ({ userId, achievementId }: { userId: number; achievementId: number }) => {
+      const res = await apiRequest("POST", `/api/admin/achievements/${achievementId}/unlock`, { userId });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      const achievementName = data.achievement?.name || "Achievement";
+      
+      toast({
+        title: "Achievement Granted",
+        description: `Successfully granted "${achievementName}" to user.`,
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: Achievement Granted",
+        message: `Successfully granted "${achievementName}" to user.`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      setAchievementDialogOpen(false);
+      achievementForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", selectedUserId] });
+      // Also invalidate achievements for the user
+      queryClient.invalidateQueries({ queryKey: ["/api/achievements"] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Grant Achievement",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to grant achievement: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
 
   // Form handlers
   const onSearchSubmit = (data: UserSearchValues) => {
@@ -459,6 +520,15 @@ export default function AdminPage() {
       editStatsMutation.mutate({
         userId: selectedUserId,
         stats: data,
+      });
+    }
+  };
+  
+  const onGrantAchievementSubmit = (data: GrantAchievementValues) => {
+    if (selectedUserId) {
+      grantAchievementMutation.mutate({
+        userId: selectedUserId,
+        achievementId: data.achievementId,
       });
     }
   };
@@ -947,6 +1017,15 @@ export default function AdminPage() {
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Edit Stats
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  className="bg-dark-lighter flex items-center"
+                  onClick={() => setAchievementDialogOpen(true)}
+                >
+                  <Trophy className="h-4 w-4 mr-2" />
+                  Grant Achievement
                 </Button>
                 
                 {selectedUser.isJailed ? (
