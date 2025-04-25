@@ -648,6 +648,82 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     };
   }
   
+  async getGangWithDetails(id: number): Promise<GangWithDetails | undefined> {
+    const gang = await this.getGang(id);
+    if (!gang) return undefined;
+
+    // Get gang members with contribution
+    const members = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        password: users.password,
+        level: users.level,
+        cash: users.cash,
+        respect: users.respect,
+        xp: users.xp,
+        nextLevelXp: users.nextLevelXp,
+        avatar: users.avatar,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+        lastActive: users.lastActive,
+        jailTimeEnd: users.jailTimeEnd,
+        rank: gangMembers.rank,
+        contribution: gangMembers.contribution,
+      })
+      .from(gangMembers)
+      .innerJoin(users, eq(gangMembers.userId, users.id))
+      .where(eq(gangMembers.gangId, id));
+
+    // Get territories controlled by this gang
+    const territories = await db
+      .select()
+      .from(gangTerritories)
+      .where(eq(gangTerritories.controlledBy, id));
+
+    // Get active wars involving this gang
+    const wars = await db
+      .select()
+      .from(gangWars)
+      .where(
+        and(
+          or(
+            eq(gangWars.attackerGangId, id),
+            eq(gangWars.defenderGangId, id)
+          ),
+          eq(gangWars.status, 'active')
+        )
+      );
+
+    // Get active mission attempts for this gang
+    const missionAttempts = await db
+      .select({
+        mission: gangMissions,
+        attempt: gangMissionAttempts,
+      })
+      .from(gangMissionAttempts)
+      .innerJoin(gangMissions, eq(gangMissionAttempts.missionId, gangMissions.id))
+      .where(
+        and(
+          eq(gangMissionAttempts.gangId, id),
+          eq(gangMissionAttempts.status, 'in_progress')
+        )
+      );
+
+    // Combine the data into the expected format
+    return {
+      ...gang,
+      members,
+      territories,
+      activeWars: wars,
+      activeMissions: missionAttempts.map(ma => ({
+        ...ma.mission,
+        attempt: ma.attempt
+      }))
+    };
+  }
+  
   // Gang Member methods
   async getGangMember(userId: number): Promise<(GangMember & { gang: Gang }) | undefined> {
     const [gangMember] = await db
