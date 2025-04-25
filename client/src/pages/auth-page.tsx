@@ -11,6 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
+import mafiaCharacterImg from "../assets/mafia-character.jpg";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -504,62 +505,85 @@ export default function AuthPage() {
           transition={{ delay: 0.4, duration: 0.5 }}
         >
           <div className={`backdrop-mafia rounded-sm p-8 h-full shadow-dramatic relative ${showSpotlight ? 'spotlight-effect active' : ''}`}>
-            <div className="h-full flex flex-col justify-center space-y-8">
-              <motion.div 
-                className="mb-8"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.5 }}
-              >
-                <motion.h2 
-                  className="text-3xl font-heading mb-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8, duration: 0.4 }}
+            <div className="h-full flex flex-col lg:flex-row items-center justify-between gap-6">
+              <div className="space-y-8 flex-1">
+                <motion.div 
+                  className="mb-8"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7, duration: 0.5 }}
                 >
-                  Rise to Power
-                </motion.h2>
-                <motion.p 
-                  className="text-muted-foreground"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.9, duration: 0.4 }}
-                >
-                  Welcome to Mafia Empire, where the streets are yours for the taking.
-                  Build your criminal empire, form powerful alliances, and leave your mark
-                  on the underworld.
-                </motion.p>
-              </motion.div>
-              
-              <div className="space-y-6">
-                <AnimatedFeature 
-                  title="Commit Crimes" 
-                  description="From petty theft to elaborate heists, climb your way up the criminal ladder." 
-                  icon={<TommyGunIcon size="md" />}
-                  delay={1.0}
-                />
+                  <motion.h2 
+                    className="text-3xl font-heading mb-4"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.8, duration: 0.4 }}
+                  >
+                    Rise to Power
+                  </motion.h2>
+                  <motion.p 
+                    className="text-muted-foreground"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.9, duration: 0.4 }}
+                  >
+                    Welcome to Mafia Empire, where the streets are yours for the taking.
+                    Build your criminal empire, form powerful alliances, and leave your mark
+                    on the underworld.
+                  </motion.p>
+                </motion.div>
                 
-                <AnimatedFeature 
-                  title="Form a Gang" 
-                  description="Recruit loyal members and establish a feared criminal organization." 
-                  icon={<FedoraIcon size="md" />}
-                  delay={1.2}
-                />
-                
-                <AnimatedFeature 
-                  title="Control Territory" 
-                  description="Expand your influence and dominate the city district by district." 
-                  icon={<TommyGunIcon size="md" />}
-                  delay={1.4}
-                />
-                
-                <AnimatedFeature 
-                  title="Build an Empire" 
-                  description="Develop businesses, launder money, and become the ultimate crime boss." 
-                  icon={<MoneyBriefcaseIcon size="md" />}
-                  delay={1.6}
-                />
+                <div className="space-y-6">
+                  <AnimatedFeature 
+                    title="Commit Crimes" 
+                    description="From petty theft to elaborate heists, climb your way up the criminal ladder." 
+                    icon={<TommyGunIcon size="md" />}
+                    delay={1.0}
+                  />
+                  
+                  <AnimatedFeature 
+                    title="Form a Gang" 
+                    description="Recruit loyal members and establish a feared criminal organization." 
+                    icon={<FedoraIcon size="md" />}
+                    delay={1.2}
+                  />
+                  
+                  <AnimatedFeature 
+                    title="Control Territory" 
+                    description="Expand your influence and dominate the city district by district." 
+                    icon={<TommyGunIcon size="md" />}
+                    delay={1.4}
+                  />
+                  
+                  <AnimatedFeature 
+                    title="Build an Empire" 
+                    description="Develop businesses, launder money, and become the ultimate crime boss." 
+                    icon={<MoneyBriefcaseIcon size="md" />}
+                    delay={1.6}
+                  />
+                </div>
               </div>
+              
+              {/* Mafia character image */}
+              <motion.div 
+                className="flex-1 flex items-center justify-center overflow-hidden hidden lg:block max-w-[300px]"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 1.0, duration: 0.6 }}
+              >
+                <motion.div
+                  className="relative"
+                  whileHover={{ scale: 1.03, rotate: 1 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10 pointer-events-none rounded-md"></div>
+                  <img 
+                    src={mafiaCharacterImg} 
+                    alt="Mafia Character" 
+                    className="object-cover rounded-md shadow-xl w-full"
+                  />
+                </motion.div>
+              </motion.div>
             </div>
           </div>
         </motion.div>
