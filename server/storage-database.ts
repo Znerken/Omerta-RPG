@@ -434,7 +434,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       .select()
       .from(crimeHistory)
       .where(eq(crimeHistory.userId, userId))
-      .orderBy(desc(crimeHistory.performedAt));
+      .orderBy(desc(crimeHistory.timestamp));
     
     if (limit) {
       query.limit(limit);
@@ -447,8 +447,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     const [history] = await db
       .insert(crimeHistory)
       .values({
-        ...insertHistory,
-        performedAt: new Date()
+        ...insertHistory
       })
       .returning();
     return history;
