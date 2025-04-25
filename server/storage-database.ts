@@ -403,32 +403,21 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     const userCrimeHistory = await this.getCrimeHistoryByUserId(userId);
     
     // Map crimes with history and calculated success chance
-    return allCrimes
-      .filter(crime => crime.requiredLevel <= user.level)
-      .map(crime => {
+    return allCrimes.map(crime => {
         // Find the most recent history for this crime
         const lastPerformed = userCrimeHistory.find(
           history => history.crimeId === crime.id
         );
         
-        // Parse the stat weights
-        const statWeights = JSON.parse(crime.statWeights);
+        // Calculate success chance based on user stats and crime weights
+        const strengthFactor = (userStats.strength / 100) * crime.strengthWeight;
+        const stealthFactor = (userStats.stealth / 100) * crime.stealthWeight;
+        const charismaFactor = (userStats.charisma / 100) * crime.charismaWeight;
+        const intelligenceFactor = (userStats.intelligence / 100) * crime.intelligenceWeight;
         
-        // Calculate difficulty modifier
-        const difficultyModifier = crime.difficulty === "easy" ? 0 
-          : crime.difficulty === "medium" ? 10 
-          : 20;
-        
-        // Calculate success chance based on user stats
-        const successChance = calculateCrimeSuccessChance(
-          {
-            strength: userStats.strength,
-            stealth: userStats.stealth,
-            charisma: userStats.charisma,
-            intelligence: userStats.intelligence
-          },
-          statWeights,
-          difficultyModifier
+        const successChance = Math.min(
+          95, // Cap at 95%
+          Math.round((strengthFactor + stealthFactor + charismaFactor + intelligenceFactor) * 100)
         );
         
         return {
