@@ -32,6 +32,7 @@ const navItems = [
   { name: "Profile", path: "/profile", icon: <User className="h-5 w-5 mr-3" /> },
   { name: "Crimes", path: "/crimes", icon: <Briefcase className="h-5 w-5 mr-3" /> },
   { name: "Challenges", path: "/challenges", icon: <CheckCircle className="h-5 w-5 mr-3" /> },
+  { name: "Achievements", path: "/achievements", icon: <Award className="h-5 w-5 mr-3" /> },
   { name: "Training", path: "/training", icon: <Dumbbell className="h-5 w-5 mr-3" /> },
   { name: "Gang", path: "/gang", icon: <Users className="h-5 w-5 mr-3" /> },
   { name: "Jail", path: "/jail", icon: <Lock className="h-5 w-5 mr-3" /> },

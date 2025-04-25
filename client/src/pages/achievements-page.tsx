@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { MafiaLayout } from '@/components/layout/mafia-layout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
@@ -110,9 +109,8 @@ export default function AchievementsPage() {
   }, [achievements]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <MafiaLayout>
-      <div className="container mx-auto p-4">
-        <Card className="dark:bg-black/60 border-gray-700">
+    <div className="container mx-auto p-4">
+      <Card className="dark:bg-black/60 border-gray-700">
           <CardHeader>
             <div className="flex justify-between items-center">
               <div>
@@ -246,6 +244,5 @@ export default function AchievementsPage() {
           </CardContent>
         </Card>
       </div>
-    </MafiaLayout>
   );
 }
