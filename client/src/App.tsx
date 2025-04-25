@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./hooks/use-auth";
 import { NotificationProvider } from "./hooks/use-notification";
+import { AchievementsProvider } from "./hooks/use-achievements";
 import { ProtectedRoute } from "./lib/protected-route";
 import { MafiaLayout } from "@/components/layout/mafia-layout";
 import { useAuth } from "@/hooks/use-auth";
@@ -152,7 +153,9 @@ function App() {
         <Toaster />
         <AuthProvider>
           <NotificationProvider>
-            <AppRouter />
+            <AchievementsProvider>
+              <AppRouter />
+            </AchievementsProvider>
           </NotificationProvider>
         </AuthProvider>
       </QueryClientProvider>
