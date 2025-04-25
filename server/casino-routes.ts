@@ -122,16 +122,16 @@ export function registerCasinoRoutes(app: Express) {
       let result;
       switch (game.name) {
         case 'Dice':
-          result = processDiceGame(betDetails, betAmount);
+          result = processDiceGame(betAmount, betDetails);
           break;
         case 'Slots':
-          result = processSlotMachine(betDetails, betAmount);
+          result = processSlotMachine(betAmount, betDetails);
           break;
         case 'Blackjack':
-          result = processBlackjack(betDetails, betAmount);
+          result = processBlackjack(betAmount, betDetails);
           break;
         case 'Roulette':
-          result = processRoulette(betDetails, betAmount);
+          result = processRoulette(betAmount, betDetails);
           break;
         default:
           return res.status(400).json({ error: "Unknown game type" });
