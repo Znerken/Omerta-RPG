@@ -1,13 +1,4 @@
 import {
-  users,
-  stats,
-  crimes,
-  crimeHistory,
-  items,
-  userInventory,
-  gangs,
-  gangMembers,
-  messages,
   User,
   Stat,
   Crime,
@@ -34,6 +25,9 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+
+// Import database-specific classes
+import { DatabaseStorage } from "./storage-database";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -111,7 +105,12 @@ export interface IStorage {
   releaseFromJail(userId: number): Promise<User | undefined>;
 }
 
-export class MemStorage implements IStorage {
+// Use the DatabaseStorage for all operations
+// Instantiate and export the database storage implementation
+export const storage = new DatabaseStorage();
+
+// In-memory storage implementation - kept for reference
+class MemStorage implements IStorage {
   // Storage
   private users: Map<number, User>;
   private stats: Map<number, Stat>;
@@ -851,4 +850,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// This is now handled by the DatabaseStorage implementation at the top of the file
+// const memStorage = new MemStorage();
