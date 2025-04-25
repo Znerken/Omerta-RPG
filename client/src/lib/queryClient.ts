@@ -7,7 +7,19 @@ export const queryClient = new QueryClient({
       retry: 1,
       refetchOnWindowFocus: false,
       queryFn: async ({ queryKey }) => {
-        const [url] = Array.isArray(queryKey) ? queryKey : [queryKey];
+        let url: string;
+        if (Array.isArray(queryKey)) {
+          // Handle dynamic routes by reconstructing the URL from array segments
+          if (queryKey.length > 1) {
+            // If queryKey has multiple segments, reconstruct the path
+            url = queryKey.join('/').replace(/\/+/g, '/');
+          } else {
+            // Otherwise just use the first segment
+            url = queryKey[0] as string;
+          }
+        } else {
+          url = queryKey as string;
+        }
         
         const response = await fetch(url, {
           credentials: "include", 
@@ -70,7 +82,19 @@ export async function apiRequest(
 // Helper function to create query functions
 export function getQueryFn({ on401 = "throw" }: { on401?: "throw" | "returnNull" } = {}) {
   return async ({ queryKey }: { queryKey: any }) => {
-    const [url] = queryKey;
+    let url: string;
+    if (Array.isArray(queryKey)) {
+      // Handle dynamic routes by reconstructing the URL from array segments
+      if (queryKey.length > 1) {
+        // If queryKey has multiple segments, reconstruct the path
+        url = queryKey.join('/').replace(/\/+/g, '/');
+      } else {
+        // Otherwise just use the first segment
+        url = queryKey[0] as string;
+      }
+    } else {
+      url = queryKey as string;
+    }
     
     try {
       const response = await fetch(url, {
