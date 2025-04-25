@@ -81,13 +81,15 @@ interface InsertDialogProps {
   trigger: React.ReactNode;
 }
 
-const InsertDialog = ({ onInsert, title, children, trigger }: InsertDialogProps) => {
+// This is a fixed dialog component that properly handles insertion
+function InsertDialog({ onInsert, title, children, trigger }: InsertDialogProps) {
   const [open, setOpen] = useState(false);
 
-  const handleInsert = (html: string) => {
+  // Create a memoized callback to handle insertion and close the dialog
+  const handleContentInsert = React.useCallback((html: string) => {
     onInsert(html);
     setOpen(false);
-  };
+  }, [onInsert, setOpen]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -99,7 +101,7 @@ const InsertDialog = ({ onInsert, title, children, trigger }: InsertDialogProps)
             Enter the details below to insert into your profile.
           </DialogDescription>
         </DialogHeader>
-        {React.cloneElement(children as React.ReactElement, { onInsert: handleInsert })}
+        {React.cloneElement(children as React.ReactElement, { onInsert: handleContentInsert })}
       </DialogContent>
     </Dialog>
   );
@@ -519,7 +521,7 @@ export function RichTextEditor({ value, onChange, className, placeholder }: Rich
             </Button>
           }
         >
-          <ImageInsert onInsert={() => {}} />
+          <ImageInsert onInsert={function(){}} />
         </InsertDialog>
         
         <InsertDialog
@@ -536,7 +538,7 @@ export function RichTextEditor({ value, onChange, className, placeholder }: Rich
             </Button>
           }
         >
-          <LinkInsert onInsert={() => {}} />
+          <LinkInsert onInsert={function(){}} />
         </InsertDialog>
 
         <Popover>
