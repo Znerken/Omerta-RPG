@@ -2,112 +2,80 @@ import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
-import {
-  Briefcase,
-  Users,
-  Target,
-  Activity,
-  ShoppingBag,
-  Trophy,
-  Mail,
-  User,
-  LogOut,
-  Shield,
-  Menu,
-  X,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { 
+  Home, 
+  User, 
+  Briefcase, 
+  Dumbbell, 
+  Users, 
+  Lock, 
+  Package, 
+  MailIcon, 
+  Trophy, 
+  Menu, 
+  X, 
+  LogOut 
+} from "lucide-react";
+import { 
+  TommyGunIcon, 
+  FedoraIcon, 
+  MoneyBriefcaseIcon 
+} from "@/components/ui/mafia-icons";
 
-interface MafiaLayoutProps {
-  children: React.ReactNode;
-}
+const navItems = [
+  { name: "Dashboard", path: "/", icon: <Home className="h-5 w-5 mr-3" /> },
+  { name: "Profile", path: "/profile", icon: <User className="h-5 w-5 mr-3" /> },
+  { name: "Crimes", path: "/crimes", icon: <Briefcase className="h-5 w-5 mr-3" /> },
+  { name: "Training", path: "/training", icon: <Dumbbell className="h-5 w-5 mr-3" /> },
+  { name: "Gang", path: "/gang", icon: <Users className="h-5 w-5 mr-3" /> },
+  { name: "Jail", path: "/jail", icon: <Lock className="h-5 w-5 mr-3" /> },
+  { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5 mr-3" /> },
+  { name: "Messages", path: "/messages", icon: <MailIcon className="h-5 w-5 mr-3" /> },
+  { name: "Leaderboard", path: "/leaderboard", icon: <Trophy className="h-5 w-5 mr-3" /> },
+];
 
-export function MafiaLayout({ children }: MafiaLayoutProps) {
-  const { user, logoutMutation } = useAuth();
+export function MafiaLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
+  
   const handleLogout = () => {
     logoutMutation.mutate();
   };
-
-  const navItems = [
-    {
-      name: "Dashboard",
-      path: "/",
-      icon: <Activity className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Crimes",
-      path: "/crimes",
-      icon: <Briefcase className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Gang",
-      path: "/gang",
-      icon: <Users className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Training",
-      path: "/training",
-      icon: <Target className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Inventory",
-      path: "/inventory",
-      icon: <ShoppingBag className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Leaderboard",
-      path: "/leaderboard",
-      icon: <Trophy className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Messages",
-      path: "/messages",
-      icon: <Mail className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Profile",
-      path: "/profile",
-      icon: <User className="h-5 w-5 mr-3" />,
-    },
-    {
-      name: "Jail",
-      path: "/jail",
-      icon: <Shield className="h-5 w-5 mr-3" />,
-    },
-  ];
-
-  // Only show jail link if the user is jailed
-  const filteredNavItems = user?.isJailed
-    ? navItems
-    : navItems.filter((item) => item.name !== "Jail");
-
+  
+  // Filter out "Jail" if user is not jailed
+  const filteredNavItems = navItems.filter(item => {
+    if (item.path === "/jail" && user && !user.isJailed) {
+      return false;
+    }
+    return true;
+  });
+  
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar - hidden on mobile */}
-      <aside
-        className={cn(
-          "w-64 bg-card shadow-lg hidden md:block border-r border-border overflow-y-auto pb-12",
-          "transition-all duration-300 ease-in-out z-30"
-        )}
-      >
-        <div className="px-6 py-6">
-          <h1 className="text-2xl text-gold-gradient pb-2">Mafia Empire</h1>
-          <div className="h-px bg-gradient-to-r from-secondary/5 via-secondary/80 to-secondary/5 mb-6"></div>
+    <div className="flex h-screen bg-background text-foreground">
+      {/* Sidebar */}
+      <aside className="hidden md:flex md:w-64 flex-col border-r border-border h-screen sticky top-0">
+        <div className="flex-1 px-6 py-6 overflow-y-auto">
+          <div className="mb-8">
+            <h1 className="text-2xl text-gold-gradient font-heading mb-2">
+              Mafia Empire
+            </h1>
+            <div className="flex items-center">
+              <TommyGunIcon className="h-5 w-5 mr-2 text-primary" />
+              <p className="text-xs text-muted-foreground">Rise to power. Rule the streets.</p>
+            </div>
+          </div>
           
           {user && (
-            <div className="flex items-center space-x-2 mb-8">
-              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                <span className="text-sm font-medium">{user.username.charAt(0).toUpperCase()}</span>
-              </div>
-              <div>
-                <p className="text-sm font-medium">{user.username}</p>
-                <div className="flex space-x-2 text-xs text-muted-foreground">
-                  <span>Level {user.level}</span>
-                  <span className="text-primary">$
-                  {new Intl.NumberFormat().format(user.cash)}</span>
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                  <User className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">{user.username}</p>
+                  <p className="text-xs text-muted-foreground">Level {user.level}</p>
                 </div>
               </div>
             </div>
@@ -116,9 +84,9 @@ export function MafiaLayout({ children }: MafiaLayoutProps) {
           <nav className="space-y-1">
             {filteredNavItems.map((item) => (
               <Link key={item.path} href={item.path}>
-                <a
+                <div
                   className={cn(
-                    "group flex items-center px-3 py-2 text-sm font-medium rounded-sm transition-colors",
+                    "group flex items-center px-3 py-2 text-sm font-medium rounded-sm transition-colors cursor-pointer",
                     location === item.path
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -126,7 +94,7 @@ export function MafiaLayout({ children }: MafiaLayoutProps) {
                 >
                   {item.icon}
                   {item.name}
-                </a>
+                </div>
               </Link>
             ))}
           </nav>
@@ -168,9 +136,9 @@ export function MafiaLayout({ children }: MafiaLayoutProps) {
           <nav className="px-4 py-4 space-y-2">
             {filteredNavItems.map((item) => (
               <Link key={item.path} href={item.path}>
-                <a
+                <div
                   className={cn(
-                    "group flex items-center px-3 py-3 text-sm font-medium rounded-sm",
+                    "group flex items-center px-3 py-3 text-sm font-medium rounded-sm cursor-pointer",
                     location === item.path
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -179,7 +147,7 @@ export function MafiaLayout({ children }: MafiaLayoutProps) {
                 >
                   {item.icon}
                   {item.name}
-                </a>
+                </div>
               </Link>
             ))}
             <Button 
