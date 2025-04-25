@@ -70,6 +70,11 @@ export class CasinoStorage {
       console.log('Casino bets table structure:', JSON.stringify(tableInfo, null, 2));
       
       // Using direct SQL to bypass schema mismatch issues
+      // Make sure result is always a valid JSON object
+      const resultJson = formattedBet.result && formattedBet.result !== '{}' 
+        ? formattedBet.result 
+        : '{}';
+        
       const sql_query = sql`
         INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
         VALUES (
@@ -77,7 +82,7 @@ export class CasinoStorage {
           ${formattedBet.game_id}, 
           ${formattedBet.bet_amount}, 
           ${formattedBet.status}, 
-          ${formattedBet.result}::jsonb
+          ${resultJson}::jsonb
         )
         RETURNING *
       `;
@@ -111,15 +116,16 @@ export class CasinoStorage {
     } catch (error) {
       console.error('Error creating bet - FULL ERROR DETAILS:', error);
       
-      // Let's try using a simpler query to see if we can identify the issue
+      // Let's try using a simpler query with an empty JSONB object for the result
       try {
         const insertResult = await db.execute(sql`
-          INSERT INTO casino_bets (user_id, game_id, bet_amount, status)
+          INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
           VALUES (
             ${bet.userId}, 
             ${bet.gameId}, 
             ${bet.betAmount}, 
-            'pending'
+            'pending',
+            '{}'::jsonb
           )
           RETURNING *
         `);
