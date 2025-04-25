@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -46,19 +46,38 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Loader2, DollarSign } from "lucide-react";
+import { 
+  Loader2, 
+  DollarSign, 
+  TrendingUp, 
+  Trophy, 
+  History, 
+  AlertTriangle, 
+  Dice1, 
+  Dice5, 
+  BarChart, 
+  ChevronsUp,
+  ChevronsDown,
+  RotateCw
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
+import { Sparkles } from "@/components/ui/sparkles";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 
 // Types
 type CasinoGame = {
   id: number;
   name: string;
-  type: string; // This is actually game_type in the database
+  type: string;
   description: string;
   minBet: number;
   maxBet: number;
   houseEdge: number;
-  isActive: boolean; // This is actually enabled in the database
+  isActive: boolean;
   imageUrl?: string;
 };
 
