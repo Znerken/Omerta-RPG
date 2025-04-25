@@ -17,6 +17,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard-page";
 import ProfilePage from "@/pages/profile-page";
+import PublicProfilePage from "@/pages/public-profile-page";
 import CrimesPage from "@/pages/crimes-page";
 import TrainingPage from "@/pages/training-page";
 import GangPage from "@/pages/gang-page";
@@ -176,6 +177,15 @@ function AppRouter() {
             }
             return <ProtectedPage component={AdminPage} />;
           }} />
+        )}
+      </Route>
+      
+      {/* Public profile route - not protected, only wrapped in layout */}
+      <Route path="/player/:id">
+        {({ params }) => (
+          <MafiaLayout>
+            <PublicProfilePage />
+          </MafiaLayout>
         )}
       </Route>
       

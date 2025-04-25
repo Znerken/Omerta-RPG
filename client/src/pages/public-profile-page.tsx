@@ -4,15 +4,41 @@ import { Loader2, Users, Star, Award, ArrowLeft, CalendarIcon, Clock } from "luc
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { StatusIndicator } from "@/components/social/StatusIndicator";
+
+// Define types for profile data
+interface UserAchievement {
+  id: number;
+  name: string;
+  description: string;
+  unlocked: boolean;
+  unlockedAt?: string;
+}
+
+interface UserGang {
+  id: number;
+  name: string;
+  tag: string;
+}
+
+interface UserProfile {
+  id: number;
+  username: string;
+  level: number;
+  avatar: string | null;
+  bannerImage: string | null;
+  bio: string | null;
+  htmlProfile: string | null;
+  showAchievements: boolean;
+  createdAt: string;
+  status?: string;
+  gang?: UserGang;
+}
 
 export default function PublicProfilePage() {
   const { id } = useParams();
-  const userId = parseInt(id);
+  const userId = parseInt(id || "0");
 
   // Fetch public profile data
   const { 
@@ -23,7 +49,7 @@ export default function PublicProfilePage() {
     queryKey: ['/api/users', userId, 'profile'],
     queryFn: () => fetch(`/api/users/${userId}/profile`).then(res => {
       if (!res.ok) throw new Error('Failed to fetch profile');
-      return res.json();
+      return res.json() as Promise<UserProfile>;
     }),
     enabled: !!userId && !isNaN(userId),
   });
@@ -31,7 +57,7 @@ export default function PublicProfilePage() {
   // Fetch user achievements if visible
   const { 
     data: achievements
-  } = useQuery({
+  } = useQuery<UserAchievement[] | { hidden: boolean }>({
     queryKey: ['/api/users', userId, 'achievements'],
     queryFn: () => fetch(`/api/users/${userId}/achievements`).then(res => {
       if (!res.ok) {
@@ -113,7 +139,9 @@ export default function PublicProfilePage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold">{profile.username}</h1>
-                <StatusIndicator status={profile.status || 'offline'} />
+                <Badge variant={profile.status === 'online' ? 'default' : 'outline'}>
+                  {profile.status === 'online' ? 'Online' : 'Offline'}
+                </Badge>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
                 <Badge variant="outline" className="flex items-center gap-1">
@@ -176,7 +204,7 @@ export default function PublicProfilePage() {
               <CardTitle>Achievements</CardTitle>
             </CardHeader>
             <CardContent>
-              {achievements?.hidden ? (
+              {achievements && 'hidden' in achievements ? (
                 <div className="py-8 text-center text-muted-foreground">
                   <Award className="mx-auto h-12 w-12 mb-2 opacity-20" />
                   <p>{profile.username} has chosen to hide their achievements.</p>
@@ -188,9 +216,9 @@ export default function PublicProfilePage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {achievements
+                  {Array.isArray(achievements) && achievements
                     .filter(ach => ach.unlocked)
-                    .map(achievement => (
+                    .map((achievement: UserAchievement) => (
                       <div key={achievement.id} className="flex items-start space-x-4">
                         <div className="bg-primary/10 p-3 rounded-lg">
                           <Award className="h-6 w-6 text-primary" />

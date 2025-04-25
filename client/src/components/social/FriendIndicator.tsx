@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { PlayerLink } from "./PlayerLink";
 
 interface FriendIndicatorProps {
   friend: Friend;
@@ -68,7 +69,11 @@ export const FriendIndicator: React.FC<FriendIndicatorProps> = ({
             <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
           </Avatar>
         </StatusIndicator>
-        <span className="text-sm font-medium">{friend.username}</span>
+        <PlayerLink 
+          userId={friend.id} 
+          username={friend.username} 
+          className="text-sm font-medium" 
+        />
       </div>
     );
   }
@@ -86,7 +91,11 @@ export const FriendIndicator: React.FC<FriendIndicatorProps> = ({
         </div>
         <div>
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">{friend.username}</p>
+            <PlayerLink 
+              userId={friend.id} 
+              username={friend.username} 
+              className="text-sm font-medium" 
+            />
             <Badge 
               variant="outline" 
               className={`text-xs px-1.5 py-0 ${getStatusColor(friend.status?.status || "offline")}`}
