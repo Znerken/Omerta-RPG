@@ -17,7 +17,8 @@ import {
   Menu, 
   X, 
   LogOut,
-  Shield
+  Shield,
+  Award
 } from "lucide-react";
 import { 
   TommyGunIcon, 
