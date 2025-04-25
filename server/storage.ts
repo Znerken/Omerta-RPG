@@ -34,7 +34,7 @@ const MemoryStore = createMemoryStore(session);
 // modify the interface with any CRUD methods
 export interface IStorage {
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 
   // User methods
   getUser(id: number): Promise<User | undefined>;
@@ -134,7 +134,7 @@ class MemStorage implements IStorage {
   private messageIdCounter: number;
   
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: any;
 
   constructor() {
     // Initialize maps

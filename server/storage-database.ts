@@ -1,6 +1,5 @@
 import connectPg from "connect-pg-simple";
 import session from "express-session";
-import { SessionStore } from "express-session";
 import {
   User, InsertUser,
   Stat, InsertStat,
@@ -37,7 +36,7 @@ const PostgresSessionStore = connectPg(session);
 
 // Database storage implementation
 export class DatabaseStorage extends EconomyStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any;
   
   constructor() {
     super(); // Initialize EconomyStorage
