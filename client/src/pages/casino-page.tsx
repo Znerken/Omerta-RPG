@@ -34,10 +34,20 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
 } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
+import { Sparkles } from "@/components/ui/sparkles";
+import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { formatDistanceToNow } from "date-fns";
 import {
   Form,
   FormControl,
@@ -47,8 +57,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { 
-  Loader2, 
   DollarSign, 
+  Dices, 
+  Loader2, 
+  Plus, 
+  PlusCircle, 
+  RefreshCw, 
+  RotateCw,
+  RotateCcw,
+  Coins, 
+  SquareAsterisk, 
+  Award, 
+  ArrowUp, 
+  ArrowDown, 
+  SquareStack, 
+  CircleDot, 
+  Hand, 
+  Scissors,
   TrendingUp, 
   Trophy, 
   History, 
@@ -57,16 +82,8 @@ import {
   Dice5, 
   BarChart, 
   ChevronsUp,
-  ChevronsDown,
-  RotateCw
+  ChevronsDown
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { Slider } from "@/components/ui/slider";
-import { cn } from "@/lib/utils";
-import { Progress } from "@/components/ui/progress";
-import { Sparkles } from "@/components/ui/sparkles";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 
 // Types
 type CasinoGame = {
@@ -133,17 +150,20 @@ const rouletteFormSchema = z.object({
   betType: z.enum([
     "straight",
     "split",
-    "street",
     "corner",
-    "line",
-    "column",
-    "dozen",
     "red",
     "black",
     "even",
     "odd",
     "low",
     "high",
+    "1st12",
+    "2nd12",
+    "3rd12",
+    "column1",
+    "column2",
+    "column3",
+    "zero"
   ]),
   numbers: z.array(z.number()).optional(),
 });
@@ -1136,7 +1156,7 @@ export default function CasinoPage() {
                         </SelectItem>
                         <SelectItem value="even">
                           <div className="flex items-center">
-                            <Square2x2 className="h-4 w-4 mr-2 text-amber-500" />
+                            <SquareStack className="h-4 w-4 mr-2 text-amber-500" />
                             <span>Even (1:1)</span>
                           </div>
                         </SelectItem>
@@ -1329,6 +1349,44 @@ export default function CasinoPage() {
     );
   };
 
+  // Calculate blackjack probabilities and payouts
+  const calculateBlackjackWinChance = (playerCards: string[], dealerUpCard: string) => {
+    // This is a simplified calculation
+    // In a real game, it would depend on card counting and probability analysis
+    
+    // Convert face cards to 10 and aces to 11 initially
+    const convertCardValue = (card: string) => {
+      if (['J', 'Q', 'K'].includes(card[0])) return 10;
+      if (card[0] === 'A') return 11;
+      return parseInt(card);
+    };
+    
+    // Calculate player's hand value
+    const playerValues = playerCards.map(convertCardValue);
+    const playerSum = playerValues.reduce((sum, val) => sum + val, 0);
+    
+    // Calculate dealer's visible card value
+    const dealerValue = convertCardValue(dealerUpCard);
+    
+    // Basic strategy win chances:
+    if (playerSum === 21) return 90; // Blackjack
+    if (playerSum >= 17) return 50; // Stand with high hand
+    if (playerSum <= 11) return 70; // Always hit - good chances
+    
+    // Dealer showing low card is better for player
+    if (dealerValue >= 7) return 35;
+    
+    // Medium hands against low dealer card
+    return 55;
+  };
+  
+  const calculateBlackjackPayout = (betAmount: number, hasBlackjack: boolean) => {
+    if (hasBlackjack) {
+      return betAmount * 2.5; // Blackjack typically pays 3:2
+    }
+    return betAmount * 2; // Normal win pays 1:1
+  };
+
   const Blackjack = ({ game }: { game: CasinoGame }) => {
     const form = useForm<z.infer<typeof blackjackFormSchema>>({
       resolver: zodResolver(blackjackFormSchema),
@@ -1337,84 +1395,544 @@ export default function CasinoPage() {
         action: "bet",
       },
     });
-
-    function onSubmit(values: z.infer<typeof blackjackFormSchema>) {
+    
+    // Game state
+    const [gameStage, setGameStage] = useState<'betting' | 'playing' | 'result'>('betting');
+    const [playerCards, setPlayerCards] = useState<string[]>([]);
+    const [dealerCards, setDealerCards] = useState<string[]>([]);
+    const [playerScore, setPlayerScore] = useState(0);
+    const [dealerScore, setDealerScore] = useState(0);
+    const [dealerCardHidden, setDealerCardHidden] = useState(true);
+    const [gameResult, setGameResult] = useState<'win' | 'lose' | 'push' | null>(null);
+    const [animatingCards, setAnimatingCards] = useState(false);
+    
+    const watchedAction = form.watch("action");
+    const watchedBetAmount = form.watch("betAmount");
+    
+    // Import SVG assets for cards and table
+    const cardSvgPath = "/src/assets/casino/playing-card.svg";
+    const tableSvgPath = "/src/assets/casino/blackjack-table.svg";
+    
+    // Calculate the current hand score
+    const calculateHandScore = (cards: string[]) => {
+      let score = 0;
+      let aces = 0;
+      
+      // Count non-aces first
+      cards.forEach(card => {
+        const value = card[0];
+        if (value === 'A') {
+          aces++;
+        } else if (['J', 'Q', 'K', '1'].includes(value)) { // 10 is represented as '10'
+          score += 10;
+        } else {
+          score += parseInt(value);
+        }
+      });
+      
+      // Add aces optimally
+      for (let i = 0; i < aces; i++) {
+        if (score + 11 <= 21) {
+          score += 11;
+        } else {
+          score += 1;
+        }
+      }
+      
+      return score;
+    };
+    
+    // Get a random card (simplified)
+    const getRandomCard = () => {
+      const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+      const suits = ['♥', '♦', '♣', '♠'];
+      const value = values[Math.floor(Math.random() * values.length)];
+      const suit = suits[Math.floor(Math.random() * suits.length)];
+      return value + suit;
+    };
+    
+    // Deal initial cards
+    const dealInitialCards = () => {
+      const pCards = [getRandomCard(), getRandomCard()];
+      const dCards = [getRandomCard(), getRandomCard()];
+      
+      setAnimatingCards(true);
+      
+      // Animate dealing cards
+      setTimeout(() => {
+        setPlayerCards([pCards[0]]);
+        
+        setTimeout(() => {
+          setDealerCards([dCards[0]]);
+          
+          setTimeout(() => {
+            setPlayerCards(pCards);
+            
+            setTimeout(() => {
+              setDealerCards(dCards);
+              setAnimatingCards(false);
+              
+              // Calculate scores
+              const pScore = calculateHandScore(pCards);
+              const dScore = calculateHandScore([dCards[0]]); // Only count visible dealer card
+              
+              setPlayerScore(pScore);
+              setDealerScore(dScore);
+              
+              // Check for blackjack
+              if (pScore === 21) {
+                handleDealerTurn(pCards, dCards);
+              }
+            }, 300);
+          }, 300);
+        }, 300);
+      }, 300);
+    };
+    
+    // Handle player hitting
+    const handleHit = () => {
+      if (gameStage !== 'playing' || animatingCards) return;
+      
+      setAnimatingCards(true);
+      const newCard = getRandomCard();
+      
+      setTimeout(() => {
+        const updatedCards = [...playerCards, newCard];
+        setPlayerCards(updatedCards);
+        
+        const newScore = calculateHandScore(updatedCards);
+        setPlayerScore(newScore);
+        
+        setAnimatingCards(false);
+        
+        // Check if player busts
+        if (newScore > 21) {
+          setTimeout(() => {
+            setGameResult('lose');
+            setGameStage('result');
+            setDealerCardHidden(false);
+            setDealerScore(calculateHandScore(dealerCards));
+            
+            // Submit the result
+            placeBetMutation.mutate({
+              gameId: game.id,
+              betAmount: watchedBetAmount,
+              betDetails: {
+                action: 'stand',
+                playerCards: updatedCards,
+                dealerCards,
+                playerScore: newScore,
+                dealerScore: calculateHandScore(dealerCards),
+                result: 'lose'
+              },
+            });
+          }, 500);
+        }
+      }, 500);
+    };
+    
+    // Handle dealer's turn
+    const handleDealerTurn = (finalPlayerCards: string[], currentDealerCards: string[]) => {
+      let updatedDealerCards = [...currentDealerCards];
+      let dealerFinalScore = calculateHandScore(updatedDealerCards);
+      
+      // Dealer must hit on 16 or less
+      while (dealerFinalScore < 17) {
+        updatedDealerCards.push(getRandomCard());
+        dealerFinalScore = calculateHandScore(updatedDealerCards);
+      }
+      
+      setDealerCards(updatedDealerCards);
+      setDealerCardHidden(false);
+      setDealerScore(dealerFinalScore);
+      
+      // Determine the result
+      const playerFinalScore = calculateHandScore(finalPlayerCards);
+      
+      let result: 'win' | 'lose' | 'push';
+      if (playerFinalScore > 21) {
+        result = 'lose';
+      } else if (dealerFinalScore > 21) {
+        result = 'win';
+      } else if (playerFinalScore > dealerFinalScore) {
+        result = 'win';
+      } else if (playerFinalScore < dealerFinalScore) {
+        result = 'lose';
+      } else {
+        result = 'push';
+      }
+      
+      setGameResult(result);
+      setGameStage('result');
+      
+      // Submit the result
       placeBetMutation.mutate({
         gameId: game.id,
-        betAmount: values.betAmount,
+        betAmount: watchedBetAmount,
         betDetails: {
-          action: values.action,
+          action: 'stand',
+          playerCards: finalPlayerCards,
+          dealerCards: updatedDealerCards,
+          playerScore: playerFinalScore,
+          dealerScore: dealerFinalScore,
+          result
         },
       });
+    };
+    
+    // Handle standing
+    const handleStand = () => {
+      if (gameStage !== 'playing' || animatingCards) return;
+      handleDealerTurn(playerCards, dealerCards);
+    };
+    
+    // Reset the game
+    const resetGame = () => {
+      setGameStage('betting');
+      setPlayerCards([]);
+      setDealerCards([]);
+      setPlayerScore(0);
+      setDealerScore(0);
+      setDealerCardHidden(true);
+      setGameResult(null);
+      setAnimatingCards(false);
+      form.setValue('action', 'bet');
+    };
+    
+    // Handle form submission
+    function onSubmit(values: z.infer<typeof blackjackFormSchema>) {
+      if (gameStage === 'betting') {
+        // Start new game
+        setGameStage('playing');
+        dealInitialCards();
+      } else if (gameStage === 'playing') {
+        // Handle game actions
+        switch (values.action) {
+          case 'hit':
+            handleHit();
+            break;
+          case 'stand':
+            handleStand();
+            break;
+          case 'double':
+            // Double bet, take one card and stand
+            placeBetMutation.mutate({
+              gameId: game.id,
+              betAmount: values.betAmount * 2,
+              betDetails: {
+                action: 'double',
+              },
+            });
+            break;
+          case 'split':
+            // Split hand into two separate hands
+            placeBetMutation.mutate({
+              gameId: game.id,
+              betAmount: values.betAmount,
+              betDetails: {
+                action: 'split',
+              },
+            });
+            break;
+          default:
+            break;
+        }
+      } else if (gameStage === 'result') {
+        // Reset game after showing result
+        resetGame();
+      }
     }
+    
+    // Format cards for display
+    const formatCard = (card: string, hidden: boolean = false) => {
+      if (hidden) {
+        return (
+          <div className="relative w-12 h-16 md:w-16 md:h-20 rounded-md bg-gradient-to-b from-blue-900 to-blue-950 border-2 border-blue-800 shadow-lg">
+            <div className="absolute inset-0 flex items-center justify-center text-gold text-xs opacity-50">
+              ?
+            </div>
+            <div className="absolute inset-0 bg-pattern-diamond opacity-20"></div>
+          </div>
+        );
+      }
+      
+      const value = card[0] === '1' ? '10' : card[0]; // Handle 10
+      const suit = card.slice(-1);
+      const color = ['♥', '♦'].includes(suit) ? 'text-red-600' : 'text-black';
+      
+      return (
+        <div className="relative w-12 h-16 md:w-16 md:h-20 rounded-md bg-white border border-gray-300 shadow-lg flex flex-col justify-between p-1">
+          <div className={`text-xs font-bold ${color}`}>{value}</div>
+          <div className={`text-center text-xl ${color}`}>{suit}</div>
+          <div className={`text-xs font-bold self-end ${color}`}>{value}</div>
+        </div>
+      );
+    };
+    
+    // Calculate win chances (only relevant during play)
+    const winChance = gameStage === 'playing' && playerCards.length > 0 && dealerCards.length > 0
+      ? calculateBlackjackWinChance(playerCards, dealerCards[0])
+      : 45; // Default chance
+    
+    // Calculate potential payout
+    const hasBlackjack = playerCards.length === 2 && playerScore === 21;
+    const potentialPayout = calculateBlackjackPayout(watchedBetAmount, hasBlackjack);
 
     return (
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <FormField
-            control={form.control}
-            name="betAmount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Bet Amount</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min={game.minBet}
-                    max={game.maxBet}
-                    {...field}
-                    onChange={(e) =>
-                      field.onChange(Number(e.target.value))
-                    }
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+      <div className="space-y-8 relative">
+        <div className="bg-black/30 rounded-xl p-4 backdrop-blur-sm border border-gray-800/60">
+          <div className="text-center mb-4">
+            <h3 className="text-xl font-semibold">Blackjack</h3>
+            <p className="text-muted-foreground text-sm">
+              {gameStage === 'betting' && "Place your bet to start playing"}
+              {gameStage === 'playing' && `Current hand: ${playerScore}`}
+              {gameStage === 'result' && gameResult === 'win' && 
+                <span className="text-green-500">You won!</span>}
+              {gameStage === 'result' && gameResult === 'lose' && 
+                <span className="text-red-500">You lost!</span>}
+              {gameStage === 'result' && gameResult === 'push' && 
+                <span className="text-amber-500">Push - bet returned</span>}
+            </p>
+          </div>
+          
+          {/* Blackjack table visualization */}
+          <div className="relative w-full h-48 md:h-56 border border-amber-900/30 rounded-lg overflow-hidden bg-green-900 mb-6">
+            {/* Table background */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <img 
+                src={tableSvgPath} 
+                alt="Blackjack Table" 
+                className="object-cover w-full h-full"
+              />
+            </div>
+            
+            {/* Dealer's cards */}
+            <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center">
+              <div className="text-amber-200 text-xs absolute -top-4 left-1/2 transform -translate-x-1/2 font-bold">
+                Dealer {dealerCardHidden ? `(${dealerScore})` : `(${dealerScore})`}
+              </div>
+              <div className="flex space-x-1">
+                {dealerCards.map((card, index) => (
+                  <div 
+                    key={index} 
+                    className="transition-all duration-300 transform"
+                    style={{ 
+                      transform: `rotate(${(index - dealerCards.length / 2) * 5}deg)`,
+                      zIndex: index
+                    }}
+                  >
+                    {formatCard(card, index === 1 && dealerCardHidden)}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Player's cards */}
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center">
+              <div className="text-amber-200 text-xs absolute -bottom-4 left-1/2 transform -translate-x-1/2 font-bold">
+                Player ({playerScore})
+              </div>
+              <div className="flex space-x-1">
+                {playerCards.map((card, index) => (
+                  <div 
+                    key={index} 
+                    className="transition-all duration-300 transform"
+                    style={{ 
+                      transform: `rotate(${(index - playerCards.length / 2) * 5}deg)`,
+                      zIndex: index
+                    }}
+                  >
+                    {formatCard(card)}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Result overlay */}
+            {gameStage === 'result' && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <div className={cn(
+                  "text-3xl font-bold px-6 py-3 rounded-lg",
+                  gameResult === 'win' ? "bg-green-900/80 text-green-300" : 
+                  gameResult === 'lose' ? "bg-red-900/80 text-red-300" : 
+                  "bg-amber-900/80 text-amber-300"
+                )}>
+                  {gameResult === 'win' ? "You Win!" : 
+                   gameResult === 'lose' ? "Dealer Wins" : "Push"}
+                </div>
+              </div>
             )}
-          />
-
-          <FormField
-            control={form.control}
-            name="action"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Action</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
+          </div>
+          
+          {/* Game statistics */}
+          {(gameStage === 'playing' || gameStage === 'betting') && (
+            <>
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-sm font-medium">Win Chance</p>
+                <Badge 
+                  variant={winChance > 50 ? "default" : "outline"}
                 >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an action" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="bet">Bet</SelectItem>
-                    <SelectItem value="hit">Hit</SelectItem>
-                    <SelectItem value="stand">Stand</SelectItem>
-                    <SelectItem value="double">Double</SelectItem>
-                    <SelectItem value="split">Split</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  {winChance.toFixed(1)}%
+                </Badge>
+              </div>
+              <Progress 
+                className="h-2" 
+                value={winChance} 
+                indicatorColor={winChance > 50 ? "bg-green-500" : "bg-amber-500"}
+              />
 
-          <Button
-            type="submit"
-            disabled={placeBetMutation.isPending}
-            className="w-full"
-          >
-            {placeBetMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <DollarSign className="h-4 w-4 mr-2" />
+              <div className="flex justify-between items-center mt-4 mb-2">
+                <p className="text-sm font-medium">Potential Payout</p>
+                <Badge variant="outline" className="bg-green-900/30">
+                  <DollarSign className="h-3 w-3 mr-1" />
+                  {potentialPayout.toFixed(2)}
+                </Badge>
+              </div>
+            </>
+          )}
+          
+          <Separator className="my-4 opacity-30" />
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Bet amount field - only shown during betting phase */}
+            {gameStage === 'betting' && (
+              <FormField
+                control={form.control}
+                name="betAmount"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex justify-between">
+                      <FormLabel>Bet Amount</FormLabel>
+                      <div className="text-sm text-muted-foreground">
+                        Min: ${game.minBet} | Max: ${game.maxBet}
+                      </div>
+                    </div>
+                    <FormControl>
+                      <div className="space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <Input
+                            type="number"
+                            min={game.minBet}
+                            max={game.maxBet}
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                            className="bg-gray-950/80 border-gray-800"
+                          />
+                        </div>
+                        <Slider
+                          value={[field.value]}
+                          min={game.minBet}
+                          max={game.maxBet}
+                          step={10}
+                          onValueChange={(vals) => field.onChange(vals[0])}
+                          className="py-2"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
-            {form.watch("action") === "bet" ? "Place Bet" : form.watch("action")}
-          </Button>
-        </form>
-      </Form>
+
+            {/* Game actions - only shown during playing phase */}
+            {gameStage === 'playing' && (
+              <FormField
+                control={form.control}
+                name="action"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Action</FormLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        type="button"
+                        variant={field.value === 'hit' ? "default" : "outline"}
+                        className={field.value === 'hit' ? "bg-green-800" : "bg-gray-950/80 border-gray-800"}
+                        onClick={() => field.onChange('hit')}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Hit
+                      </Button>
+                      
+                      <Button 
+                        type="button"
+                        variant={field.value === 'stand' ? "default" : "outline"}
+                        className={field.value === 'stand' ? "bg-red-800" : "bg-gray-950/80 border-gray-800"}
+                        onClick={() => field.onChange('stand')}
+                      >
+                        <Hand className="h-4 w-4 mr-2" />
+                        Stand
+                      </Button>
+                      
+                      <Button 
+                        type="button"
+                        variant={field.value === 'double' ? "default" : "outline"}
+                        className={field.value === 'double' ? "bg-amber-800" : "bg-gray-950/80 border-gray-800"}
+                        onClick={() => field.onChange('double')}
+                        disabled={playerCards.length > 2} // Can only double on initial hand
+                      >
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Double
+                      </Button>
+                      
+                      <Button 
+                        type="button"
+                        variant={field.value === 'split' ? "default" : "outline"}
+                        className={field.value === 'split' ? "bg-blue-800" : "bg-gray-950/80 border-gray-800"}
+                        onClick={() => field.onChange('split')}
+                        disabled={playerCards.length !== 2 || playerCards[0][0] !== playerCards[1][0]} // Can only split pairs
+                      >
+                        <Scissors className="h-4 w-4 mr-2" />
+                        Split
+                      </Button>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <Sparkles intensity="low" sparkleColor="rgba(245, 158, 11, 0.6)">
+              <Button
+                type="submit"
+                disabled={placeBetMutation.isPending || animatingCards}
+                className={cn(
+                  "w-full h-12 bg-gradient-to-r from-amber-600 to-amber-800 hover:from-amber-500 hover:to-amber-700 text-white border-amber-950",
+                  animatingCards && "animate-pulse"
+                )}
+              >
+                {placeBetMutation.isPending || animatingCards ? (
+                  <>
+                    <RotateCw className="h-5 w-5 animate-spin mr-2" />
+                    {animatingCards ? "Dealing cards..." : "Processing..."}
+                  </>
+                ) : gameStage === 'betting' ? (
+                  <>
+                    <DollarSign className="h-5 w-5 mr-2" />
+                    Place Bet
+                  </>
+                ) : gameStage === 'playing' ? (
+                  <>
+                    {watchedAction === 'hit' && <Plus className="h-5 w-5 mr-2" />}
+                    {watchedAction === 'stand' && <Hand className="h-5 w-5 mr-2" />}
+                    {watchedAction === 'double' && <DollarSign className="h-5 w-5 mr-2" />}
+                    {watchedAction === 'split' && <Scissors className="h-5 w-5 mr-2" />}
+                    {watchedAction}
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="h-5 w-5 mr-2" />
+                    Play Again
+                  </>
+                )}
+              </Button>
+            </Sparkles>
+          </form>
+        </Form>
+      </div>
     );
   };
 
