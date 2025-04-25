@@ -53,6 +53,7 @@ import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingU
 import PageHeader from "../components/layout/page-header";
 import { PageSection } from "../components/layout/page-section";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
@@ -1011,6 +1012,39 @@ export default function AdminPage() {
                   </Table>
                 </CardContent>
               </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Development Tab */}
+        <TabsContent value="development" className="space-y-6">
+          <Card className="bg-dark-surface">
+            <CardHeader>
+              <CardTitle>Development Tools</CardTitle>
+              <CardDescription>Access testing and development features</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <Card className="bg-dark-lighter hover:bg-dark-surface transition-colors">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="p-2 bg-primary/20 rounded-full">
+                        <Users className="h-6 w-6 text-primary" />
+                      </div>
+                      <CardTitle className="text-lg">Friend System</CardTitle>
+                      <CardDescription>Test friend requests, social features and notifications</CardDescription>
+                      <Link href="/friend-system-test">
+                        <Button 
+                          variant="default" 
+                          className="mt-4 w-full"
+                        >
+                          Open Test Page
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
