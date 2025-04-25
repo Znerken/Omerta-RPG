@@ -45,33 +45,51 @@ export class CasinoStorage {
 
   // Casino Bets
   async createBet(bet: InsertCasinoBet): Promise<CasinoBet> {
-    // Convert to the actual database schema structure
-    const formattedBet = {
-      user_id: bet.userId,
-      game_id: bet.gameId,
-      bet_amount: bet.betAmount,
-      status: bet.status || 'pending',
-      result: bet.result
-    };
-    
-    // Using direct SQL to bypass schema mismatch issues
-    const [newBet] = await db.execute(sql`
-      INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
-      VALUES (${formattedBet.user_id}, ${formattedBet.game_id}, ${formattedBet.bet_amount}, ${formattedBet.status}, ${JSON.stringify(formattedBet.result)})
-      RETURNING *
-    `);
-    
-    // Transform to match the expected structure
-    return {
-      id: newBet.id,
-      userId: newBet.user_id,
-      gameId: newBet.game_id,
-      betAmount: newBet.bet_amount,
-      status: newBet.status,
-      result: newBet.result,
-      createdAt: newBet.created_at,
-      settledAt: newBet.settled_at
-    };
+    try {
+      // Convert to the actual database schema structure
+      const formattedBet = {
+        user_id: bet.userId,
+        game_id: bet.gameId,
+        bet_amount: bet.betAmount,
+        status: bet.status || 'pending',
+        result: bet.result ? JSON.stringify(bet.result) : '{}'
+      };
+      
+      // Using direct SQL to bypass schema mismatch issues
+      const result = await db.execute(sql`
+        INSERT INTO casino_bets (user_id, game_id, bet_amount, status, result)
+        VALUES (
+          ${formattedBet.user_id}, 
+          ${formattedBet.game_id}, 
+          ${formattedBet.bet_amount}, 
+          ${formattedBet.status}, 
+          ${formattedBet.result}::jsonb
+        )
+        RETURNING *
+      `);
+      
+      // Check if we have valid results
+      if (!Array.isArray(result) || result.length === 0) {
+        throw new Error('Failed to create bet record');
+      }
+      
+      const newBet = result[0];
+      
+      // Transform to match the expected structure
+      return {
+        id: newBet.id,
+        userId: newBet.user_id,
+        gameId: newBet.game_id,
+        betAmount: newBet.bet_amount,
+        status: newBet.status,
+        result: newBet.result,
+        createdAt: newBet.created_at,
+        settledAt: newBet.settled_at
+      };
+    } catch (error) {
+      console.error('Error creating bet:', error);
+      throw error; // Re-throw the error so the API can handle it
+    }
   }
 
   async updateBetResult(
@@ -79,32 +97,42 @@ export class CasinoStorage {
     result: { win: boolean; amount: number; details?: { [key: string]: any } },
     status: "pending" | "won" | "lost" | "canceled" | "refunded"
   ): Promise<CasinoBet | undefined> {
-    // Using direct SQL to bypass schema mismatch issues
-    const [updatedBet] = await db.execute(sql`
-      UPDATE casino_bets
-      SET 
-        result = ${JSON.stringify(result)},
-        status = ${status},
-        settled_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `);
-    
-    if (!updatedBet) {
+    try {
+      // Using direct SQL to bypass schema mismatch issues
+      const resultJson = JSON.stringify(result);
+      
+      const queryResult = await db.execute(sql`
+        UPDATE casino_bets
+        SET 
+          result = ${resultJson}::jsonb,
+          status = ${status},
+          settled_at = NOW()
+        WHERE id = ${id}
+        RETURNING *
+      `);
+      
+      // Check if we have valid results
+      if (!Array.isArray(queryResult) || queryResult.length === 0) {
+        return undefined;
+      }
+      
+      const updatedBet = queryResult[0];
+      
+      // Transform to match the expected structure
+      return {
+        id: updatedBet.id,
+        userId: updatedBet.user_id,
+        gameId: updatedBet.game_id,
+        betAmount: updatedBet.bet_amount,
+        status: updatedBet.status,
+        result: updatedBet.result,
+        createdAt: updatedBet.created_at,
+        settledAt: updatedBet.settled_at
+      };
+    } catch (error) {
+      console.error('Error updating bet result:', error);
       return undefined;
     }
-    
-    // Transform to match the expected structure
-    return {
-      id: updatedBet.id,
-      userId: updatedBet.user_id,
-      gameId: updatedBet.game_id,
-      betAmount: updatedBet.bet_amount,
-      status: updatedBet.status,
-      result: updatedBet.result,
-      createdAt: updatedBet.created_at,
-      settledAt: updatedBet.settled_at
-    };
   }
 
   async getUserBets(userId: number, limit: number = 10): Promise<CasinoBetWithDetails[]> {
