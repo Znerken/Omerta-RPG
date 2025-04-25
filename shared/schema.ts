@@ -29,14 +29,6 @@ export const users = pgTable("users", {
   xp: integer("xp").notNull().default(0),
   cash: integer("cash").notNull().default(1000),
   respect: integer("respect").notNull().default(0),
-  // Economy-related fields
-  bankBalance: integer("bank_balance").notNull().default(0),
-  investmentBalance: integer("investment_balance").notNull().default(0),
-  netWorth: integer("net_worth").notNull().default(1000), // Cash + bank + investments + assets
-  creditScore: integer("credit_score").notNull().default(500), // 300-850 range
-  taxRate: integer("tax_rate").notNull().default(15), // Percentage
-  lastIncome: timestamp("last_income"), // For passive income timing
-  lastInterest: timestamp("last_interest"), // For bank interest timing
   // Basic user data
   avatar: text("avatar"),
   bio: text("bio"),
@@ -45,6 +37,16 @@ export const users = pgTable("users", {
   jailTimeEnd: timestamp("jail_time_end"),
   gangId: integer("gang_id"),
   createdAt: timestamp("created_at").defaultNow(),
+  
+  // NOTE: Economy-related fields - Commented out until database migration is complete
+  // These will be added in a future migration
+  // bankBalance: integer("bank_balance").notNull().default(0),
+  // investmentBalance: integer("investment_balance").notNull().default(0),
+  // netWorth: integer("net_worth").notNull().default(1000), // Cash + bank + investments + assets
+  // creditScore: integer("credit_score").notNull().default(500), // 300-850 range
+  // taxRate: integer("tax_rate").notNull().default(15), // Percentage
+  // lastIncome: timestamp("last_income"), // For passive income timing
+  // lastInterest: timestamp("last_interest"), // For bank interest timing
 });
 
 // Stats Schema
