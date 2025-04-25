@@ -46,20 +46,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     setNotifications(prev => [newNotification, ...prev]);
     
     // Show toast notification
-    const toastIcons = {
-      success: <Check className="h-4 w-4" />,
-      error: <Ban className="h-4 w-4" />,
-      warning: <AlertCircle className="h-4 w-4" />,
-      info: <Bell className="h-4 w-4" />,
-      payment: <DollarSign className="h-4 w-4" />
-    };
-    
     toast({
       title: title,
       description: message,
-      variant: type === "error" ? "destructive" : "default",
-      icon: toastIcons[type]
+      variant: type === "error" ? "destructive" : "default"
     });
+    
+    // Different icons based on notification type
+    // (We don't use this in the toast due to type constraints,
+    // but we use it in the notification list component)
     
     return id;
   }, [toast]);

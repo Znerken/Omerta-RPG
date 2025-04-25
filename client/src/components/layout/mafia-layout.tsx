@@ -22,6 +22,7 @@ import {
   FedoraIcon, 
   MoneyBriefcaseIcon 
 } from "@/components/ui/mafia-icons";
+import { NotificationList } from "@/components/notification/notification-list";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: <Home className="h-5 w-5 mr-3" /> },
@@ -74,9 +75,12 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
                 <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
                   <User className="h-6 w-6 text-primary" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="font-medium">{user.username}</p>
                   <p className="text-xs text-muted-foreground">Level {user.level}</p>
+                </div>
+                <div>
+                  <NotificationList />
                 </div>
               </div>
             </div>
@@ -117,17 +121,20 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-card border-b border-border">
         <div className="flex items-center justify-between px-4 py-3">
           <h1 className="text-xl text-gold-gradient">Mafia Empire</h1>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </Button>
+          <div className="flex items-center space-x-2">
+            {user && <NotificationList />}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
