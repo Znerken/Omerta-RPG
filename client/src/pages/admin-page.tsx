@@ -49,7 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle } from "lucide-react";
+import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle, Code, WrenchIcon } from "lucide-react";
 import PageHeader from "../components/layout/page-header";
 import { PageSection } from "../components/layout/page-section";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -630,7 +630,12 @@ export default function AdminPage() {
             Jail
           </TabsTrigger>
           <TabsTrigger value="drug-labs" className="data-[state=active]:bg-dark-surface">
+            <Database className="h-4 w-4 mr-2" />
             Drug Labs
+          </TabsTrigger>
+          <TabsTrigger value="development" className="data-[state=active]:bg-dark-surface">
+            <Code className="h-4 w-4 mr-2" />
+            Development
           </TabsTrigger>
         </TabsList>
 
