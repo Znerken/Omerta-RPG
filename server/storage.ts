@@ -22,6 +22,21 @@ import {
   CrimeWithHistory,
   ItemWithDetails,
   GangWithMembers,
+  GangWithDetails,
+  // Gang Territory, War, and Mission types
+  GangTerritory,
+  GangWar,
+  GangWarParticipant,
+  GangMission,
+  GangMissionAttempt,
+  InsertGangTerritory,
+  InsertGangWar,
+  InsertGangWarParticipant,
+  InsertGangMission,
+  InsertGangMissionAttempt,
+  GangTerritoryWithDetails,
+  GangWarWithDetails,
+  GangMissionWithDetails,
   // Challenge types
   Challenge,
   ChallengeProgress,
@@ -92,12 +107,46 @@ export interface IStorage {
   createGang(gang: InsertGang): Promise<Gang>;
   updateGang(id: number, gang: Partial<Gang>): Promise<Gang | undefined>;
   getGangWithMembers(id: number): Promise<GangWithMembers | undefined>;
+  getGangWithDetails(id: number): Promise<GangWithDetails | undefined>;
   
   // Gang Member methods
   getGangMember(userId: number): Promise<(GangMember & { gang: Gang }) | undefined>;
   addGangMember(member: InsertGangMember): Promise<GangMember>;
   updateGangMember(userId: number, gangId: number, data: Partial<GangMember>): Promise<GangMember | undefined>;
   removeGangMember(userId: number, gangId: number): Promise<boolean>;
+  getGangMemberCount(gangId: number): Promise<number>;
+  updateMemberContribution(userId: number, gangId: number, amount: number): Promise<GangMember | undefined>;
+  
+  // Gang Territory methods
+  getAllTerritories(): Promise<GangTerritory[]>;
+  getTerritory(id: number): Promise<GangTerritory | undefined>;
+  getTerritoryWithDetails(id: number): Promise<GangTerritoryWithDetails | undefined>;
+  getTerritoriesByGangId(gangId: number): Promise<GangTerritory[]>;
+  createTerritory(territory: InsertGangTerritory): Promise<GangTerritory>;
+  updateTerritory(id: number, data: Partial<GangTerritory>): Promise<GangTerritory | undefined>;
+  claimTerritory(territoryId: number, gangId: number): Promise<GangTerritory | undefined>;
+  
+  // Gang War methods
+  getActiveWars(): Promise<GangWar[]>;
+  getWarsByGangId(gangId: number, status?: string): Promise<GangWar[]>;
+  getWar(id: number): Promise<GangWar | undefined>;
+  getWarWithDetails(id: number): Promise<GangWarWithDetails | undefined>;
+  startWar(war: InsertGangWar): Promise<GangWar>;
+  updateWar(id: number, data: Partial<GangWar>): Promise<GangWar | undefined>;
+  endWar(id: number, winnerId: number): Promise<GangWar | undefined>;
+  addWarParticipant(participant: InsertGangWarParticipant): Promise<GangWarParticipant>;
+  updateWarParticipantContribution(userId: number, warId: number, amount: number): Promise<GangWarParticipant | undefined>;
+  
+  // Gang Mission methods
+  getAllMissions(): Promise<GangMission[]>;
+  getAvailableMissions(gangId: number): Promise<GangMissionWithDetails[]>;
+  getMission(id: number): Promise<GangMission | undefined>;
+  getMissionWithDetails(id: number, gangId: number): Promise<GangMissionWithDetails | undefined>;
+  createMission(mission: InsertGangMission): Promise<GangMission>;
+  updateMission(id: number, data: Partial<GangMission>): Promise<GangMission | undefined>;
+  startMissionAttempt(attempt: InsertGangMissionAttempt): Promise<GangMissionAttempt>;
+  updateMissionAttempt(gangId: number, missionId: number, data: Partial<GangMissionAttempt>): Promise<GangMissionAttempt | undefined>;
+  completeMissionAttempt(gangId: number, missionId: number, success: boolean): Promise<GangMissionAttempt | undefined>;
   
   // Message methods
   getUserMessages(userId: number, limit?: number): Promise<Message[]>;
@@ -147,6 +196,11 @@ class MemStorage implements IStorage {
   private userInventory: Map<number, UserInventory>;
   private gangs: Map<number, Gang>;
   private gangMembers: Map<number, GangMember>;
+  private gangTerritories: Map<number, GangTerritory>;
+  private gangWars: Map<number, GangWar>;
+  private gangWarParticipants: Map<number, GangWarParticipant>;
+  private gangMissions: Map<number, GangMission>;
+  private gangMissionAttempts: Map<number, GangMissionAttempt>;
   private messages: Map<number, Message>;
   private challenges: Map<number, Challenge>;
   private challengeProgress: Map<number, ChallengeProgress>;
@@ -161,6 +215,11 @@ class MemStorage implements IStorage {
   private userInventoryIdCounter: number;
   private gangIdCounter: number;
   private gangMemberIdCounter: number;
+  private gangTerritoryIdCounter: number;
+  private gangWarIdCounter: number;
+  private gangWarParticipantIdCounter: number;
+  private gangMissionIdCounter: number;
+  private gangMissionAttemptIdCounter: number;
   private messageIdCounter: number;
   private challengeIdCounter: number;
   private challengeProgressIdCounter: number;
