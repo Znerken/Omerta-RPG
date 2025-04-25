@@ -264,8 +264,21 @@ export class DrugStorage {
   // Drug Lab operations
   async getUserLabs(userId: number): Promise<DrugLab[]> {
     try {
+      // Explicitly select only the columns we know exist in the database
+      // This avoids the 'last_raided_at' column error
       const labs = await db
-        .select()
+        .select({
+          id: drugLabs.id,
+          userId: drugLabs.userId,
+          name: drugLabs.name,
+          level: drugLabs.level,
+          securityLevel: drugLabs.securityLevel,
+          capacity: drugLabs.capacity,
+          costToUpgrade: drugLabs.costToUpgrade,
+          location: drugLabs.location,
+          discoveryChance: drugLabs.discoveryChance,
+          createdAt: drugLabs.createdAt
+        })
         .from(drugLabs)
         .where(eq(drugLabs.userId, userId))
         .orderBy(drugLabs.level, desc);
@@ -273,7 +286,9 @@ export class DrugStorage {
       // Ensure location has a default value if it's null
       return labs.map(lab => ({
         ...lab,
-        location: lab.location || 'Hidden Location'
+        location: lab.location || 'Hidden Location',
+        // Add a default value for lastRaidedAt since the schema expects it
+        lastRaidedAt: null
       }));
     } catch (error) {
       console.error("Error fetching drug labs:", error);
@@ -282,8 +297,29 @@ export class DrugStorage {
   }
 
   async getDrugLab(id: number): Promise<DrugLab | undefined> {
-    const [lab] = await db.select().from(drugLabs).where(eq(drugLabs.id, id));
-    return lab;
+    const [lab] = await db
+      .select({
+        id: drugLabs.id,
+        userId: drugLabs.userId,
+        name: drugLabs.name,
+        level: drugLabs.level,
+        securityLevel: drugLabs.securityLevel, 
+        capacity: drugLabs.capacity,
+        costToUpgrade: drugLabs.costToUpgrade,
+        location: drugLabs.location,
+        discoveryChance: drugLabs.discoveryChance,
+        createdAt: drugLabs.createdAt
+      })
+      .from(drugLabs)
+      .where(eq(drugLabs.id, id));
+    
+    if (!lab) return undefined;
+    
+    return {
+      ...lab,
+      location: lab.location || 'Hidden Location',
+      lastRaidedAt: null
+    };
   }
 
   async createDrugLab(insertLab: InsertDrugLab): Promise<DrugLab> {
@@ -340,7 +376,7 @@ export class DrugStorage {
   }
 
   async getCompletedProductions(): Promise<(DrugProduction & { drug: Drug, lab: DrugLab })[]> {
-    return await db
+    const productions = await db
       .select({
         id: drugProduction.id,
         labId: drugProduction.labId,
@@ -351,7 +387,18 @@ export class DrugStorage {
         isCompleted: drugProduction.isCompleted,
         successRate: drugProduction.successRate,
         drug: drugs,
-        lab: drugLabs,
+        lab: {
+          id: drugLabs.id,
+          userId: drugLabs.userId,
+          name: drugLabs.name,
+          level: drugLabs.level,
+          securityLevel: drugLabs.securityLevel,
+          capacity: drugLabs.capacity,
+          costToUpgrade: drugLabs.costToUpgrade,
+          location: drugLabs.location,
+          discoveryChance: drugLabs.discoveryChance,
+          createdAt: drugLabs.createdAt
+        }
       })
       .from(drugProduction)
       .innerJoin(drugs, eq(drugProduction.drugId, drugs.id))
@@ -362,6 +409,16 @@ export class DrugStorage {
           lt(drugProduction.completesAt, new Date())
         )
       );
+      
+    // Add the missing lastRaidedAt property to each lab
+    return productions.map(prod => ({
+      ...prod,
+      lab: {
+        ...prod.lab,
+        location: prod.lab.location || 'Hidden Location',
+        lastRaidedAt: null
+      }
+    }));
   }
 
   async startDrugProduction(insertProduction: InsertDrugProduction): Promise<DrugProduction> {
