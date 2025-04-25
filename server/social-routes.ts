@@ -22,6 +22,9 @@ function notifyUser(userId: number, event: string, data: any) {
 }
 
 export function registerSocialRoutes(app: Express) {
+  // IMPORTANT: The order of routes matters - more specific routes should come before more generic ones
+  // For example, /api/social/users/search must come before /api/social/users/:userId
+
   // Get user friends
   app.get("/api/social/friends", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
@@ -33,6 +36,100 @@ export function registerSocialRoutes(app: Express) {
     } catch (error) {
       console.error("Error getting friends:", error);
       res.status(500).json({ message: "Failed to get friends" });
+    }
+  });
+
+  // Search for users by username - THIS MUST COME BEFORE THE /:userId ROUTE
+  app.get("/api/social/users/search", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      // Log all request details for debugging
+      console.log('Search API called with params:', req.params);
+      console.log('Search API called with query:', req.query);
+      
+      const searchQuery = req.query.q as string;
+      
+      if (!searchQuery || searchQuery.trim().length < 3) {
+        return res.status(400).json({ message: "Search query must be at least 3 characters" });
+      }
+      
+      console.log(`Searching for users with query: "${searchQuery}"`);
+      
+      // Direct database query to find matching users
+      const matchingUsers = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          avatar: users.avatar,
+        })
+        .from(users)
+        .where(
+          sql`LOWER(${users.username}) LIKE LOWER(${'%' + searchQuery + '%'})`
+        )
+        .limit(10);
+      
+      console.log(`Found ${matchingUsers.length} users matching query:`, matchingUsers);
+      
+      if (matchingUsers.length === 0) {
+        return res.json([]);
+      }
+      
+      const currentUserId = req.user.id;
+      
+      // Get all friendship relations for the current user in a single query
+      const friendships = await db
+        .select()
+        .from(userFriends)
+        .where(
+          or(
+            eq(userFriends.userId, currentUserId),
+            eq(userFriends.friendId, currentUserId)
+          )
+        );
+      
+      console.log(`Found ${friendships.length} friendship records for user ${currentUserId}`);
+      
+      // Map results to include friendship status
+      const resultsWithFriendStatus = matchingUsers.map(user => {
+        // Skip self
+        if (user.id === currentUserId) {
+          return null;
+        }
+        
+        // Find friendship record if any
+        const friendship = friendships.find(f => 
+          (f.userId === currentUserId && f.friendId === user.id) ||
+          (f.userId === user.id && f.friendId === currentUserId)
+        );
+        
+        const isFriend = friendship ? friendship.status === "accepted" : false;
+        const friendStatus = friendship ? friendship.status : null;
+        
+        return {
+          id: user.id,
+          username: user.username,
+          avatar: user.avatar,
+          isFriend,
+          friendStatus,
+          status: {
+            id: 0,
+            userId: user.id,
+            status: "unknown", // We're not loading status here for performance
+            lastActive: new Date(),
+            lastLocation: null
+          }
+        };
+      });
+      
+      // Filter out null results (self)
+      const filteredResults = resultsWithFriendStatus.filter(u => u !== null);
+      
+      console.log('Returning search results:', filteredResults);
+      res.json(filteredResults);
+    } catch (error) {
+      console.error("Error searching users:", error);
+      res.status(500).json({ message: "Failed to search users" });
     }
   });
   
@@ -334,92 +431,5 @@ export function registerSocialRoutes(app: Express) {
     }
   });
   
-  // Search for users by username
-  app.get("/api/social/users/search", async (req, res) => {
-    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-    
-    try {
-      const searchQuery = req.query.q as string;
-      
-      if (!searchQuery || searchQuery.trim().length < 3) {
-        return res.status(400).json({ message: "Search query must be at least 3 characters" });
-      }
-      
-      console.log(`Searching for users with query: "${searchQuery}"`);
-      
-      // Direct database query to find matching users
-      const matchingUsers = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          avatar: users.avatar,
-        })
-        .from(users)
-        .where(
-          sql`LOWER(${users.username}) LIKE LOWER(${'%' + searchQuery + '%'})`
-        )
-        .limit(10);
-      
-      console.log(`Found ${matchingUsers.length} users matching query`);
-      
-      if (matchingUsers.length === 0) {
-        return res.json([]);
-      }
-      
-      const currentUserId = req.user.id;
-      
-      // Get all friendship relations for the current user in a single query
-      const friendships = await db
-        .select()
-        .from(userFriends)
-        .where(
-          or(
-            eq(userFriends.userId, currentUserId),
-            eq(userFriends.friendId, currentUserId)
-          )
-        );
-      
-      console.log(`Found ${friendships.length} friendship records for user ${currentUserId}`);
-      
-      // Map results to include friendship status
-      const resultsWithFriendStatus = matchingUsers.map(user => {
-        // Skip self
-        if (user.id === currentUserId) {
-          return null;
-        }
-        
-        // Find friendship record if any
-        const friendship = friendships.find(f => 
-          (f.userId === currentUserId && f.friendId === user.id) ||
-          (f.userId === user.id && f.friendId === currentUserId)
-        );
-        
-        const isFriend = friendship ? friendship.status === "accepted" : false;
-        const friendStatus = friendship ? friendship.status : null;
-        
-        return {
-          id: user.id,
-          username: user.username,
-          avatar: user.avatar,
-          isFriend,
-          friendStatus,
-          status: {
-            id: 0,
-            userId: user.id,
-            status: "unknown", // We're not loading status here for performance
-            lastActive: null,
-            lastLocation: null
-          }
-        };
-      });
-      
-      // Filter out null results (self)
-      const filteredResults = resultsWithFriendStatus.filter(u => u !== null);
-      
-      res.json(filteredResults);
-    } catch (error) {
-      console.error("Error searching users:", error);
-      res.status(500).json({ message: "Failed to search users" });
-    }
-  });
+
 }
