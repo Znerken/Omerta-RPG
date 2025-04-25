@@ -66,10 +66,18 @@ export default function GangPage() {
     queryKey: ["/api/user/profile"],
   });
   
-  // Log the profile data to debug
+  // Log the profile data to debug more extensively
   useEffect(() => {
     if (userProfile) {
       console.log("User Profile Data:", userProfile);
+      console.log("Gang Member Data:", userProfile.gangMember);
+      console.log("Gang Data:", userProfile.gang);
+      console.log("In Gang?", userProfile.inGang);
+      console.log("Gang Rank:", userProfile.gangRank);
+      
+      // Also log our derived values
+      console.log("Derived Gang ID:", gang?.id);
+      console.log("Is In Gang (derived):", isInGang);
     }
   }, [userProfile]);
   
