@@ -16,6 +16,10 @@ import {
   CrimeWithHistory,
   ItemWithDetails,
   GangWithMembers,
+  Challenge, InsertChallenge,
+  ChallengeProgress, InsertChallengeProgress,
+  ChallengeReward, InsertChallengeReward,
+  ChallengeWithProgress,
   users,
   stats,
   crimes,
@@ -24,7 +28,10 @@ import {
   userInventory,
   gangs,
   gangMembers,
-  messages
+  messages,
+  challenges,
+  challengeProgress,
+  challengeRewards
 } from "@shared/schema";
 import { eq, and, desc, gte, sql, asc } from "drizzle-orm";
 import { db, pool } from "./db";
@@ -806,5 +813,154 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       .returning();
     
     return user;
+  }
+
+  // Challenge methods
+  async getAllChallenges(): Promise<Challenge[]> {
+    return await db.select().from(challenges);
+  }
+
+  async getActiveChallenges(): Promise<Challenge[]> {
+    const now = new Date();
+    return await db
+      .select()
+      .from(challenges)
+      .where(
+        and(
+          eq(challenges.active, true),
+          lte(challenges.startDate, now),
+          gte(challenges.endDate, now)
+        )
+      );
+  }
+
+  async getChallenge(id: number): Promise<Challenge | undefined> {
+    const [challenge] = await db
+      .select()
+      .from(challenges)
+      .where(eq(challenges.id, id));
+    return challenge;
+  }
+
+  async createChallenge(insertChallenge: InsertChallenge): Promise<Challenge> {
+    const [challenge] = await db
+      .insert(challenges)
+      .values(insertChallenge)
+      .returning();
+    return challenge;
+  }
+
+  async updateChallenge(id: number, challengeData: Partial<Challenge>): Promise<Challenge | undefined> {
+    const [challenge] = await db
+      .update(challenges)
+      .set(challengeData)
+      .where(eq(challenges.id, id))
+      .returning();
+    return challenge;
+  }
+
+  async deleteChallenge(id: number): Promise<boolean> {
+    try {
+      const result = await db
+        .delete(challenges)
+        .where(eq(challenges.id, id));
+      return result.rowCount ? result.rowCount > 0 : false;
+    } catch (error) {
+      console.error("Error deleting challenge:", error);
+      return false;
+    }
+  }
+
+  async getChallengesWithProgress(userId: number): Promise<ChallengeWithProgress[]> {
+    // Get active challenges
+    const activeChallenges = await this.getActiveChallenges();
+    
+    // Get user's progress for these challenges
+    const userProgress = await db
+      .select()
+      .from(challengeProgress)
+      .where(eq(challengeProgress.userId, userId));
+    
+    // Map challenges with their progress
+    return activeChallenges.map(challenge => {
+      const progress = userProgress.find(p => p.challengeId === challenge.id);
+      
+      return {
+        ...challenge,
+        progress,
+        completed: progress?.completed || false,
+        claimed: progress?.claimed || false,
+        currentValue: progress?.currentValue || 0
+      };
+    });
+  }
+
+  async getChallengeProgress(userId: number, challengeId: number): Promise<ChallengeProgress | undefined> {
+    const [progress] = await db
+      .select()
+      .from(challengeProgress)
+      .where(
+        and(
+          eq(challengeProgress.userId, userId),
+          eq(challengeProgress.challengeId, challengeId)
+        )
+      );
+    return progress;
+  }
+
+  async createChallengeProgress(insertProgress: InsertChallengeProgress): Promise<ChallengeProgress> {
+    const [progress] = await db
+      .insert(challengeProgress)
+      .values({
+        ...insertProgress,
+        createdAt: new Date(),
+        completedAt: null,
+      })
+      .returning();
+    return progress;
+  }
+
+  async updateChallengeProgress(userId: number, challengeId: number, data: Partial<ChallengeProgress>): Promise<ChallengeProgress | undefined> {
+    let updateData = { ...data };
+    
+    // If marking as completed and it wasn't before, set completedAt
+    if (data.completed) {
+      const currentProgress = await this.getChallengeProgress(userId, challengeId);
+      if (currentProgress && !currentProgress.completed) {
+        updateData.completedAt = new Date();
+      }
+    }
+    
+    const [progress] = await db
+      .update(challengeProgress)
+      .set(updateData)
+      .where(
+        and(
+          eq(challengeProgress.userId, userId),
+          eq(challengeProgress.challengeId, challengeId)
+        )
+      )
+      .returning();
+    return progress;
+  }
+
+  async createChallengeReward(insertReward: InsertChallengeReward): Promise<ChallengeReward> {
+    const [reward] = await db
+      .insert(challengeRewards)
+      .values({
+        ...insertReward,
+        awardedAt: new Date(),
+      })
+      .returning();
+    return reward;
+  }
+
+  async getUserChallengeRewards(userId: number, limit: number = 10): Promise<ChallengeReward[]> {
+    return await db
+      .select()
+      .from(challengeRewards)
+      .where(eq(challengeRewards.userId, userId))
+      .orderBy(desc(challengeRewards.awardedAt))
+      .limit(limit);
   }
 }

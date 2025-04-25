@@ -180,6 +180,9 @@ class MemStorage implements IStorage {
     this.gangs = new Map();
     this.gangMembers = new Map();
     this.messages = new Map();
+    this.challenges = new Map();
+    this.challengeProgress = new Map();
+    this.challengeRewards = new Map();
     
     // Initialize counters
     this.userIdCounter = 1;
@@ -191,6 +194,9 @@ class MemStorage implements IStorage {
     this.gangIdCounter = 1;
     this.gangMemberIdCounter = 1;
     this.messageIdCounter = 1;
+    this.challengeIdCounter = 1;
+    this.challengeProgressIdCounter = 1;
+    this.challengeRewardIdCounter = 1;
     
     // Initialize session store
     this.sessionStore = new MemoryStore({
@@ -880,6 +886,115 @@ class MemStorage implements IStorage {
     
     this.users.set(userId, updatedUser);
     return updatedUser;
+  }
+
+  // Challenge methods
+  async getAllChallenges(): Promise<Challenge[]> {
+    return Array.from(this.challenges.values());
+  }
+
+  async getActiveChallenges(): Promise<Challenge[]> {
+    const now = new Date();
+    return Array.from(this.challenges.values())
+      .filter(challenge => 
+        challenge.active && 
+        challenge.startDate <= now &&
+        challenge.endDate >= now
+      );
+  }
+
+  async getChallenge(id: number): Promise<Challenge | undefined> {
+    return this.challenges.get(id);
+  }
+
+  async createChallenge(insertChallenge: InsertChallenge): Promise<Challenge> {
+    const id = this.challengeIdCounter++;
+    const challenge: Challenge = { ...insertChallenge, id };
+    this.challenges.set(id, challenge);
+    return challenge;
+  }
+
+  async updateChallenge(id: number, challengeData: Partial<Challenge>): Promise<Challenge | undefined> {
+    const challenge = await this.getChallenge(id);
+    if (!challenge) return undefined;
+    
+    const updatedChallenge = { ...challenge, ...challengeData };
+    this.challenges.set(id, updatedChallenge);
+    return updatedChallenge;
+  }
+
+  async deleteChallenge(id: number): Promise<boolean> {
+    const challenge = await this.getChallenge(id);
+    if (!challenge) return false;
+    
+    return this.challenges.delete(id);
+  }
+
+  async getChallengesWithProgress(userId: number): Promise<ChallengeWithProgress[]> {
+    const activeChallenges = await this.getActiveChallenges();
+    const userProgressEntries = Array.from(this.challengeProgress.values())
+      .filter(progress => progress.userId === userId);
+    
+    return activeChallenges.map(challenge => {
+      const progress = userProgressEntries.find(p => p.challengeId === challenge.id);
+      
+      return {
+        ...challenge,
+        progress,
+        completed: progress?.completed || false,
+        claimed: progress?.claimed || false,
+        currentValue: progress?.currentValue || 0
+      };
+    });
+  }
+
+  async getChallengeProgress(userId: number, challengeId: number): Promise<ChallengeProgress | undefined> {
+    return Array.from(this.challengeProgress.values())
+      .find(progress => progress.userId === userId && progress.challengeId === challengeId);
+  }
+
+  async createChallengeProgress(insertProgress: InsertChallengeProgress): Promise<ChallengeProgress> {
+    const id = this.challengeProgressIdCounter++;
+    const progress: ChallengeProgress = { 
+      ...insertProgress, 
+      id,
+      createdAt: new Date(),
+      completedAt: null,
+    };
+    this.challengeProgress.set(id, progress);
+    return progress;
+  }
+
+  async updateChallengeProgress(userId: number, challengeId: number, data: Partial<ChallengeProgress>): Promise<ChallengeProgress | undefined> {
+    const progress = await this.getChallengeProgress(userId, challengeId);
+    if (!progress) return undefined;
+    
+    const updatedProgress = { ...progress, ...data };
+    if (data.completed && !progress.completed) {
+      updatedProgress.completedAt = new Date();
+    }
+    
+    this.challengeProgress.set(progress.id, updatedProgress);
+    return updatedProgress;
+  }
+
+  async createChallengeReward(insertReward: InsertChallengeReward): Promise<ChallengeReward> {
+    const id = this.challengeRewardIdCounter++;
+    const reward: ChallengeReward = { 
+      ...insertReward, 
+      id,
+      awardedAt: new Date(),
+    };
+    this.challengeRewards.set(id, reward);
+    return reward;
+  }
+
+  async getUserChallengeRewards(userId: number, limit: number = 10): Promise<ChallengeReward[]> {
+    const userRewards = Array.from(this.challengeRewards.values())
+      .filter(reward => reward.userId === userId)
+      .sort((a, b) => b.awardedAt.getTime() - a.awardedAt.getTime());
+    
+    return limit ? userRewards.slice(0, limit) : userRewards;
   }
 }
 
