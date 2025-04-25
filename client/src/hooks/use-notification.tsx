@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from "react";
 import { toast, useToast } from "@/hooks/use-toast";
-import { Check, Ban, AlertCircle, DollarSign, Bell } from "lucide-react";
+import { Check, Ban, AlertCircle, DollarSign, Bell, UserPlus, Users } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
-export type NotificationType = "success" | "error" | "warning" | "info" | "payment";
+export type NotificationType = "success" | "error" | "warning" | "info" | "payment" | "friend_request" | "friend_status";
 
 export interface Notification {
   id: string;
@@ -28,8 +29,86 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [socket, setSocket] = useState<WebSocket | null>(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+  
+  // Connect to WebSocket when user is authenticated
+  useEffect(() => {
+    if (!user) {
+      // Close any existing connection if user is logged out
+      if (socket) {
+        socket.close();
+        setSocket(null);
+      }
+      return;
+    }
+    
+    // Create WebSocket connection
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const newSocket = new WebSocket(wsUrl);
+    
+    newSocket.onopen = () => {
+      console.log("WebSocket connected");
+    };
+    
+    newSocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Handle friend request notifications
+        if (data.type === "friend_request") {
+          addNotification(
+            "Friend Request", 
+            `${data.from.username} wants to be your friend`, 
+            "friend_request",
+            {
+              requestId: data.requestId,
+              userId: data.from.id,
+              username: data.from.username,
+              avatar: data.from.avatar
+            }
+          );
+        }
+        
+        // Handle friend status updates
+        else if (data.type === "friend_status") {
+          addNotification(
+            "Friend Status Update", 
+            `${data.username} is now ${data.status}`, 
+            "friend_status",
+            {
+              userId: data.userId,
+              username: data.username,
+              avatar: data.avatar,
+              status: data.status
+            }
+          );
+        }
+      } catch (error) {
+        console.error("Error processing WebSocket message:", error);
+      }
+    };
+    
+    newSocket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+    
+    newSocket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+    
+    setSocket(newSocket);
+    
+    // Cleanup on unmount
+    return () => {
+      if (newSocket) {
+        newSocket.close();
+      }
+    };
+  }, [user]);
 
   const addNotification = useCallback((
     titleOrNotification: string | Partial<Notification>, 

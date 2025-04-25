@@ -1,97 +1,153 @@
-import React, { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import React, { ReactNode } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 
-type StatusOption = {
-  id: string;
-  label: string;
-  color: string;
-};
+const statusColors = {
+  online: "bg-green-500 border-green-400",
+  away: "bg-yellow-500 border-yellow-400",
+  busy: "bg-red-500 border-red-400",
+  offline: "bg-gray-400 border-gray-400",
+} as const;
 
-const statusOptions: StatusOption[] = [
-  { id: "online", label: "Online", color: "bg-green-500" },
-  { id: "away", label: "Away", color: "bg-yellow-500" },
-  { id: "busy", label: "Busy", color: "bg-red-500" },
-  { id: "offline", label: "Offline", color: "bg-gray-400" },
-];
+const statusVariants = cva("absolute border rounded-full", {
+  variants: {
+    size: {
+      sm: "w-2 h-2 right-0 bottom-0",
+      md: "w-3 h-3 right-0 bottom-0",
+      lg: "w-4 h-4 right-0 bottom-0",
+    },
+    status: {
+      online: statusColors.online,
+      away: statusColors.away,
+      busy: statusColors.busy,
+      offline: statusColors.offline,
+    },
+  },
+  defaultVariants: {
+    size: "md",
+    status: "offline",
+  },
+});
 
-export function StatusIndicator() {
-  const { user } = useAuth();
+export interface StatusIndicatorProps
+  extends VariantProps<typeof statusVariants> {
+  children: ReactNode;
+  status: string;
+  isEditable?: boolean;
+  userId?: number;
+}
+
+export function StatusIndicator({
+  children,
+  status = "offline",
+  size,
+  isEditable = false,
+  userId,
+}: StatusIndicatorProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [currentLocation, setCurrentLocation] = useState<string>("");
-
-  // Get current page path for lastLocation
-  useEffect(() => {
-    setCurrentLocation(window.location.pathname);
-  }, []);
-
+  const statusClass = statusVariants({ size, status: status as any });
+  
+  // Update status mutation
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ status, lastLocation }: { status: string; lastLocation: string }) => {
-      return apiRequest("POST", "/api/social/status", { status, lastLocation });
+    mutationFn: async (newStatus: string) => {
+      return apiRequest("PUT", "/api/social/status", { status: newStatus });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      toast({
+        title: "Status updated",
+        description: `Your status is now set to ${status}`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to update status",
+        description: error.message || "Failed to update status",
         variant: "destructive",
       });
     },
   });
-
-  const handleStatusChange = (status: string) => {
-    updateStatusMutation.mutate({ status, lastLocation: currentLocation });
+  
+  // Status labels for tooltip and menu
+  const statusLabels: Record<string, string> = {
+    online: "Online",
+    away: "Away",
+    busy: "Busy",
+    offline: "Offline",
   };
-
-  // Find current status from user object or default to offline
-  const currentStatus = user?.status?.status || "offline";
-  const statusOption = statusOptions.find((option) => option.id === currentStatus) || statusOptions[3];
-
+  
+  // If not editable, just show with tooltip
+  if (!isEditable) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="relative inline-block">
+              {children}
+              <span className={statusClass}></span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="capitalize">{statusLabels[status] || status}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+  
+  // If editable, show dropdown
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-8 gap-1 border border-input px-3"
-          disabled={updateStatusMutation.isPending}
-        >
-          {updateStatusMutation.isPending ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <span className={`w-2 h-2 rounded-full ${statusOption.color}`}></span>
-          )}
-          <span className="capitalize">{statusOption.label}</span>
-        </Button>
+        <div className="relative inline-block cursor-pointer">
+          {children}
+          <span className={statusClass}></span>
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Set Status</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {statusOptions.map((option) => (
-          <DropdownMenuItem
-            key={option.id}
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => handleStatusChange(option.id)}
-          >
-            <span className={`w-2 h-2 rounded-full ${option.color}`}></span>
-            <span>{option.label}</span>
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuItem
+          className="flex items-center gap-2"
+          onClick={() => updateStatusMutation.mutate("online")}
+        >
+          <span className={`w-2 h-2 rounded-full ${statusColors.online}`}></span>
+          <span>Online</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="flex items-center gap-2"
+          onClick={() => updateStatusMutation.mutate("away")}
+        >
+          <span className={`w-2 h-2 rounded-full ${statusColors.away}`}></span>
+          <span>Away</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="flex items-center gap-2"
+          onClick={() => updateStatusMutation.mutate("busy")}
+        >
+          <span className={`w-2 h-2 rounded-full ${statusColors.busy}`}></span>
+          <span>Busy</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="flex items-center gap-2"
+          onClick={() => updateStatusMutation.mutate("offline")}
+        >
+          <span className={`w-2 h-2 rounded-full ${statusColors.offline}`}></span>
+          <span>Offline</span>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

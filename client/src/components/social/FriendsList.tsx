@@ -1,215 +1,316 @@
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2, UserPlus, X, Check, UserX } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { 
+  UserMinus, 
+  MessageSquare, 
+  Search, 
+  Users, 
+  UserPlus,
+  Clock,
+  Loader2
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { StatusIndicator } from "./StatusIndicator";
 
-type Friend = {
+interface Friend {
   id: number;
   username: string;
   avatar: string | null;
   status: {
+    id: number;
+    userId: number;
     status: string;
-    lastActive: string;
+    lastActive: Date | null;
+    lastLocation: string | null;
   };
   isFriend: boolean;
-  friendStatus: string;
-  friendRequest: {
+  friendStatus?: string;
+  friendRequest?: {
     id: number;
+    userId: number;
+    friendId: number;
     status: string;
-  } | null;
-};
+    createdAt: Date | null;
+  };
+}
 
 export function FriendsList() {
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
-
-  const {
-    data: friends,
-    isLoading,
-    error,
-    refetch
-  } = useQuery({
+  const queryClient = useQueryClient();
+  
+  // Query for friends
+  const { data: friends, isLoading: isLoadingFriends } = useQuery({
     queryKey: ["/api/social/friends"],
     queryFn: async () => {
-      const response = await fetch("/api/social/friends");
-      if (!response.ok) {
-        throw new Error("Failed to fetch friends");
-      }
-      return response.json();
+      const response = await apiRequest("GET", "/api/social/friends");
+      return await response.json() as Friend[];
     }
   });
-
-  const acceptFriendRequest = async (requestId: number) => {
-    try {
-      await apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "accepted" });
+  
+  // Query for friend requests
+  const { data: friendRequests, isLoading: isLoadingRequests } = useQuery({
+    queryKey: ["/api/social/friends/requests"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/social/friends/requests");
+      return await response.json() as Friend[];
+    }
+  });
+  
+  // Accept friend request mutation
+  const acceptRequestMutation = useMutation({
+    mutationFn: async (requestId: number) => {
+      return apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "accepted" });
+    },
+    onSuccess: () => {
       toast({
         title: "Friend request accepted",
-        description: "You are now friends!"
+        description: "You are now friends with this user"
       });
-      refetch();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to accept friend request",
+        description: error.message || "Failed to accept friend request",
         variant: "destructive"
       });
     }
-  };
-
-  const rejectFriendRequest = async (requestId: number) => {
-    try {
-      await apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "rejected" });
+  });
+  
+  // Reject friend request mutation
+  const rejectRequestMutation = useMutation({
+    mutationFn: async (requestId: number) => {
+      return apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "rejected" });
+    },
+    onSuccess: () => {
       toast({
         title: "Friend request rejected",
-        description: "Friend request has been rejected"
+        description: "The request has been removed"
       });
-      refetch();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to reject friend request",
+        description: error.message || "Failed to reject friend request",
         variant: "destructive"
       });
     }
-  };
-
-  const removeFriend = async (friendId: number) => {
-    try {
-      await apiRequest("DELETE", `/api/social/friends/${friendId}`);
+  });
+  
+  // Remove friend mutation
+  const removeFriendMutation = useMutation({
+    mutationFn: async (friendId: number) => {
+      return apiRequest("DELETE", `/api/social/friends/${friendId}`);
+    },
+    onSuccess: () => {
       toast({
         title: "Friend removed",
-        description: "You are no longer friends"
+        description: "This user has been removed from your friends list"
       });
-      refetch();
-    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
+    },
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to remove friend",
+        description: error.message || "Failed to remove friend",
         variant: "destructive"
       });
     }
+  });
+  
+  // Filter friends by search query
+  const filteredFriends = friends?.filter(friend => 
+    friend.username.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-40">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center p-4 text-destructive">
-        <p>Error loading friends</p>
-      </div>
-    );
-  }
-
-  if (!friends || friends.length === 0) {
-    return (
-      <div className="text-center p-4 text-muted-foreground">
-        <p>You don't have any friends yet.</p>
-      </div>
-    );
-  }
-
-  // Group friends by status
-  const pendingRequests = friends.filter((friend: Friend) => friend.friendStatus === "pending");
-  const acceptedFriends = friends.filter((friend: Friend) => friend.friendStatus === "accepted");
-
+  
   return (
-    <div className="space-y-4">
-      {pendingRequests.length > 0 && (
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold mb-2">Friend Requests</h3>
-          <div className="space-y-2">
-            {pendingRequests.map((friend: Friend) => (
-              <Card key={friend.id} className="bg-muted/50">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        <AvatarImage src={friend.avatar || undefined} />
-                        <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{friend.username}</div>
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle className="text-xl flex items-center">
+          <Users className="mr-2 h-5 w-5" />
+          Friends
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="friends">
+          <TabsList className="mb-4 w-full">
+            <TabsTrigger value="friends" className="flex-1">
+              My Friends
+              {friends && friends.length > 0 && (
+                <span className="ml-2 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
+                  {friends.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="requests" className="flex-1">
+              Requests
+              {friendRequests && friendRequests.length > 0 && (
+                <span className="ml-2 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
+                  {friendRequests.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="friends">
+            <div className="relative mb-4">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search friends"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                className="pl-8"
+              />
+            </div>
+            
+            {isLoadingFriends ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : !friends || friends.length === 0 ? (
+              <div className="text-center py-8">
+                <UserPlus className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-2">No friends yet</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Use the "Find Friends" tab to start adding friends
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[350px]">
+                <div className="space-y-1">
+                  {filteredFriends?.map(friend => (
+                    <React.Fragment key={friend.id}>
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center space-x-3">
+                          <StatusIndicator 
+                            status={friend.status?.status || "offline"} 
+                            size="md"
+                          >
+                            <Avatar>
+                              <AvatarImage src={friend.avatar || undefined} />
+                              <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                          </StatusIndicator>
+                          <div>
+                            <p className="text-sm font-medium">{friend.username}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {friend.status?.status || "offline"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 rounded-full"
+                            onClick={() => {
+                              // Navigate to messages with this user
+                              // This would typically use router navigation
+                              window.location.href = `/messages?userId=${friend.id}`;
+                            }}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0 rounded-full text-red-500 hover:text-red-600 hover:bg-red-50/10"
+                            onClick={() => removeFriendMutation.mutate(friend.id)}
+                            disabled={removeFriendMutation.isPending}
+                          >
+                            {removeFriendMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <UserMinus className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="rounded-full p-2 h-8 w-8" 
-                        onClick={() => acceptFriendRequest(friend.friendRequest?.id || 0)}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="rounded-full p-2 h-8 w-8" 
-                        onClick={() => rejectFriendRequest(friend.friendRequest?.id || 0)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Friends ({acceptedFriends.length})</h3>
-        <div className="space-y-2">
-          {acceptedFriends.map((friend: Friend) => (
-            <Card key={friend.id}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarImage src={friend.avatar || undefined} />
-                      <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">{friend.username}</div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`w-2 h-2 rounded-full ${
-                          friend.status?.status === "online" 
-                            ? "bg-green-500" 
-                            : friend.status?.status === "away"
-                            ? "bg-yellow-500"
-                            : "bg-gray-400"
-                        }`}></span>
-                        <span className="text-xs text-muted-foreground capitalize">
-                          {friend.status?.status || "offline"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10" 
-                    onClick={() => removeFriend(friend.id)}
-                  >
-                    <UserX className="h-4 w-4 mr-1" />
-                    Remove
-                  </Button>
+                      <Separator />
+                    </React.Fragment>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </div>
+              </ScrollArea>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="requests">
+            {isLoadingRequests ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : !friendRequests || friendRequests.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-2">No pending requests</p>
+                <p className="text-sm text-muted-foreground">
+                  When someone sends you a friend request, it will appear here
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[350px]">
+                <div className="space-y-3">
+                  {friendRequests.map(request => (
+                    <Card key={request.id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Avatar>
+                            <AvatarImage src={request.avatar || undefined} />
+                            <AvatarFallback>{request.username.charAt(0).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-medium">{request.username}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Wants to be your friend
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
+                            onClick={() => request.friendRequest && acceptRequestMutation.mutate(request.friendRequest.id)}
+                            disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
+                          >
+                            Accept
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                            onClick={() => request.friendRequest && rejectRequestMutation.mutate(request.friendRequest.id)}
+                            disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }

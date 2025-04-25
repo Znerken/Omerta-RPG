@@ -1,180 +1,187 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, UserPlus, Search } from "lucide-react";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger,
-  DialogFooter
-} from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { UserPlus, Loader2, Search, UserCheck, Clock, X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { debounce } from "@/lib/utils";
 
-type User = {
+interface UserSearchResult {
   id: number;
   username: string;
   avatar: string | null;
   isFriend: boolean;
-  friendStatus?: string;
-};
+  friendStatus: string | null;
+}
 
 export function AddFriend() {
-  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [debouncedQuery, setDebouncedQuery] = useState<string>("");
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<User[]>([]);
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
-    setSearching(true);
-    try {
-      // In a real implementation, this would be an API call to search users
-      // For now, we'll simulate with a placeholder API endpoint
-      const response = await apiRequest(
-        "GET", 
-        `/api/social/users/search?q=${encodeURIComponent(searchQuery)}`
-      );
-      setSearchResults(await response.json());
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to search for users",
-        variant: "destructive"
-      });
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
+  const queryClient = useQueryClient();
+  
+  // Set up debounced search
+  const debouncedSearch = React.useMemo(
+    () =>
+      debounce((query: string) => {
+        if (query.trim().length >= 3) {
+          setDebouncedQuery(query);
+        }
+      }, 500),
+    []
+  );
+  
+  // Handle input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    debouncedSearch(value);
   };
-
+  
+  // Query for search results
+  const { data: searchResults, isLoading } = useQuery({
+    queryKey: ["/api/social/users/search", debouncedQuery],
+    queryFn: async () => {
+      if (!debouncedQuery || debouncedQuery.length < 3) return [];
+      
+      const response = await apiRequest("GET", `/api/social/users/search?q=${encodeURIComponent(debouncedQuery)}`);
+      return await response.json() as UserSearchResult[];
+    },
+    enabled: debouncedQuery.length >= 3,
+  });
+  
+  // Mutation for sending friend request
   const sendFriendRequestMutation = useMutation({
-    mutationFn: async (friendId: number) => {
-      return apiRequest("POST", "/api/social/friends/request", { friendId });
+    mutationFn: async (userId: number) => {
+      return apiRequest("POST", "/api/social/friends/request", { friendId: userId });
     },
     onSuccess: () => {
       toast({
         title: "Friend request sent",
-        description: "Your friend request has been sent successfully"
+        description: "They will be notified of your request",
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/users/search", debouncedQuery] });
       queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
-      setOpen(false);
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to send friend request",
+        description: error.message || "Failed to send friend request",
         variant: "destructive"
       });
     }
   });
-
-  const handleSendRequest = (friendId: number) => {
-    sendFriendRequestMutation.mutate(friendId);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1">
-          <UserPlus className="h-4 w-4" />
-          Add Friend
+  
+  // Render user search result item
+  const renderUserItem = (user: UserSearchResult) => {
+    let actionButton;
+    
+    if (user.isFriend) {
+      // Already friends
+      actionButton = (
+        <Badge variant="outline" className="flex items-center gap-1 bg-green-500/10 text-green-500 border-green-500/20">
+          <UserCheck className="h-3 w-3" />
+          Friends
+        </Badge>
+      );
+    } else if (user.friendStatus === "pending") {
+      // Request already sent
+      actionButton = (
+        <Badge variant="outline" className="flex items-center gap-1 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+          <Clock className="h-3 w-3" />
+          Pending
+        </Badge>
+      );
+    } else {
+      // Can send request
+      actionButton = (
+        <Button 
+          size="sm" 
+          variant="ghost" 
+          className="h-8 w-8 p-0 rounded-full"
+          disabled={sendFriendRequestMutation.isPending}
+          onClick={() => sendFriendRequestMutation.mutate(user.id)}
+        >
+          {sendFriendRequestMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <UserPlus className="h-4 w-4" />
+          )}
         </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add a Friend</DialogTitle>
-        </DialogHeader>
-        <div className="flex items-center space-x-2 mt-4">
-          <div className="grid flex-1 gap-2">
-            <Input
-              placeholder="Search by username..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch();
-              }}
-            />
+      );
+    }
+    
+    return (
+      <div key={user.id} className="flex items-center justify-between py-2">
+        <div className="flex items-center space-x-3">
+          <Avatar>
+            <AvatarImage src={user.avatar || undefined} />
+            <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="text-sm font-medium">{user.username}</p>
           </div>
-          <Button 
-            type="submit" 
-            size="sm" 
-            onClick={handleSearch} 
-            disabled={searching || !searchQuery.trim()}
-          >
-            {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-            Search
-          </Button>
         </div>
-
-        <div className="mt-4 max-h-[300px] overflow-y-auto space-y-2">
-          {searching && (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          )}
-
-          {!searching && searchResults.length === 0 && searchQuery && (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No users found with that username</p>
-            </div>
-          )}
-
-          {!searching && searchResults.map((user) => (
-            <Card key={user.id}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarImage src={user.avatar || undefined} />
-                      <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="font-medium">{user.username}</div>
-                  </div>
-                  <div>
-                    {user.isFriend ? (
-                      <Button variant="outline" size="sm" disabled>
-                        {user.friendStatus === "pending" ? "Pending" : "Already Friends"}
-                      </Button>
-                    ) : (
-                      <Button 
-                        variant="default" 
-                        size="sm" 
-                        onClick={() => handleSendRequest(user.id)}
-                        disabled={sendFriendRequestMutation.isPending}
-                      >
-                        {sendFriendRequestMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                        ) : (
-                          <UserPlus className="h-4 w-4 mr-1" />
-                        )}
-                        Add Friend
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {actionButton}
+      </div>
+    );
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl">Find Friends</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="relative mb-4">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search by username"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="pl-8"
+          />
         </div>
-
-        <DialogFooter className="sm:justify-end">
-          <Button 
-            variant="secondary" 
-            onClick={() => setOpen(false)}
-          >
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        
+        {searchQuery.length > 0 && searchQuery.length < 3 && (
+          <p className="text-sm text-muted-foreground mb-4">
+            Type at least 3 characters to search
+          </p>
+        )}
+        
+        {isLoading && debouncedQuery.length >= 3 && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+        
+        {!isLoading && searchResults && searchResults.length === 0 && debouncedQuery.length >= 3 && (
+          <div className="text-center py-4">
+            <X className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-muted-foreground">No users found</p>
+          </div>
+        )}
+        
+        {!isLoading && searchResults && searchResults.length > 0 && (
+          <ScrollArea className="h-[250px]">
+            <div className="space-y-1">
+              {searchResults.map((user) => (
+                <React.Fragment key={user.id}>
+                  {renderUserItem(user)}
+                  <Separator className="my-1" />
+                </React.Fragment>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
   );
 }
