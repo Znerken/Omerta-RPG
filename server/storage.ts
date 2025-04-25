@@ -759,11 +759,11 @@ class MemStorage implements IStorage {
     };
     this.gangs.set(id, gang);
     
-    // Add owner as a member with Leader rank
+    // Add owner as a member with Boss rank
     await this.addGangMember({
       gangId: id,
       userId: insertGang.ownerId,
-      rank: "Leader"
+      rank: "Boss"
     });
     
     return gang;

@@ -610,9 +610,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Gang bank doesn't have enough cash" });
         }
         
-        // Only leader or officers can withdraw
-        if (membership.rank !== "Leader" && membership.rank !== "Officer") {
-          return res.status(403).json({ message: "Only Leaders and Officers can withdraw from the gang bank" });
+        // Only boss or officers can withdraw
+        if (membership.rank !== "Boss" && membership.rank !== "Officer") {
+          return res.status(403).json({ message: "Only Bosses and Officers can withdraw from the gang bank" });
         }
         
         // Update user and gang
