@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useAchievements } from "@/hooks/use-achievements";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   Home, 
@@ -45,6 +47,7 @@ const navItems = [
 export function MafiaLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const { unviewedCount, hasNewAchievements } = useAchievements();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleLogout = () => {
@@ -116,6 +119,16 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
                 >
                   {item.icon}
                   {item.name}
+                  
+                  {/* Display badge for unviewed achievements */}
+                  {item.path === "/achievements" && hasNewAchievements && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                    >
+                      {unviewedCount}
+                    </Badge>
+                  )}
                 </div>
               </Link>
             ))}
@@ -172,6 +185,16 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
                 >
                   {item.icon}
                   {item.name}
+                  
+                  {/* Display badge for unviewed achievements in mobile menu */}
+                  {item.path === "/achievements" && hasNewAchievements && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                    >
+                      {unviewedCount}
+                    </Badge>
+                  )}
                 </div>
               </Link>
             ))}

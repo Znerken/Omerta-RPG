@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useAchievements } from '@/hooks/use-achievements';
 import { apiRequest } from '@/lib/queryClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,6 +48,7 @@ const CategoryIcon = ({ category }: { category: string }) => {
 
 export default function AchievementsPage() {
   const { toast } = useToast();
+  const { refreshAchievements } = useAchievements();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   
   // Fetch all achievements
@@ -77,6 +79,7 @@ export default function AchievementsPage() {
       const result = await apiRequest('POST', `/api/achievements/${id}/view`);
       if (result.ok) {
         refetch();
+        refreshAchievements(); // Also refresh the achievements context
       }
     } catch (error) {
       console.error('Error marking achievement as viewed:', error);
