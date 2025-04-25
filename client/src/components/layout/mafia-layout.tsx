@@ -20,7 +20,8 @@ import {
   X, 
   LogOut,
   Shield,
-  Award
+  Award,
+  Pill
 } from "lucide-react";
 import { 
   TommyGunIcon, 
@@ -37,6 +38,7 @@ const navItems = [
   { name: "Achievements", path: "/achievements", icon: <Award className="h-5 w-5 mr-3" /> },
   { name: "Training", path: "/training", icon: <Dumbbell className="h-5 w-5 mr-3" /> },
   { name: "Gang", path: "/gang", icon: <Users className="h-5 w-5 mr-3" /> },
+  { name: "Drugs", path: "/drugs", icon: <Pill className="h-5 w-5 mr-3" /> },
   { name: "Jail", path: "/jail", icon: <Lock className="h-5 w-5 mr-3" /> },
   { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5 mr-3" /> },
   { name: "Banking", path: "/banking", icon: <MoneyBriefcaseIcon className="h-5 w-5 mr-3" /> },

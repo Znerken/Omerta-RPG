@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { registerBankingRoutes } from "./banking-routes";
 import { registerAdminRoutes } from "./admin-routes";
 import { registerAchievementRoutes } from "./achievement-routes";
+import { registerDrugRoutes } from "./drug-routes";
 import challengeRoutes from "./challenge-routes";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
@@ -22,6 +23,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register achievement routes
   registerAchievementRoutes(app);
+  
+  // Register drug system routes
+  registerDrugRoutes(app);
   
   // Register challenge routes
   app.use("/api", challengeRoutes);
