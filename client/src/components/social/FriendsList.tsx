@@ -35,12 +35,21 @@ export function FriendsList() {
     }
   });
   
-  // Query for friend requests
-  const { data: friendRequests, isLoading: isLoadingRequests } = useQuery({
-    queryKey: ["/api/social/friends/requests"],
+  // Query for pending friend requests (requests received by the user)
+  const { data: pendingRequests, isLoading: isLoadingPendingRequests } = useQuery({
+    queryKey: ["/api/social/friends/requests/pending"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/social/friends/requests");
-      return await response.json() as Friend[];
+      const response = await apiRequest("GET", "/api/social/friends/requests/pending");
+      return await response.json();
+    }
+  });
+  
+  // Query for sent friend requests (requests sent by the user)
+  const { data: sentRequests, isLoading: isLoadingSentRequests } = useQuery({
+    queryKey: ["/api/social/friends/requests/sent"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/social/friends/requests/sent");
+      return await response.json();
     }
   });
   
@@ -55,7 +64,8 @@ export function FriendsList() {
         description: "You are now friends with this user"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/sent"] });
     },
     onError: (error: any) => {
       toast({
@@ -76,12 +86,33 @@ export function FriendsList() {
         title: "Friend request rejected",
         description: "The request has been removed"
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/pending"] });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to reject friend request",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  // Cancel sent request mutation
+  const cancelRequestMutation = useMutation({
+    mutationFn: async (requestId: number) => {
+      return apiRequest("DELETE", `/api/social/friends/request/${requestId}`);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Friend request cancelled",
+        description: "Your friend request has been cancelled"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests/sent"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel friend request",
         variant: "destructive"
       });
     }
@@ -128,7 +159,7 @@ export function FriendsList() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="friends">
-          <TabsList className="mb-4 w-full">
+          <TabsList className="mb-4 w-full grid grid-cols-3">
             <TabsTrigger value="friends" className="flex-1">
               My Friends
               {friends && friends.length > 0 && (
@@ -137,11 +168,19 @@ export function FriendsList() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="requests" className="flex-1">
-              Requests
-              {friendRequests && friendRequests.length > 0 && (
+            <TabsTrigger value="pending" className="flex-1">
+              Pending
+              {pendingRequests && pendingRequests.length > 0 && (
                 <span className="ml-2 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
-                  {friendRequests.length}
+                  {pendingRequests.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="sent" className="flex-1">
+              Sent
+              {sentRequests && sentRequests.length > 0 && (
+                <span className="ml-2 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
+                  {sentRequests.length}
                 </span>
               )}
             </TabsTrigger>
@@ -185,12 +224,13 @@ export function FriendsList() {
             )}
           </TabsContent>
           
-          <TabsContent value="requests">
-            {isLoadingRequests ? (
+          {/* Pending Friend Requests */}
+          <TabsContent value="pending">
+            {isLoadingPendingRequests ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
-            ) : !friendRequests || friendRequests.length === 0 ? (
+            ) : !pendingRequests || pendingRequests.length === 0 ? (
               <div className="text-center py-8">
                 <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-lg font-medium mb-2">No pending requests</p>
@@ -201,10 +241,21 @@ export function FriendsList() {
             ) : (
               <ScrollArea className="h-[350px]">
                 <div className="space-y-3">
-                  {friendRequests.map(request => (
+                  {pendingRequests.map(request => (
                     <Card key={request.id} className="p-4">
                       <div className="space-y-3">
-                        <FriendIndicator friend={request} showActions={false} />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10 border border-primary/20">
+                              <AvatarImage src={request.avatar} alt={request.username} />
+                              <AvatarFallback>{request.username.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4 className="text-sm font-medium">{request.username}</h4>
+                              <p className="text-xs text-muted-foreground">Level {request.level || 1}</p>
+                            </div>
+                          </div>
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           Wants to be your friend
                         </p>
@@ -213,7 +264,7 @@ export function FriendsList() {
                             variant="outline" 
                             size="sm" 
                             className="flex-1 bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
-                            onClick={() => request.friendRequest && acceptRequestMutation.mutate(request.friendRequest.id)}
+                            onClick={() => acceptRequestMutation.mutate(request.id)}
                             disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
                           >
                             {acceptRequestMutation.isPending ? (
@@ -227,7 +278,7 @@ export function FriendsList() {
                             variant="outline" 
                             size="sm"
                             className="flex-1 bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
-                            onClick={() => request.friendRequest && rejectRequestMutation.mutate(request.friendRequest.id)}
+                            onClick={() => rejectRequestMutation.mutate(request.id)}
                             disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
                           >
                             {rejectRequestMutation.isPending ? (
@@ -238,6 +289,63 @@ export function FriendsList() {
                             Reject
                           </Button>
                         </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </TabsContent>
+          
+          {/* Sent Friend Requests */}
+          <TabsContent value="sent">
+            {isLoadingSentRequests ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : !sentRequests || sentRequests.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-2">No sent requests</p>
+                <p className="text-sm text-muted-foreground">
+                  Friend requests you've sent will appear here
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[350px]">
+                <div className="space-y-3">
+                  {sentRequests.map(request => (
+                    <Card key={request.id} className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10 border border-primary/20">
+                              <AvatarImage src={request.avatar} alt={request.username} />
+                              <AvatarFallback>{request.username.charAt(0).toUpperCase()}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h4 className="text-sm font-medium">{request.username}</h4>
+                              <p className="text-xs text-muted-foreground">Level {request.level || 1}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Request sent on {new Date(request.createdAt || Date.now()).toLocaleDateString()}
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                          onClick={() => cancelRequestMutation.mutate(request.id)}
+                          disabled={cancelRequestMutation.isPending}
+                        >
+                          {cancelRequestMutation.isPending ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <UserMinus className="h-4 w-4 mr-2" />
+                          )}
+                          Cancel Request
+                        </Button>
                       </div>
                     </Card>
                   ))}
