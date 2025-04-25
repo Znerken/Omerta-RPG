@@ -31,12 +31,13 @@ function ProtectedPage({ component: Component }: { component: React.ComponentTyp
   );
 }
 
-function Router() {
-  const { user } = useAuth();
+// Router component that uses the auth context
+function AppRouter() {
+  const { user, isLoading } = useAuth();
   
-  // Conditional rendering to avoid React hooks rule violations
-  if (user === undefined) {
-    return null; // Loading state
+  // Loading state
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
   
   return (
@@ -109,14 +110,15 @@ function Router() {
   );
 }
 
+// Wrap the entire application
 function App() {
   return (
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </AuthProvider>
+    <TooltipProvider>
+      <Toaster />
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </TooltipProvider>
   );
 }
 

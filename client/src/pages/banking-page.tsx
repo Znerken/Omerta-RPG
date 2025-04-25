@@ -708,7 +708,7 @@ export default function BankingPage() {
                   <FormItem>
                     <FormLabel>From Account</FormLabel>
                     <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      onValueChange={(value: string) => field.onChange(parseInt(value))}
                       defaultValue={selectedAccountId?.toString()}
                     >
                       <FormControl>
@@ -736,7 +736,7 @@ export default function BankingPage() {
                   <FormItem>
                     <FormLabel>To Account</FormLabel>
                     <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
+                      onValueChange={(value: string) => field.onChange(parseInt(value))}
                     >
                       <FormControl>
                         <SelectTrigger>
