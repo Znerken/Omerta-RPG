@@ -854,6 +854,53 @@ export class DrugStorage {
     for (const territory of defaultTerritories) {
       await this.createTerritory(territory);
     }
+
+    // Create drug recipes
+    const allDrugs = await this.getAllDrugs();
+    const allIngredients = await this.getAllIngredients();
+    
+    if (allDrugs.length > 0 && allIngredients.length > 0) {
+      // Define recipes for each drug
+      const recipes = [
+        // Stardust (drug id 1)
+        { drugId: 1, ingredientId: 1, quantity: 2 }, // Basic Chemical x2
+        { drugId: 1, ingredientId: 3, quantity: 1 }, // Rare Extract x1
+        
+        // Shade (drug id 2)
+        { drugId: 2, ingredientId: 1, quantity: 1 }, // Basic Chemical x1
+        { drugId: 2, ingredientId: 2, quantity: 2 }, // Synthetic Compound x2
+        
+        // Titan (drug id 3)
+        { drugId: 3, ingredientId: 2, quantity: 2 }, // Synthetic Compound x2
+        { drugId: 3, ingredientId: 4, quantity: 1 }, // Crystalline Powder x1
+        
+        // Brainwave (drug id 4)
+        { drugId: 4, ingredientId: 3, quantity: 2 }, // Rare Extract x2
+        { drugId: 4, ingredientId: 5, quantity: 1 }, // Exotic Mineral x1
+        
+        // Fortunate (drug id 5)
+        { drugId: 5, ingredientId: 4, quantity: 2 }, // Crystalline Powder x2
+        { drugId: 5, ingredientId: 5, quantity: 1 }, // Exotic Mineral x1
+        
+        // Blend (drug id 6)
+        { drugId: 6, ingredientId: 1, quantity: 1 }, // Basic Chemical x1
+        { drugId: 6, ingredientId: 3, quantity: 1 }, // Rare Extract x1
+        { drugId: 6, ingredientId: 5, quantity: 1 }, // Exotic Mineral x1
+        
+        // Phantom (drug id 7)
+        { drugId: 7, ingredientId: 2, quantity: 1 }, // Synthetic Compound x1
+        { drugId: 7, ingredientId: 5, quantity: 2 }, // Exotic Mineral x2
+        
+        // Kingmaker (drug id 8)
+        { drugId: 8, ingredientId: 3, quantity: 1 }, // Rare Extract x1
+        { drugId: 8, ingredientId: 4, quantity: 1 }, // Crystalline Powder x1
+        { drugId: 8, ingredientId: 6, quantity: 2 }, // Forbidden Substance x2
+      ];
+      
+      for (const recipe of recipes) {
+        await this.createRecipe(recipe);
+      }
+    }
   }
 }
 
