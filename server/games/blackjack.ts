@@ -13,6 +13,11 @@ export interface BlackjackBetDetails {
   action: 'bet' | 'hit' | 'stand' | 'double' | 'split';
   hand?: string; // JSON string of current hand if continuing a game
   dealerHand?: string; // JSON string of dealer's hand if continuing a game
+  playerCards?: string[]; // Array of card strings (e.g. ['A♥', 'K♠'])
+  dealerCards?: string[]; // Array of card strings (e.g. ['7♦', '10♣'])
+  playerScore?: number;
+  dealerScore?: number;
+  result?: 'win' | 'lose' | 'push';
 }
 
 export interface BlackjackResult {
@@ -174,16 +179,62 @@ export function processBlackjack(betAmount: number, betDetails: BlackjackBetDeta
     }
   } else {
     // Continue existing game
-    if (!betDetails.hand || !betDetails.dealerHand) {
-      throw new Error('Missing game state for continuation');
-    }
-    
     try {
-      playerHand = JSON.parse(betDetails.hand);
-      dealerHand = JSON.parse(betDetails.dealerHand);
+      // For continued game actions like hit/stand, handle playerCards and dealerCards
+      if (betDetails.playerCards && betDetails.dealerCards) {
+        // Convert array of card strings like "J♠" to Card objects
+        playerHand = betDetails.playerCards.map(cardStr => {
+          const suit = cardStr.slice(-1) === '♥' ? 'hearts' : 
+                      cardStr.slice(-1) === '♦' ? 'diamonds' : 
+                      cardStr.slice(-1) === '♣' ? 'clubs' : 'spades';
+          const value = cardStr.slice(0, -1);
+          let numericValue: number;
+          
+          if (value === 'A') {
+            numericValue = 11;
+          } else if (['J', 'Q', 'K'].includes(value)) {
+            numericValue = 10;
+          } else {
+            numericValue = parseInt(value);
+          }
+          
+          return { suit, value, numericValue };
+        });
+        
+        dealerHand = betDetails.dealerCards.map(cardStr => {
+          const suit = cardStr.slice(-1) === '♥' ? 'hearts' : 
+                      cardStr.slice(-1) === '♦' ? 'diamonds' : 
+                      cardStr.slice(-1) === '♣' ? 'clubs' : 'spades';
+          const value = cardStr.slice(0, -1);
+          let numericValue: number;
+          
+          if (value === 'A') {
+            numericValue = 11;
+          } else if (['J', 'Q', 'K'].includes(value)) {
+            numericValue = 10;
+          } else {
+            numericValue = parseInt(value);
+          }
+          
+          return { suit, value, numericValue };
+        });
+      }
+      // If we have string format (legacy support), try parsing
+      else if (betDetails.hand && betDetails.dealerHand) {
+        try {
+          playerHand = JSON.parse(betDetails.hand);
+          dealerHand = JSON.parse(betDetails.dealerHand);
+        } catch (error) {
+          console.error("Failed to parse hand JSON:", error);
+          throw new Error('Invalid game state format');
+        }
+      } else {
+        throw new Error('Missing game state for continuation');
+      }
+      
       deck = createDeck(); // Create a new deck for continuing actions
       
-      // Remove cards that are already in play
+      // Remove cards that are already in play to avoid duplicates
       const usedCards = new Set([
         ...playerHand.map(card => `${card.value}${card.suit}`),
         ...dealerHand.map(card => `${card.value}${card.suit}`)
@@ -228,6 +279,7 @@ export function processBlackjack(betAmount: number, betDetails: BlackjackBetDeta
           break;
       }
     } catch (error) {
+      console.error("Blackjack game error:", error);
       throw new Error('Invalid game state');
     }
   }

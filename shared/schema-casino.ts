@@ -135,7 +135,14 @@ export const rouletteBetDetailsSchema = z.object({
 
 // Blackjack bet details schema
 export const blackjackBetDetailsSchema = z.object({
-  action: z.string().optional(),
+  action: z.enum(['bet', 'hit', 'stand', 'double', 'split']),
+  hand: z.string().optional(),
+  dealerHand: z.string().optional(),
+  result: z.enum(['win', 'lose', 'push']).optional(),
+  playerCards: z.array(z.string()).optional(),
+  dealerCards: z.array(z.string()).optional(),
+  playerScore: z.number().optional(),
+  dealerScore: z.number().optional(),
 });
 
 // Generic bet details schema
