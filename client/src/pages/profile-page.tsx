@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { RichTextEditor } from "@/components/profile/RichTextEditor";
 import { 
   User, 
   DollarSign, 
@@ -583,18 +584,13 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent className="p-0">
               {isEditing ? (
-                <div className="p-4 space-y-4">
-                  <Textarea 
+                <div className="p-4">
+                  <RichTextEditor 
                     value={htmlProfile} 
-                    onChange={(e) => setHtmlProfile(e.target.value)}
-                    placeholder="<div class='showcase'><h1>Welcome to my profile!</h1><p>I'm a notorious crime boss...</p></div>"
-                    className="resize-none bg-dark-lighter h-64 font-mono text-sm"
+                    onChange={setHtmlProfile}
+                    placeholder="Create your custom profile showcase here..."
+                    className="bg-dark-surface"
                   />
-                  <div className="text-xs text-muted-foreground p-2 bg-dark-lighter rounded-md">
-                    <p>Allowed HTML tags: h1, h2, h3, p, div, span, b, i, u, a, ul, ol, li, img, hr</p>
-                    <p>You can use custom CSS to style your showcase with classes and inline styles.</p>
-                    <p className="text-primary">Tip: Create a gallery of your best achievements or display your criminal empire!</p>
-                  </div>
                 </div>
               ) : (
                 htmlProfile ? (
@@ -606,7 +602,7 @@ export default function ProfilePage() {
                   <div className="p-8 text-center text-muted-foreground">
                     <PenTool className="h-12 w-12 mx-auto mb-3 opacity-20" />
                     <h3 className="text-lg font-medium mb-2">Your Custom Showcase</h3>
-                    <p>This is where you can display your custom HTML showcase. Click "Edit Profile" to personalize it.</p>
+                    <p>This is where you can display your custom showcase. Click "Edit Profile" to personalize it.</p>
                   </div>
                 )
               )}
