@@ -238,6 +238,11 @@ class MemStorage implements IStorage {
     this.userInventory = new Map();
     this.gangs = new Map();
     this.gangMembers = new Map();
+    this.gangTerritories = new Map();
+    this.gangWars = new Map();
+    this.gangWarParticipants = new Map();
+    this.gangMissions = new Map();
+    this.gangMissionAttempts = new Map();
     this.messages = new Map();
     this.challenges = new Map();
     this.challengeProgress = new Map();
@@ -252,6 +257,11 @@ class MemStorage implements IStorage {
     this.userInventoryIdCounter = 1;
     this.gangIdCounter = 1;
     this.gangMemberIdCounter = 1;
+    this.gangTerritoryIdCounter = 1;
+    this.gangWarIdCounter = 1;
+    this.gangWarParticipantIdCounter = 1;
+    this.gangMissionIdCounter = 1;
+    this.gangMissionAttemptIdCounter = 1;
     this.messageIdCounter = 1;
     this.challengeIdCounter = 1;
     this.challengeProgressIdCounter = 1;
