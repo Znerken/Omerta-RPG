@@ -47,10 +47,72 @@ import {
   Anchor,
   Zap, // Instead of Nfc
   Rocket,
-  Gauge
+  Gauge,
+  DollarSign
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+
+// Custom hook for drug production countdown timer with real-time updates
+function useProductionTimer(completesAt: string, startedAt: string) {
+  const [timer, setTimer] = useState({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    progress: 0,
+    isCompleted: false
+  });
+
+  useEffect(() => {
+    const calculateTimeRemaining = () => {
+      const now = new Date();
+      const completionTime = new Date(completesAt);
+      const startTime = new Date(startedAt);
+      
+      // Check if completed
+      if (now >= completionTime) {
+        setTimer({
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          progress: 100,
+          isCompleted: true
+        });
+        return;
+      }
+      
+      // Calculate remaining time
+      const msRemaining = Math.max(0, completionTime.getTime() - now.getTime());
+      const hours = Math.floor(msRemaining / (1000 * 60 * 60));
+      const minutes = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((msRemaining % (1000 * 60)) / 1000);
+      
+      // Calculate progress percentage
+      const totalDuration = completionTime.getTime() - startTime.getTime();
+      const elapsed = now.getTime() - startTime.getTime();
+      const progress = Math.min(100, Math.round((elapsed / totalDuration) * 100));
+      
+      setTimer({
+        hours,
+        minutes,
+        seconds,
+        progress,
+        isCompleted: false
+      });
+    };
+    
+    // Initial calculation
+    calculateTimeRemaining();
+    
+    // Update every second
+    const interval = setInterval(calculateTimeRemaining, 1000);
+    
+    // Cleanup on unmount
+    return () => clearInterval(interval);
+  }, [completesAt, startedAt]);
+  
+  return timer;
+}
 
 type Drug = {
   id: number;
@@ -1198,20 +1260,16 @@ function LabsTab() {
                 {productions && productions.length > 0 ? (
                   <div className="space-y-4">
                     {productions.filter(p => p && !p.isCompleted && p.drug).map((production) => {
-                      const now = new Date();
-                      const completesAt = new Date(production.completesAt);
-                      const isCompleted = completesAt <= now;
-                      const totalDuration = new Date(production.completesAt).getTime() - new Date(production.startedAt).getTime();
-                      const elapsed = now.getTime() - new Date(production.startedAt).getTime();
-                      const progress = isCompleted ? 100 : Math.min(100, Math.round((elapsed / totalDuration) * 100));
+                      // Use our custom real-time timer hook
+                      const {
+                        hours: hoursRemaining,
+                        minutes: minutesRemaining,
+                        seconds: secondsRemaining,
+                        progress,
+                        isCompleted
+                      } = useProductionTimer(production.completesAt, production.startedAt);
                       
-                      // Calculate remaining time
-                      const msRemaining = Math.max(0, completesAt.getTime() - now.getTime());
-                      const hoursRemaining = Math.floor(msRemaining / (1000 * 60 * 60));
-                      const minutesRemaining = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
-                      const secondsRemaining = Math.floor((msRemaining % (1000 * 60)) / 1000);
-                      
-                      // Format countdown
+                      // Format countdown with real-time updates
                       const countdown = isCompleted 
                         ? "Ready for collection!" 
                         : `${hoursRemaining}h ${minutesRemaining}m ${secondsRemaining}s`;
@@ -1225,7 +1283,7 @@ function LabsTab() {
                             ? 'bg-gradient-to-r from-primary/70 to-primary/90' 
                             : 'bg-gradient-to-r from-primary/80 to-primary';
                             
-                      // Bubble animation count based on progress
+                      // Bubble animation count increases with progress
                       const bubbleCount = Math.max(1, Math.floor(progress / 20));
                       
                       return (
@@ -1294,8 +1352,8 @@ function LabsTab() {
                                   <div className="flex items-center text-xs text-muted-foreground">
                                     <Clock className="h-3 w-3 mr-1.5" />
                                     {isCompleted ? 
-                                      "Completed on " + format(completesAt, "MMM d, h:mm a") :
-                                      "Completes on " + format(completesAt, "MMM d, h:mm a")
+                                      "Completed on " + format(new Date(production.completesAt), "MMM d, h:mm a") :
+                                      "Completes on " + format(new Date(production.completesAt), "MMM d, h:mm a")
                                     }
                                   </div>
                                 </div>
