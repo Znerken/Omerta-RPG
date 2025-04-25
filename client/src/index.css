@@ -191,3 +191,171 @@ h1, h2, h3, h4, h5, h6 {
 .badge-associate {
   @apply px-2 py-0.5 text-xs font-medium rounded-sm bg-gray-500/20 text-gray-400 border border-gray-500/40;
 }
+
+/* === Animation Effects === */
+
+/* Crime tape animation */
+.animate-crime-tape {
+  background-image: repeating-linear-gradient(
+    45deg,
+    hsl(50, 100%, 50%) 0,
+    hsl(50, 100%, 50%) 10px,
+    hsl(0, 0%, 10%) 10px,
+    hsl(0, 0%, 10%) 20px
+  );
+  background-size: 200% 200%;
+  animation: crimeTape 3s linear infinite;
+}
+
+@keyframes crimeTape {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
+/* Gunshot effect */
+.gunshot-effect {
+  position: relative;
+}
+
+.gunshot-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(255, 90, 90, 0.8) 0%, transparent 70%);
+  opacity: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.gunshot-effect.active::before {
+  animation: gunshot 0.5s ease-out forwards;
+}
+
+@keyframes gunshot {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3);
+  }
+}
+
+/* Money rain effect */
+.money-rain-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 5;
+}
+
+.money-bill {
+  position: absolute;
+  width: 20px;
+  height: 8px;
+  background: hsl(120, 70%, 40%);
+  opacity: 0.7;
+  transform: rotate(calc(var(--rotation) * 1deg));
+}
+
+/* Spotlight effect */
+.spotlight-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-effect::after {
+  content: '';
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(circle at center, rgba(255, 255, 200, 0.15) 0%, transparent 70%);
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.spotlight-effect.active::after {
+  animation: spotlight 2s ease-out;
+}
+
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Smoke effect for transitions */
+.smoke-effect {
+  position: relative;
+}
+
+.smoke-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(50, 50, 60, 0) 0%, rgba(50, 50, 60, 0.8) 100%);
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.smoke-effect.active::before {
+  animation: smoke 1.5s ease-in-out forwards;
+}
+
+@keyframes smoke {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: translateY(-10px) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-20px) scale(1.1);
+  }
+}
+
+/* Typing effect for text */
+.typing-effect {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 3px solid var(--secondary);
+  animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: var(--secondary) }
+}
