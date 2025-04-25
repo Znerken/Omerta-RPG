@@ -69,17 +69,22 @@ export default function GangPage() {
   // Log the profile data to debug more extensively
   useEffect(() => {
     if (userProfile) {
+      console.log("===== GANG MEMBERSHIP DEBUG =====");
       console.log("User Profile Data:", userProfile);
+      console.log("Direct gangId:", userProfile.gangId);
       console.log("Gang Member Data:", userProfile.gangMember);
       console.log("Gang Data:", userProfile.gang);
-      console.log("In Gang?", userProfile.inGang);
-      console.log("Gang Rank:", userProfile.gangRank);
+      console.log("In Gang from API?", userProfile.inGang);
+      console.log("Gang Rank from API:", userProfile.gangRank);
       
-      // Also log our derived values
-      console.log("Derived Gang ID:", gang?.id);
+      // Also log derived values
+      console.log("userGangId (derived):", userGangId);
+      console.log("Derived gang details:", gangDetails);
       console.log("Is In Gang (derived):", isInGang);
+      console.log("User Gang (derived):", userGang);
+      console.log("=================================");
     }
-  }, [userProfile]);
+  }, [userProfile, gangDetails, userGangId, isInGang, userGang]);
   
   // Get gang membership information from multiple fields to be resilient
   // Also check if user has gangId set directly
