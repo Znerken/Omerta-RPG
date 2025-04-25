@@ -456,6 +456,20 @@ export class DrugStorage {
     
     return updatedProduction;
   }
+  
+  async deleteAllLabProductions(labId: number): Promise<boolean> {
+    try {
+      // Delete all productions for this lab
+      await db
+        .delete(drugProduction)
+        .where(eq(drugProduction.labId, labId));
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting lab productions:", error);
+      return false;
+    }
+  }
 
   // Drug Deals operations
   async getUserDrugDeals(userId: number): Promise<(DrugDeal & { drug: Drug })[]> {

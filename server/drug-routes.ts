@@ -865,6 +865,30 @@ export function registerDrugRoutes(app: Express) {
   });
   
   // New endpoint to create recipes only
+  // Delete all productions for a lab (admin tool)
+  app.delete("/api/admin/drug-labs/:id/productions", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const labId = parseInt(req.params.id);
+      
+      // Get the lab
+      const lab = await drugStorage.getDrugLab(labId);
+      if (!lab) {
+        return res.status(404).json({ error: "Lab not found" });
+      }
+      
+      // Delete all productions for this lab
+      await drugStorage.deleteAllLabProductions(labId);
+      
+      res.json({ 
+        message: `Successfully deleted all productions for lab ${labId}`,
+        lab: lab.name
+      });
+    } catch (error) {
+      console.error("Error deleting productions:", error);
+      res.status(500).json({ error: "Failed to delete productions" });
+    }
+  });
+  
   app.post("/api/dev/create-recipes", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
       const allDrugs = await drugStorage.getAllDrugs();
