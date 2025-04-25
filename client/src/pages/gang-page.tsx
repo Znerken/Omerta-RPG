@@ -81,6 +81,9 @@ export default function GangPage() {
     enabled: !!userGangId, // Only run this query if user has a gang ID
   });
 
+  // Use either the detailed gang info or the basic info from user's profile
+  const userGang = gangDetails || gang || null;
+  
   // Log the profile data to debug more extensively
   useEffect(() => {
     if (userProfile) {

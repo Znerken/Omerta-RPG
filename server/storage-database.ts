@@ -99,6 +99,187 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       return undefined;
     }
   }
+  
+  async getAllGangs(): Promise<Gang[]> {
+    try {
+      return await db
+        .select()
+        .from(gangs)
+        .orderBy(desc(gangs.level));
+    } catch (error) {
+      console.error("Error in getAllGangs:", error);
+      return [];
+    }
+  }
+
+  async getTopGangs(limit: number = 10): Promise<Gang[]> {
+    try {
+      return await db
+        .select()
+        .from(gangs)
+        .orderBy(desc(gangs.level))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error in getTopGangs:", error);
+      return [];
+    }
+  }
+
+  async getUserWithGang(userId: number): Promise<UserWithGang | undefined> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) return undefined;
+      
+      const gangMember = await this.getGangMember(userId);
+      if (!gangMember) {
+        return { ...user, inGang: false };
+      }
+      
+      return {
+        ...user,
+        inGang: true,
+        gangId: gangMember.gangId,
+        gang: gangMember.gang,
+        gangMember,
+        gangRank: gangMember.rank
+      };
+    } catch (error) {
+      console.error("Error in getUserWithGang:", error);
+      return undefined;
+    }
+  }
+  
+  // This method is used by the gang-routes.ts file
+  async getGangWithMembers(gangId: number): Promise<any> {
+    // We're reusing our existing method since it already includes members
+    return this.getGangWithDetails(gangId);
+  }
+  
+  // Used to check if a gang name already exists
+  async getGangByName(name: string): Promise<Gang | undefined> {
+    try {
+      const [gang] = await db
+        .select()
+        .from(gangs)
+        .where(sql`LOWER(${gangs.name}) = LOWER(${name})`);
+      return gang;
+    } catch (error) {
+      console.error("Error in getGangByName:", error);
+      return undefined;
+    }
+  }
+  
+  // Used to check if a gang tag already exists
+  async getGangByTag(tag: string): Promise<Gang | undefined> {
+    try {
+      const [gang] = await db
+        .select()
+        .from(gangs)
+        .where(sql`LOWER(${gangs.tag}) = LOWER(${tag})`);
+      return gang;
+    } catch (error) {
+      console.error("Error in getGangByTag:", error);
+      return undefined;
+    }
+  }
+  
+  // Add basic user profile method
+  async getUserProfile(userId: number): Promise<any> {
+    try {
+      return this.getUserWithGang(userId);
+    } catch (error) {
+      console.error("Error in getUserProfile:", error);
+      return undefined;
+    }
+  }
+  
+  // Add gang creation method
+  async createGang(gangData: InsertGang): Promise<Gang | undefined> {
+    try {
+      const [gang] = await db
+        .insert(gangs)
+        .values(gangData)
+        .returning();
+      return gang;
+    } catch (error) {
+      console.error("Error in createGang:", error);
+      return undefined;
+    }
+  }
+  
+  // Add gang member operations
+  async addGangMember(memberData: InsertGangMember): Promise<GangMember | undefined> {
+    try {
+      const [member] = await db
+        .insert(gangMembers)
+        .values(memberData)
+        .returning();
+      return member;
+    } catch (error) {
+      console.error("Error in addGangMember:", error);
+      return undefined;
+    }
+  }
+  
+  async removeGangMember(userId: number, gangId: number): Promise<boolean> {
+    try {
+      await db
+        .delete(gangMembers)
+        .where(
+          and(
+            eq(gangMembers.userId, userId),
+            eq(gangMembers.gangId, gangId)
+          )
+        );
+      return true;
+    } catch (error) {
+      console.error("Error in removeGangMember:", error);
+      return false;
+    }
+  }
+  
+  // Update user method
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .update(users)
+        .set(userData)
+        .where(eq(users.id, id))
+        .returning();
+      return user;
+    } catch (error) {
+      console.error("Error in updateUser:", error);
+      return undefined;
+    }
+  }
+  
+  // Update gang method
+  async updateGang(id: number, gangData: Partial<Gang>): Promise<Gang | undefined> {
+    try {
+      const [gang] = await db
+        .update(gangs)
+        .set(gangData)
+        .where(eq(gangs.id, id))
+        .returning();
+      return gang;
+    } catch (error) {
+      console.error("Error in updateGang:", error);
+      return undefined;
+    }
+  }
+  
+  // Add some achievement methods
+  async getUnviewedAchievements(userId: number): Promise<AchievementWithUnlocked[]> {
+    try {
+      // This is a simplified version that just returns an empty array
+      // since we don't have the full achievements implementation
+      console.log(`Getting unviewed achievements for user ${userId}`);
+      return [];
+    } catch (error) {
+      console.error("Error in getUnviewedAchievements:", error);
+      return [];
+    }
+  }
 
   async getGangWithDetails(id: number): Promise<any | undefined> {
     try {
