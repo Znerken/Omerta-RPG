@@ -72,11 +72,11 @@ gangRouter.post("/", async (req, res) => {
       createdAt: new Date()
     });
     
-    // Add founder as a member with leader rank
+    // Add founder as a member with boss rank
     await storage.addGangMember({
       gangId: newGang.id,
       userId: req.user.id,
-      rank: "Leader",
+      rank: "Boss",
       contribution: 0
     });
     
@@ -153,12 +153,12 @@ gangRouter.post("/:id/leave", async (req, res) => {
       });
     }
     
-    // Leaders can't leave unless they're the only member
-    if (existingMembership.rank === "Leader") {
+    // Bosses can't leave unless they're the only member
+    if (existingMembership.rank === "Boss") {
       const memberCount = await storage.getGangMemberCount(gangId);
       if (memberCount > 1) {
         return res.status(400).json({ 
-          message: "Leaders must promote another member before leaving" 
+          message: "Bosses must promote another member before leaving" 
         });
       }
     }
@@ -257,9 +257,9 @@ gangRouter.post("/:id/bank/withdraw", async (req, res) => {
       });
     }
     
-    if (existingMembership.rank !== "Leader" && existingMembership.rank !== "Underboss") {
+    if (existingMembership.rank !== "Boss" && existingMembership.rank !== "Underboss") {
       return res.status(403).json({ 
-        message: "Only Leaders and Underbosses can withdraw from the gang bank" 
+        message: "Only Bosses and Underbosses can withdraw from the gang bank" 
       });
     }
     
@@ -380,9 +380,9 @@ gangRouter.post("/wars", async (req, res) => {
       });
     }
     
-    if (membership.rank !== "Leader" && membership.rank !== "Underboss") {
+    if (membership.rank !== "Boss" && membership.rank !== "Underboss") {
       return res.status(403).json({ 
-        message: "Only Leaders and Underbosses can declare war" 
+        message: "Only Bosses and Underbosses can declare war" 
       });
     }
     
@@ -639,9 +639,9 @@ gangRouter.post("/missions/:id/start", async (req, res) => {
       return res.status(403).json({ message: "You must be in a gang to start a mission" });
     }
     
-    if (membership.rank !== "Leader" && membership.rank !== "Underboss") {
+    if (membership.rank !== "Boss" && membership.rank !== "Underboss") {
       return res.status(403).json({ 
-        message: "Only Leaders and Underbosses can start gang missions" 
+        message: "Only Bosses and Underbosses can start gang missions" 
       });
     }
     
