@@ -52,7 +52,7 @@ export default function ProfilePage() {
 
   // Initialize all state variables at the top
   const [isEditing, setIsEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("activity");
   const [bio, setBio] = useState("");
   const [htmlProfile, setHtmlProfile] = useState("");
   const [showAchievements, setShowAchievements] = useState(true);
@@ -198,19 +198,12 @@ export default function ProfilePage() {
     (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
   );
 
-  if (profileLoading) {
+  if (profileLoading || historyLoading) {
     return (
       <>
-        <PageHeader 
-          title="Your Profile" 
-          icon={<User className="h-5 w-5" />}
-          description="View your character stats and activity"
-        />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading profile data...</p>
-          </div>
+        <PageHeader title="Your Profile" icon={<User className="h-5 w-5" />} description="Loading profile data..." />
+        <div className="grid place-items-center h-64">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
         </div>
       </>
     );
@@ -219,15 +212,10 @@ export default function ProfilePage() {
   if (!userProfile) {
     return (
       <>
-        <PageHeader 
-          title="Your Profile" 
-          icon={<User className="h-5 w-5" />}
-          description="View your character stats and activity"
-        />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <p className="text-red-400">Failed to load profile data</p>
-          </div>
+        <PageHeader title="Profile" icon={<User className="h-5 w-5" />} description="Profile not found" />
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold mb-4">Profile not available</h2>
+          <p className="text-muted-foreground">There was an error loading your profile data. Please try again later.</p>
         </div>
       </>
     );
@@ -292,121 +280,182 @@ export default function ProfilePage() {
   };
 
   return (
-    <>
-      <PageHeader 
-        title="Your Profile" 
-        icon={<User className="h-5 w-5" />}
-        description="View your character stats and activity"
-        actions={
-          isEditing ? (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(false)}
-                className="flex items-center gap-1"
-              >
-                <Trash2 className="h-4 w-4" /> Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSaveProfile}
-                className="flex items-center gap-1"
-                disabled={updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending}
-              >
-                {(updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending) ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" /> Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
-          ) : (
+    <div className={`profile-page ${profileTheme}`}>
+      {/* Dynamic Edit Button - Always visible floating at top right */}
+      <div className="fixed top-20 right-6 z-50">
+        {isEditing ? (
+          <div className="flex flex-col gap-2">
             <Button
               size="sm"
-              onClick={() => setIsEditing(true)}
+              onClick={handleSaveProfile}
+              className="flex items-center gap-1"
+              disabled={updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending}
+            >
+              {(updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending) ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" /> Save Changes
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(false)}
               className="flex items-center gap-1"
             >
-              <FileEdit className="h-4 w-4" /> Edit Profile
+              <Trash2 className="h-4 w-4" /> Cancel
             </Button>
-          )
-        }
-      />
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
+          >
+            <FileEdit className="h-4 w-4" /> Edit Profile
+          </Button>
+        )}
+      </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Summary */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card className="bg-dark-surface">
-            <CardContent className="pt-6 relative">
-              {/* Banner Image */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-primary/30 to-accent/30 overflow-hidden rounded-t-lg"
-                style={{
-                  backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
+      {/* Full-width Banner with Avatar */}
+      <div className="relative w-full mb-16">
+        {/* Banner Image - Full width */}
+        <div 
+          className="w-full h-64 bg-gradient-to-r from-primary/30 to-accent/30 relative overflow-hidden"
+          style={{
+            backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        >
+          {isEditing && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70"
+              onClick={() => bannerInputRef.current?.click()}
+            >
+              <Image className="h-5 w-5" />
+              <input
+                type="file"
+                ref={bannerInputRef}
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleBannerChange}
+              />
+            </Button>
+          )}
+          
+          {/* Overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+        </div>
+        
+        {/* Avatar - Positioned to overlap banner and content */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+          <div className="relative">
+            <Avatar className="h-32 w-32 border-4 border-background bg-primary ring-4 ring-primary/20">
+              {avatarPreview ? (
+                <AvatarImage src={avatarPreview} alt={username} />
+              ) : (
+                <AvatarFallback className="text-5xl font-heading">{getInitials(username)}</AvatarFallback>
+              )}
+            </Avatar>
+            
+            {isEditing && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8"
+                onClick={() => avatarInputRef.current?.click()}
               >
-                {isEditing && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70"
-                    onClick={() => bannerInputRef.current?.click()}
-                  >
-                    <Image className="h-4 w-4" />
-                    <input
-                      type="file"
-                      ref={bannerInputRef}
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      className="hidden"
-                      onChange={handleBannerChange}
-                    />
-                  </Button>
-                )}
-              </div>
-              
-              <div className="flex flex-col items-center text-center mb-6 mt-16">
-                <div className="relative">
-                  <Avatar className="h-24 w-24 border-4 border-background mb-4 bg-primary">
-                    {avatarPreview ? (
-                      <AvatarImage src={avatarPreview} alt={username} />
-                    ) : (
-                      <AvatarFallback className="text-3xl font-heading">{getInitials(username)}</AvatarFallback>
-                    )}
-                  </Avatar>
-                  
-                  {isEditing && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute bottom-4 right-0 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8"
-                      onClick={() => avatarInputRef.current?.click()}
-                    >
-                      <Camera className="h-4 w-4" />
-                      <input
-                        type="file"
-                        ref={avatarInputRef}
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        className="hidden"
-                        onChange={handleAvatarChange}
-                      />
-                    </Button>
+                <Camera className="h-4 w-4" />
+                <input
+                  type="file"
+                  ref={avatarInputRef}
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* User Identity - Centered below avatar */}
+      <div className="text-center mb-8">
+        <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{username}</h1>
+        <div className="flex items-center justify-center text-gray-400 mb-2">
+          <Medal className="h-5 w-5 mr-1" />
+          <span className="text-lg">Level {level}</span>
+        </div>
+        
+        {/* User status badges/stats */}
+        <div className="flex justify-center gap-2 flex-wrap mt-3">
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+            <DollarSign className="h-4 w-4 mr-1 text-green-500" />
+            {formatCurrency(cash)}
+          </Badge>
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+            <Award className="h-4 w-4 mr-1 text-primary" />
+            {respect.toLocaleString()} Respect
+          </Badge>
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+            <Briefcase className="h-4 w-4 mr-1 text-amber-500" />
+            Mafia Boss
+          </Badge>
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+            <Users className="h-4 w-4 mr-1 text-blue-500" />
+            Crew: 6 Members
+          </Badge>
+        </div>
+      </div>
+      
+      {/* Main content grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        {/* Left Column - User Bio and Stats */}
+        <div className="xl:col-span-1 space-y-6">
+          {/* Bio Card */}
+          <Card className="bg-dark-surface border-primary/20 overflow-hidden">
+            <CardHeader className="pb-2 border-b border-border/30">
+              <CardTitle className="text-lg flex items-center">
+                <User className="h-5 w-5 mr-2 text-primary" /> About
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
+              {isEditing ? (
+                <Textarea 
+                  id="bio" 
+                  value={bio} 
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell others about yourself..."
+                  className="resize-none bg-dark-lighter min-h-[120px]"
+                />
+              ) : (
+                <div className="prose prose-invert prose-sm max-w-none">
+                  {bio ? (
+                    <p>{bio}</p>
+                  ) : (
+                    <p className="text-muted-foreground italic">No bio provided yet.</p>
                   )}
                 </div>
-                
-                <h2 className="text-2xl font-medium mb-1">{username}</h2>
-                <div className="flex items-center text-gray-400">
-                  <Medal className="h-4 w-4 mr-1" />
-                  <span>Level {level}</span>
-                </div>
-              </div>
-
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* Character Stats Card */}
+          <Card className="bg-dark-surface border-primary/20">
+            <CardHeader className="pb-2 border-b border-border/30">
+              <CardTitle className="text-lg flex items-center">
+                <ShieldCheck className="h-5 w-5 mr-2 text-primary" /> Character Stats
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4">
               <div className="space-y-4">
                 {/* XP Progress */}
                 <div>
@@ -414,108 +463,70 @@ export default function ProfilePage() {
                     <span className="text-gray-400">Level Progress</span>
                     <span className="text-gray-400">{xp.toLocaleString()} / {nextLevelXp.toLocaleString()} XP</span>
                   </div>
-                  <Progress value={xpProgress} className="h-2" />
+                  <Progress 
+                    value={xpProgress} 
+                    className="h-2.5" 
+                    indicatorClassName="bg-gradient-to-r from-primary to-purple-600" 
+                  />
                 </div>
-
-                {/* Stats Overview */}
-                <div className="grid grid-cols-2 gap-3 bg-dark-lighter p-3 rounded-md">
-                  <div className="text-center p-2">
-                    <DollarSign className="h-5 w-5 mx-auto mb-1 text-green-500" />
-                    <div className="text-lg font-medium">{formatCurrency(cash)}</div>
-                    <div className="text-xs text-gray-400">Cash</div>
-                  </div>
-                  <div className="text-center p-2">
-                    <Award className="h-5 w-5 mx-auto mb-1 text-primary" />
-                    <div className="text-lg font-medium">{respect.toLocaleString()}</div>
-                    <div className="text-xs text-gray-400">Respect</div>
-                  </div>
-                  <div className="text-center p-2">
-                    <Clock className="h-5 w-5 mx-auto mb-1 text-blue-500" />
-                    <div className="text-lg font-medium">48h</div>
-                    <div className="text-xs text-gray-400">Play Time</div>
-                  </div>
-                  <div className="text-center p-2">
-                    <TrendingUp className="h-5 w-5 mx-auto mb-1 text-yellow-500" />
-                    <div className="text-lg font-medium">85</div>
-                    <div className="text-xs text-gray-400">Actions</div>
-                  </div>
-                </div>
-
-                {/* Character Stats */}
-                <div>
-                  <h3 className="font-medium mb-3 flex items-center">
-                    <ShieldCheck className="h-4 w-4 mr-2" /> Character Stats
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm flex items-center text-gray-300">
-                          <Dumbbell className="h-4 w-4 mr-1 text-red-500" /> Strength
-                        </span>
-                        <span className="text-sm font-mono">{stats.strength}/100</span>
-                      </div>
-                      <Progress value={stats.strength} className="h-1.5" indicatorClassName="bg-red-600" />
+                
+                <div className="space-y-3.5 mt-4">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm flex items-center text-gray-300">
+                        <Dumbbell className="h-4 w-4 mr-1 text-red-500" /> Strength
+                      </span>
+                      <span className="text-sm font-mono">{stats.strength}/100</span>
                     </div>
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm flex items-center text-gray-300">
-                          <Footprints className="h-4 w-4 mr-1 text-green-500" /> Stealth
-                        </span>
-                        <span className="text-sm font-mono">{stats.stealth}/100</span>
-                      </div>
-                      <Progress value={stats.stealth} className="h-1.5" indicatorClassName="bg-green-600" />
+                    <Progress value={stats.strength} className="h-1.5" indicatorClassName="bg-red-600" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm flex items-center text-gray-300">
+                        <Footprints className="h-4 w-4 mr-1 text-green-500" /> Stealth
+                      </span>
+                      <span className="text-sm font-mono">{stats.stealth}/100</span>
                     </div>
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm flex items-center text-gray-300">
-                          <SmilePlus className="h-4 w-4 mr-1 text-blue-500" /> Charisma
-                        </span>
-                        <span className="text-sm font-mono">{stats.charisma}/100</span>
-                      </div>
-                      <Progress value={stats.charisma} className="h-1.5" indicatorClassName="bg-blue-600" />
+                    <Progress value={stats.stealth} className="h-1.5" indicatorClassName="bg-green-600" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm flex items-center text-gray-300">
+                        <SmilePlus className="h-4 w-4 mr-1 text-blue-500" /> Charisma
+                      </span>
+                      <span className="text-sm font-mono">{stats.charisma}/100</span>
                     </div>
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm flex items-center text-gray-300">
-                          <BookOpen className="h-4 w-4 mr-1 text-yellow-500" /> Intelligence
-                        </span>
-                        <span className="text-sm font-mono">{stats.intelligence}/100</span>
-                      </div>
-                      <Progress value={stats.intelligence} className="h-1.5" indicatorClassName="bg-yellow-600" />
+                    <Progress value={stats.charisma} className="h-1.5" indicatorClassName="bg-blue-600" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm flex items-center text-gray-300">
+                        <BookOpen className="h-4 w-4 mr-1 text-yellow-500" /> Intelligence
+                      </span>
+                      <span className="text-sm font-mono">{stats.intelligence}/100</span>
                     </div>
+                    <Progress value={stats.intelligence} className="h-1.5" indicatorClassName="bg-yellow-600" />
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Profile Edit Settings */}
+          
+          {/* Profile Theme Control - Only in edit mode */}
           {isEditing && (
-            <Card className="bg-dark-surface">
-              <CardHeader>
+            <Card className="bg-dark-surface border-primary/20">
+              <CardHeader className="pb-2 border-b border-border/30">
                 <CardTitle className="text-lg flex items-center">
-                  <FileEdit className="h-5 w-5 mr-2" /> Profile Settings
+                  <Palette className="h-5 w-5 mr-2 text-primary" /> Profile Customization
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 <div className="space-y-4">
-                  {/* Bio */}
-                  <div>
-                    <Label htmlFor="bio" className="mb-2 block">Bio</Label>
-                    <Textarea 
-                      id="bio" 
-                      value={bio} 
-                      onChange={(e) => setBio(e.target.value)}
-                      placeholder="Tell others about yourself..."
-                      className="resize-none bg-dark-lighter"
-                    />
-                  </div>
-                  
                   {/* Profile Theme */}
                   <div>
                     <Label htmlFor="theme" className="mb-2 block">Profile Theme</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {['dark', 'noir', 'mafia'].map((theme) => (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {['dark', 'noir', 'mafia', 'elegant', 'vintage'].map((theme) => (
                         <Button
                           key={theme}
                           type="button"
@@ -534,7 +545,7 @@ export default function ProfilePage() {
                   </div>
                   
                   {/* Show Achievements Toggle */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mt-4">
                     <div>
                       <Label htmlFor="show-achievements" className="text-sm font-medium">
                         Show Achievements
@@ -553,206 +564,206 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
           )}
-          
-          {/* HTML Profile Editor */}
-          {isEditing && (
-            <Card className="bg-dark-surface">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <PenTool className="h-5 w-5 mr-2" /> HTML Profile
-                </CardTitle>
-                <CardDescription>
-                  Use HTML to customize your profile page
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+        </div>
+        
+        {/* Main showcase area */}
+        <div className="xl:col-span-3 space-y-8">
+          {/* HTML Profile Showcase */}
+          <Card className="bg-dark-surface border-primary/20 overflow-hidden">
+            <CardHeader className="pb-2 border-b border-border/30">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <PenTool className="h-5 w-5 mr-2 text-primary" /> 
+                  Showcase
+                </div>
+                {isEditing && (
+                  <Badge variant="outline" className="text-xs">HTML Enabled</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {isEditing ? (
+                <div className="p-4 space-y-4">
                   <Textarea 
                     value={htmlProfile} 
                     onChange={(e) => setHtmlProfile(e.target.value)}
-                    placeholder="<h1>Welcome to my profile!</h1>"
-                    className="min-h-[200px] font-mono text-sm bg-dark-lighter"
+                    placeholder="<div class='showcase'><h1>Welcome to my profile!</h1><p>I'm a notorious crime boss...</p></div>"
+                    className="resize-none bg-dark-lighter h-64 font-mono text-sm"
                   />
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground p-2 bg-dark-lighter rounded-md">
                     <p>Allowed HTML tags: h1, h2, h3, p, div, span, b, i, u, a, ul, ol, li, img, hr</p>
-                    <p>Example: <code>&lt;h1&gt;My Gang&lt;/h1&gt; &lt;p&gt;I've been a member since 2025&lt;/p&gt;</code></p>
+                    <p>You can use custom CSS to style your showcase with classes and inline styles.</p>
+                    <p className="text-primary">Tip: Create a gallery of your best achievements or display your criminal empire!</p>
                   </div>
                 </div>
-              </CardContent>
-              <CardFooter className="bg-dark-lighter text-xs p-2">
-                <div className="flex w-full flex-col space-y-1">
-                  <div className="flex items-center text-yellow-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      className="h-4 w-4 mr-1"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10.362 1.093a.75.75 0 00-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925zM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0018 14.25V6.443zm-7.25 12.25v-8.25l-7.25-4v7.807a.75.75 0 00.388.657l6.862 3.786z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <span>HTML content is restricted for security reasons</span>
+              ) : (
+                htmlProfile ? (
+                  <div 
+                    className="profile-html-content p-6"
+                    dangerouslySetInnerHTML={{ __html: htmlProfile }}
+                  />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    <PenTool className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <h3 className="text-lg font-medium mb-2">Your Custom Showcase</h3>
+                    <p>This is where you can display your custom HTML showcase. Click "Edit Profile" to personalize it.</p>
                   </div>
-                </div>
-              </CardFooter>
-            </Card>
-          )}
+                )
+              )}
+            </CardContent>
+          </Card>
           
-          {/* HTML Profile Display */}
-          {!isEditing && userProfile.htmlProfile && (
-            <Card className="bg-dark-surface">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <PenTool className="h-5 w-5 mr-2" /> Custom Profile
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div 
-                  className="prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: userProfile.htmlProfile }}
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Achievements */}
-          <Card className="bg-dark-surface">
-            <CardHeader>
+          {/* Featured Achievements */}
+          <Card className="bg-dark-surface border-primary/20">
+            <CardHeader className="pb-2 border-b border-border/30">
               <CardTitle className="text-lg flex items-center">
-                <Medal className="h-5 w-5 mr-2" /> Achievements
+                <Award className="h-5 w-5 mr-2 text-primary" /> Featured Achievements
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-dark-lighter rounded-md p-3 text-center flex flex-col items-center">
-                  <Briefcase className="h-8 w-8 mb-2 text-secondary" />
-                  <div className="text-sm font-medium">Master Thief</div>
-                  <div className="text-xs text-gray-400">50 successful crimes</div>
-                </div>
-                <div className="bg-dark-lighter rounded-md p-3 text-center flex flex-col items-center opacity-50">
-                  <Dumbbell className="h-8 w-8 mb-2 text-secondary" />
-                  <div className="text-sm font-medium">Strong Arm</div>
-                  <div className="text-xs text-gray-400">Reach 50 Strength</div>
-                </div>
-                <div className="bg-dark-lighter rounded-md p-3 text-center flex flex-col items-center opacity-50">
-                  <Users className="h-8 w-8 mb-2 text-secondary" />
-                  <div className="text-sm font-medium">Gang Boss</div>
-                  <div className="text-xs text-gray-400">Lead a gang of 5+ members</div>
-                </div>
-                <div className="bg-dark-lighter rounded-md p-3 text-center flex flex-col items-center opacity-50">
-                  <DollarSign className="h-8 w-8 mb-2 text-secondary" />
-                  <div className="text-sm font-medium">Millionaire</div>
-                  <div className="text-xs text-gray-400">Accumulate $1,000,000</div>
-                </div>
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* Achievement Cards */}
+                {[
+                  { name: "First Blood", icon: <Award />, rarity: "Common", date: "2023-05-15" },
+                  { name: "Mastermind", icon: <Award />, rarity: "Rare", date: "2023-06-20" },
+                  { name: "Kingpin", icon: <Award />, rarity: "Epic", date: "2023-07-10" },
+                  { name: "Untouchable", icon: <Award />, rarity: "Legendary", date: "2023-08-05" },
+                ].map((achievement, i) => (
+                  <div key={i} className="relative group overflow-hidden">
+                    <div className="bg-dark-lighter rounded-lg p-4 text-center transition-all duration-200 group-hover:bg-dark-lighter/80 border border-border/50 group-hover:border-primary/50">
+                      <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20">
+                        {achievement.icon}
+                      </div>
+                      <h4 className="font-medium">{achievement.name}</h4>
+                      <div className="mt-2 flex items-center justify-center">
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-xs",
+                            achievement.rarity === "Common" && "bg-gray-700/50",
+                            achievement.rarity === "Rare" && "bg-blue-700/50",
+                            achievement.rarity === "Epic" && "bg-purple-700/50",
+                            achievement.rarity === "Legendary" && "bg-amber-700/50",
+                          )}
+                        >
+                          {achievement.rarity}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Activity History */}
-        <div className="lg:col-span-2">
-          <Card className="bg-dark-surface">
-            <CardHeader>
-              <CardTitle className="text-lg">Activity History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="all">
-                <TabsList className="mb-4 bg-dark-lighter">
-                  <TabsTrigger value="all">All Activity</TabsTrigger>
-                  <TabsTrigger value="crimes">Crimes</TabsTrigger>
-                  <TabsTrigger value="training">Training</TabsTrigger>
+          
+          {/* Activity Feed and Tabs - More Compact */}
+          <Card className="bg-dark-surface border-primary/20">
+            <CardHeader className="pb-0 pt-4">
+              <Tabs defaultValue="activity" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="activity">Recent Activity</TabsTrigger>
+                  <TabsTrigger value="crimes">Crime History</TabsTrigger>
+                  <TabsTrigger value="achievements">All Achievements</TabsTrigger>
                 </TabsList>
-                
-                <TabsContent value="all">
-                  <ActivityTable activities={allActivities} loading={historyLoading} />
-                </TabsContent>
-                
-                <TabsContent value="crimes">
-                  <ActivityTable activities={crimeActivities || []} loading={historyLoading} />
-                </TabsContent>
-                
-                <TabsContent value="training">
-                  <ActivityTable activities={trainingActivities} />
-                </TabsContent>
               </Tabs>
-            </CardContent>
-          </Card>
-
-          {/* Statistics */}
-          <Card className="bg-dark-surface mt-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Statistics</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-dark-lighter p-3 rounded-md text-center">
-                  <div className="text-2xl font-medium">42</div>
-                  <div className="text-xs text-gray-400">Crimes Committed</div>
+            <CardContent className="pt-6">
+              {activeTab === 'activity' && (
+                <div>
+                  <ActivityTable activities={allActivities} />
                 </div>
-                <div className="bg-dark-lighter p-3 rounded-md text-center">
-                  <div className="text-2xl font-medium">78%</div>
-                  <div className="text-xs text-gray-400">Success Rate</div>
-                </div>
-                <div className="bg-dark-lighter p-3 rounded-md text-center">
-                  <div className="text-2xl font-medium">3</div>
-                  <div className="text-xs text-gray-400">Jail Sentences</div>
-                </div>
-                <div className="bg-dark-lighter p-3 rounded-md text-center">
-                  <div className="text-2xl font-medium">{formatCurrency(15420)}</div>
-                  <div className="text-xs text-gray-400">Total Earnings</div>
-                </div>
-              </div>
+              )}
 
-              <Separator className="my-6 bg-gray-700" />
+              {activeTab === 'crimes' && (
+                <div>
+                  {crimeHistory?.length > 0 ? (
+                    <div className="space-y-3">
+                      {crimeHistory.map((crime: any) => (
+                        <div key={crime.id} className="border border-border/50 rounded-lg p-3 hover:border-primary/30 transition-all duration-200">
+                          <div className="flex justify-between items-center mb-1">
+                            <h4 className="font-medium">{crime.name}</h4>
+                            <Badge variant={crime.successRate > 50 ? "success" : "default"} className="text-xs">
+                              {crime.successRate}% Success
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2 line-clamp-1">{crime.description}</p>
+                          {crime.lastPerformed && (
+                            <div className="text-xs text-muted-foreground flex items-center justify-between">
+                              <span>{new Date(crime.lastPerformed.timestamp).toLocaleString()}</span>
+                              {crime.lastPerformed.success && (
+                                <span className="text-green-500">
+                                  +${crime.lastPerformed.cashReward} | +{crime.lastPerformed.xpReward} XP
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      No crimes performed yet
+                    </div>
+                  )}
+                </div>
+              )}
 
-              <h3 className="font-medium mb-4">Crime Statistics</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-dark flex items-center justify-center mr-2">
-                      <Briefcase className="h-4 w-4 text-green-500" />
-                    </div>
-                    <span>Pickpocket a Tourist</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">28 times</div>
-                    <div className="text-xs text-gray-400">92% success</div>
-                  </div>
-                </div>
-                <Separator className="bg-gray-800" />
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-dark flex items-center justify-center mr-2">
-                      <Briefcase className="h-4 w-4 text-yellow-500" />
-                    </div>
-                    <span>Break into a Car</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">12 times</div>
-                    <div className="text-xs text-gray-400">75% success</div>
+              {activeTab === 'achievements' && (
+                <div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {/* Sample achievements */}
+                    {[...Array(8)].map((_, i) => (
+                      <div key={i} className="border border-border/50 rounded-lg p-3 text-center hover:border-primary/30 transition-all duration-200">
+                        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <Award className="h-6 w-6 text-primary/80" />
+                        </div>
+                        <h4 className="font-medium text-sm">Achievement {i+1}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">10% of players have this</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <Separator className="bg-gray-800" />
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-dark flex items-center justify-center mr-2">
-                      <Briefcase className="h-4 w-4 text-red-500" />
-                    </div>
-                    <span>Rob a Convenience Store</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium">2 times</div>
-                    <div className="text-xs text-gray-400">50% success</div>
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
-    </>
+      
+      {/* Custom CSS for the HTML showcase */}
+      <style jsx global>{`
+        .profile-html-content {
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+        
+        .profile-html-content img {
+          max-width: 100%;
+          height: auto;
+        }
+        
+        .profile-page.noir {
+          --page-bg: #0a0a0a;
+          --card-bg: #141414;
+          --border-color: rgba(255,255,255,0.05);
+        }
+        
+        .profile-page.mafia {
+          --primary-color: #b8860b;
+          --accent-color: #8b4513;
+        }
+        
+        .profile-page.elegant {
+          --primary-color: #9370db;
+          --accent-color: #4b0082;
+        }
+        
+        .profile-page.vintage {
+          --primary-color: #cd853f;
+          --accent-color: #8b4513;
+          --card-bg: #1c1917;
+          --border-color: rgba(205,133,63,0.2);
+        }
+      `}</style>
+    </div>
   );
 }
