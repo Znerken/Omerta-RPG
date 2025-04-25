@@ -72,6 +72,24 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       return undefined;
     }
   }
+  
+  async createUser(userData: InsertUser): Promise<User> {
+    try {
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .returning();
+        
+      if (!user) {
+        throw new Error("Failed to create user");
+      }
+      
+      return user;
+    } catch (error) {
+      console.error("Error in createUser:", error);
+      throw new Error("User creation failed: " + (error instanceof Error ? error.message : String(error)));
+    }
+  }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
@@ -140,16 +158,35 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
 
   async getUserWithGang(userId: number): Promise<UserWithGang | undefined> {
     try {
-      const user = await this.getUser(userId);
-      if (!user) return undefined;
+      console.log(`[DEBUG] getUserWithGang called for userId: ${userId}`);
       
+      const user = await this.getUser(userId);
+      if (!user) {
+        console.log(`[DEBUG] User with ID ${userId} not found`);
+        return undefined;
+      }
+      console.log(`[DEBUG] Found user:`, user);
+      
+      // First check directly in the database 
+      const [directMember] = await db
+        .select()
+        .from(gangMembers)
+        .where(eq(gangMembers.userId, userId));
+        
+      console.log(`[DEBUG] Direct database query for gangMembers:`, directMember);
+      
+      // Now try through the method
       const gangMember = await this.getGangMember(userId);
+      console.log(`[DEBUG] getGangMember result:`, gangMember);
+      
       if (!gangMember) {
+        console.log(`[DEBUG] User with ID ${userId} is not in a gang`);
         // Return user without gang info
         return user;
       }
       
       // Return user with gang info
+      console.log(`[DEBUG] User is in gang, returning user with gang info`);
       return {
         ...user,
         gang: gangMember.gang,
@@ -157,6 +194,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error in getUserWithGang:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack available");
       return undefined;
     }
   }
@@ -201,6 +239,37 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       return this.getUserWithGang(userId);
     } catch (error) {
       console.error("Error in getUserProfile:", error);
+      return undefined;
+    }
+  }
+  
+  // Add statistics method for user
+  async getUserWithStats(userId: number): Promise<UserWithStats | undefined> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) return undefined;
+      
+      // Since we don't have a complete stats implementation yet,
+      // we'll create a basic stats object
+      const stats = {
+        id: userId,
+        userId: userId,
+        strength: 10,
+        stealth: 10,
+        charisma: 10,
+        intelligence: 10,
+        strengthTrainingCooldown: null,
+        stealthTrainingCooldown: null, 
+        charismaTrainingCooldown: null,
+        intelligenceTrainingCooldown: null,
+      };
+      
+      return {
+        ...user,
+        stats
+      };
+    } catch (error) {
+      console.error("Error in getUserWithStats:", error);
       return undefined;
     }
   }
@@ -335,10 +404,12 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
   // Gang Member methods
   async getGangMember(userId: number): Promise<(GangMember & { gang: Gang }) | undefined> {
     try {
+      console.log(`[DEBUG] getGangMember called for userId: ${userId}`);
+      // The column in the database is user_id, not userId
       const [gangMember] = await db
         .select()
         .from(gangMembers)
-        .where(eq(gangMembers.userId, userId));
+        .where(eq(gangMembers.user_id, userId));
       
       if (!gangMember) {
         console.log("No gang member found for user:", userId);
