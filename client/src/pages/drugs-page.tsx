@@ -493,9 +493,12 @@ function LabsTab() {
     queryKey: ['/api/user/ingredients'],
   });
   
+  // Only fetch productions if we have an active lab
   const { data: productions, isLoading: productionsLoading } = useQuery<Production[]>({
     queryKey: ['/api/user/drug-labs', activeLab, 'production'],
     enabled: activeLab !== null,
+    // Add a default empty array to avoid null references
+    placeholderData: [],
   });
   
   const { toast } = useToast();
@@ -674,9 +677,12 @@ function LabsTab() {
   const handleCreateLab = () => {
     if (!newLabName) return;
     
+    // Use location risk and production modifiers in creation request
     createLabMutation.mutate({
       name: newLabName,
       location: selectedLocation,
+      riskModifier: locationDescriptions[selectedLocation].riskModifier,
+      productionModifier: locationDescriptions[selectedLocation].productionModifier,
       costToUpgrade: 5000, // Base cost for a new lab
     });
     
@@ -1173,7 +1179,7 @@ function LabsTab() {
                 
                 {productions && productions.length > 0 ? (
                   <div className="space-y-4">
-                    {productions.filter(p => !p.isCompleted).map((production) => {
+                    {productions.filter(p => p && !p.isCompleted).map((production) => {
                       const now = new Date();
                       const completesAt = new Date(production.completesAt);
                       const isCompleted = completesAt <= now;

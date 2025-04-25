@@ -494,6 +494,8 @@ export const drugLabs = pgTable("drug_labs", {
   costToUpgrade: integer("cost_to_upgrade").notNull(),
   location: text("location").notNull(),
   discoveryChance: integer("discovery_chance").notNull().default(5), // percentage
+  riskModifier: integer("risk_modifier").default(0), // percentage added to base discovery chance
+  productionModifier: integer("production_modifier").default(0), // percentage speed/efficiency boost
   createdAt: timestamp("created_at").notNull().defaultNow(),
   lastRaidedAt: timestamp("last_raided_at"),
 });
