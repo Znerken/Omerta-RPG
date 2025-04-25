@@ -22,6 +22,20 @@ function handleZodError(error: ZodError, res: Response): void {
   res.status(400).json({ error: errorMessage });
 }
 
+// Location modifiers for drug labs
+const locationModifiers: Record<string, { riskModifier: number, productionModifier: number }> = {
+  "Abandoned Warehouse": { riskModifier: 0, productionModifier: 10 },
+  "Underground Bunker": { riskModifier: -15, productionModifier: -5 },
+  "Remote Farmhouse": { riskModifier: -10, productionModifier: 0 },
+  "Suburban Basement": { riskModifier: 5, productionModifier: 5 },
+  "Industrial District": { riskModifier: 10, productionModifier: 15 },
+  "Forgotten Storage Unit": { riskModifier: -5, productionModifier: -10 },
+  "Hidden Mountain Cabin": { riskModifier: -20, productionModifier: -10 },
+  "Condemned Building": { riskModifier: 15, productionModifier: 0 },
+  "Offshore Platform": { riskModifier: -25, productionModifier: 20 },
+  "Desert Compound": { riskModifier: -15, productionModifier: 5 }
+};
+
 /**
  * Register drug routes
  */
@@ -332,9 +346,16 @@ export function registerDrugRoutes(app: Express) {
   app.post("/api/user/drug-labs", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = req.user!.id;
+      const location = req.body.location;
+      
+      // Apply location modifiers if location exists
+      const locationModifier = locationModifiers[location] || { riskModifier: 0, productionModifier: 0 };
+      
       const labData = insertDrugLabSchema.parse({
         ...req.body,
         userId,
+        riskModifier: locationModifier.riskModifier,
+        productionModifier: locationModifier.productionModifier,
       });
       
       // Check if user has enough cash
@@ -355,7 +376,11 @@ export function registerDrugRoutes(app: Express) {
       
       res.status(201).json({
         lab: newLab,
-        message: `Successfully created drug lab "${newLab.name}"`,
+        message: `Successfully created drug lab "${newLab.name}" in ${location}`,
+        locationModifiers: {
+          risk: locationModifier.riskModifier,
+          production: locationModifier.productionModifier,
+        },
         cashSpent: labData.costToUpgrade,
         remainingCash: user.cash - labData.costToUpgrade,
       });
@@ -488,21 +513,27 @@ export function registerDrugRoutes(app: Express) {
         await drugStorage.removeIngredientFromUser(userId, recipe.ingredientId, requiredQuantity);
       }
       
-      // Calculate production time based on drug complexity and lab level
+      // Calculate production time based on drug complexity, lab level and production modifier
       const baseTimeHours = 2; // Base production time in hours
       const timeReductionPerLevel = 0.1; // 10% reduction per lab level
-      const timeMultiplier = Math.max(0.5, 1 - (lab.level * timeReductionPerLevel)); // At least 50% of base time
+      const levelMultiplier = Math.max(0.5, 1 - (lab.level * timeReductionPerLevel)); // At least 50% of base time
       
-      const productionTimeHours = baseTimeHours * timeMultiplier * productionData.quantity;
+      // Apply location production modifier (production modifier reduces time)
+      const locationModifier = lab.productionModifier || 0;
+      const locationTimeMultiplier = Math.max(0.7, 1 - (locationModifier / 100)); // Location can reduce time by up to 30%
+      
+      const totalTimeMultiplier = levelMultiplier * locationTimeMultiplier;
+      const productionTimeHours = baseTimeHours * totalTimeMultiplier * productionData.quantity;
       const completesAt = new Date();
       completesAt.setHours(completesAt.getHours() + productionTimeHours);
       
-      // Calculate success rate based on lab security and drug risk
+      // Calculate success rate based on lab security, drug risk, and location risk modifier
       const baseSuccessRate = 90; // Base 90% success rate
       const successRateDeduction = drug.riskLevel * 2; // 2% deduction per risk level
       const securityBonus = lab.securityLevel * 3; // 3% bonus per security level
+      const locationRiskModifier = lab.riskModifier || 0; // Apply location risk modifier
       
-      const successRate = Math.min(99, Math.max(50, baseSuccessRate - successRateDeduction + securityBonus));
+      const successRate = Math.min(99, Math.max(50, baseSuccessRate - successRateDeduction + securityBonus - locationRiskModifier));
       
       // Start production
       const production = await drugStorage.startDrugProduction({
