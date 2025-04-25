@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { useNotification } from "@/hooks/use-notification";
 import { Notification, NotificationType } from "@/types";
 import { format } from "date-fns";
-import { Check, Ban, AlertCircle, DollarSign, UserPlus, Users } from "lucide-react";
+import { Check, Ban, AlertCircle, DollarSign, UserPlus, Users, UserMinus } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { FriendRequestNotification, FriendStatusNotification } from "@/components/social/FriendNotification";
+import { FriendNotification } from "@/components/social/FriendNotification";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const NotificationList: React.FC = () => {
   const { notifications, markAsRead, markAllAsRead, clearNotifications } = useNotification();
@@ -35,29 +36,67 @@ export const NotificationList: React.FC = () => {
   };
 
   const renderNotification = (notification: Notification) => {
-    // Special rendering for friend requests
-    if (notification.type === "friend_request" && notification.data) {
+    // Special rendering for friend requests, status updates, and friend accepted/removed
+    if ((notification.type === "friend_request" || 
+         notification.type === "friend_status" ||
+         notification.type === "friend_accepted" ||
+         notification.type === "friend_removed") && 
+        notification.data) {
+      
+      if (notification.type === "friend_request") {
+        // Handle friend request - would need a separate component that includes accept/reject buttons
+        // For now, use the default rendering
+        return (
+          <Card key={notification.id} className="mb-2">
+            <CardContent className="p-4">
+              <div className="flex justify-between">
+                <div className="flex items-center">
+                  <UserPlus className="h-4 w-4 text-indigo-500" />
+                  <h4 className="ml-2 text-sm font-medium">Friend Request</h4>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {format(notification.timestamp, 'HH:mm')}
+                </div>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex items-center gap-3 mb-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={notification.data.avatar || undefined} />
+                  <AvatarFallback>{notification.data.username.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <p className="text-sm">{notification.data.username} wants to be your friend</p>
+              </div>
+              <div className="flex space-x-2 mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
+                >
+                  Accept
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                >
+                  Reject
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+      
+      // For all other friend notifications
       return (
-        <FriendRequestNotification 
+        <FriendNotification
           key={notification.id}
-          requestId={notification.data.requestId}
-          userId={notification.data.userId}
-          username={notification.data.username}
-          avatar={notification.data.avatar}
-          onDismiss={() => markAsRead(notification.id)}
-        />
-      );
-    }
-    
-    // Special rendering for friend status updates
-    if (notification.type === "friend_status" && notification.data) {
-      return (
-        <FriendStatusNotification
-          key={notification.id}
+          type={notification.type as "friend_accepted" | "friend_removed" | "friend_status"}
           userId={notification.data.userId}
           username={notification.data.username}
           avatar={notification.data.avatar}
           status={notification.data.status}
+          timestamp={notification.timestamp}
           onDismiss={() => markAsRead(notification.id)}
         />
       );

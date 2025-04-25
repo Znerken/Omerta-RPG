@@ -1,180 +1,96 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, UserCheck, UserMinus } from "lucide-react";
-import { StatusIndicator } from "./StatusIndicator";
+import { Button } from "@/components/ui/button";
+import { Check, X } from "lucide-react";
+import { format } from "date-fns";
+import { Separator } from "@/components/ui/separator";
 
-interface FriendRequestNotificationProps {
-  requestId: number;
+interface FriendNotificationProps {
+  type: "friend_accepted" | "friend_removed" | "friend_status";
   userId: number;
   username: string;
-  avatar: string | null;
+  avatar?: string;
+  timestamp: Date;
+  status?: string;
   onDismiss: () => void;
 }
 
-export const FriendRequestNotification: React.FC<FriendRequestNotificationProps> = ({
-  requestId,
-  userId,
-  username,
-  avatar,
-  onDismiss
-}) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  
-  // Accept friend request mutation
-  const acceptRequestMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "accepted" });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Friend request accepted",
-        description: `You are now friends with ${username}`
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
-      onDismiss();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to accept friend request",
-        variant: "destructive"
-      });
-    }
-  });
-  
-  // Reject friend request mutation
-  const rejectRequestMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("PUT", `/api/social/friends/request/${requestId}`, { status: "rejected" });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Friend request rejected",
-        description: "The request has been rejected"
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/social/friends/requests"] });
-      onDismiss();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reject friend request",
-        variant: "destructive"
-      });
-    }
-  });
-  
-  return (
-    <Card className="mb-2 overflow-hidden">
-      <CardContent className="p-4">
-        <div className="flex items-center mb-3">
-          <Avatar className="h-10 w-10 mr-3">
-            <AvatarImage src={avatar || undefined} />
-            <AvatarFallback>{username.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="text-sm font-medium">{username}</p>
-            <p className="text-xs text-muted-foreground">Sent you a friend request</p>
-          </div>
-        </div>
-        
-        <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
-            onClick={() => acceptRequestMutation.mutate()}
-            disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
-          >
-            {acceptRequestMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <UserCheck className="h-4 w-4 mr-2" />
-            )}
-            Accept
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="flex-1 bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
-            onClick={() => rejectRequestMutation.mutate()}
-            disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
-          >
-            {rejectRequestMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <UserMinus className="h-4 w-4 mr-2" />
-            )}
-            Reject
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-interface FriendStatusNotificationProps {
-  userId: number;
-  username: string;
-  avatar: string | null;
-  status: string;
-  onDismiss: () => void;
-}
-
-export const FriendStatusNotification: React.FC<FriendStatusNotificationProps> = ({
-  userId,
+export const FriendNotification: React.FC<FriendNotificationProps> = ({
+  type,
   username,
   avatar,
   status,
+  timestamp,
   onDismiss
 }) => {
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "online":
-        return "is now online";
-      case "offline":
-        return "has gone offline";
-      case "away":
-        return "is now away";
-      case "busy":
-        return "is busy";
+  const getTitle = () => {
+    switch (type) {
+      case "friend_accepted":
+        return "Friend Request Accepted";
+      case "friend_removed":
+        return "Friend Removed";
+      case "friend_status":
+        return "Friend Status Updated";
       default:
-        return `is now ${status}`;
+        return "Friend Notification";
     }
   };
-  
+
+  const getMessage = () => {
+    switch (type) {
+      case "friend_accepted":
+        return `${username} has accepted your friend request.`;
+      case "friend_removed":
+        return `${username} has removed you from their friends list.`;
+      case "friend_status":
+        return `${username} is now ${status}.`;
+      default:
+        return "";
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case "friend_accepted":
+        return <Check className="h-4 w-4 text-green-500" />;
+      case "friend_removed":
+        return <X className="h-4 w-4 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <Card className="mb-2 overflow-hidden">
+    <Card className="mb-2">
       <CardContent className="p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between">
           <div className="flex items-center">
-            <StatusIndicator status={status} size="md">
-              <Avatar className="h-10 w-10 mr-3">
-                <AvatarImage src={avatar || undefined} />
-                <AvatarFallback>{username.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
-            </StatusIndicator>
-            <div>
-              <p className="text-sm font-medium">{username}</p>
-              <p className="text-xs text-muted-foreground">{getStatusText(status)}</p>
-            </div>
+            {getIcon()}
+            <h4 className="ml-2 text-sm font-medium">{getTitle()}</h4>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDismiss}
-            className="ml-2"
-          >
-            Dismiss
-          </Button>
+          <div className="text-xs text-muted-foreground">
+            {format(timestamp, 'HH:mm')}
+          </div>
         </div>
+        <Separator className="my-2" />
+        
+        <div className="flex items-center gap-3 mb-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={avatar || undefined} />
+            <AvatarFallback>{username.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <p className="text-sm">{getMessage()}</p>
+        </div>
+        
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full"
+          onClick={onDismiss}
+        >
+          Dismiss
+        </Button>
       </CardContent>
     </Card>
   );

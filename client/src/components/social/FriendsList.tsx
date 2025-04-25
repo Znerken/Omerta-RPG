@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Friend } from "@/types";
+import { FriendIndicator } from "./FriendIndicator";
 
 export function FriendsList() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -202,36 +203,38 @@ export function FriendsList() {
                 <div className="space-y-3">
                   {friendRequests.map(request => (
                     <Card key={request.id} className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarImage src={request.avatar || undefined} />
-                            <AvatarFallback>{request.username.charAt(0).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">{request.username}</p>
-                            <p className="text-xs text-muted-foreground">
-                              Wants to be your friend
-                            </p>
-                          </div>
-                        </div>
+                      <div className="space-y-3">
+                        <FriendIndicator friend={request} showActions={false} />
+                        <p className="text-xs text-muted-foreground">
+                          Wants to be your friend
+                        </p>
                         <div className="flex space-x-2">
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
+                            className="flex-1 bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20"
                             onClick={() => request.friendRequest && acceptRequestMutation.mutate(request.friendRequest.id)}
                             disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
                           >
+                            {acceptRequestMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <UserPlus className="h-4 w-4 mr-2" />
+                            )}
                             Accept
                           </Button>
                           <Button 
                             variant="outline" 
                             size="sm"
-                            className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
+                            className="flex-1 bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20"
                             onClick={() => request.friendRequest && rejectRequestMutation.mutate(request.friendRequest.id)}
                             disabled={acceptRequestMutation.isPending || rejectRequestMutation.isPending}
                           >
+                            {rejectRequestMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <UserMinus className="h-4 w-4 mr-2" />
+                            )}
                             Reject
                           </Button>
                         </div>
