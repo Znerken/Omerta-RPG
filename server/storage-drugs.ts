@@ -81,6 +81,15 @@ export class DrugStorage {
     const [ingredient] = await db.select().from(drugIngredients).where(eq(drugIngredients.id, id));
     return ingredient;
   }
+  
+  async getIngredientByName(name: string): Promise<DrugIngredient | undefined> {
+    const [ingredient] = await db
+      .select()
+      .from(drugIngredients)
+      .where(eq(drugIngredients.name, name));
+    
+    return ingredient;
+  }
 
   async createDrugIngredient(insertIngredient: InsertDrugIngredient): Promise<DrugIngredient> {
     const [ingredient] = await db.insert(drugIngredients).values(insertIngredient).returning();
@@ -105,6 +114,18 @@ export class DrugStorage {
   async createDrugRecipe(insertRecipe: InsertDrugRecipe): Promise<DrugRecipe> {
     const [recipe] = await db.insert(drugRecipes).values(insertRecipe).returning();
     return recipe;
+  }
+  
+  async createRecipe(insertRecipe: InsertDrugRecipe): Promise<DrugRecipe> {
+    return this.createDrugRecipe(insertRecipe);
+  }
+  
+  async getRecipeCount(): Promise<number> {
+    const result = await db
+      .select({ count: count() })
+      .from(drugRecipes);
+    
+    return Number(result[0].count);
   }
 
   async getDrugWithRecipe(drugId: number): Promise<DrugWithRecipe | undefined> {
