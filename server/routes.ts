@@ -124,10 +124,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gangId: gangMember?.gangId || null  // Direct gangId reference
       };
       
-      console.log("Sending user profile response with gang data");
+      console.log("Sending user profile response with gang data:", JSON.stringify(response));
       res.json(response);
     } catch (error) {
       console.error("Error getting user profile:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack available");
       res.status(500).json({ message: "Failed to get user profile" });
     }
   });

@@ -85,6 +85,19 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       return undefined;
     }
   }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(sql`LOWER(${users.email}) = LOWER(${email})`);
+      return user;
+    } catch (error) {
+      console.error("Error in getUserByEmail:", error);
+      return undefined;
+    }
+  }
 
   // Gang methods
   async getGang(id: number): Promise<Gang | undefined> {
