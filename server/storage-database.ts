@@ -20,6 +20,9 @@ import {
   ChallengeProgress, InsertChallengeProgress,
   ChallengeReward, InsertChallengeReward,
   ChallengeWithProgress,
+  Achievement, InsertAchievement,
+  UserAchievement, InsertUserAchievement,
+  AchievementWithUnlocked,
   users,
   stats,
   crimes,
@@ -31,7 +34,9 @@ import {
   messages,
   challenges,
   challengeProgress,
-  challengeRewards
+  challengeRewards,
+  achievements,
+  userAchievements
 } from "@shared/schema";
 import { eq, and, desc, gte, lte, sql, asc } from "drizzle-orm";
 import { db, pool } from "./db";

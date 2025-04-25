@@ -356,3 +356,50 @@ export type {
   CompanyWithDetails, BettingEventWithOptions,
   UserWithFinancials
 } from "./schema-economy";
+
+// Achievement system
+export const achievements = pgTable('achievements', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  icon: text('icon'),
+  category: text('category').notNull(),
+  requirementType: text('requirement_type').notNull(),
+  requirementValue: integer('requirement_value').notNull(),
+  cashReward: integer('cash_reward').notNull().default(0),
+  respectReward: integer('respect_reward').notNull().default(0),
+  xpReward: integer('xp_reward').notNull().default(0),
+  hidden: boolean('hidden').notNull().default(false),
+  secretDescription: text('secret_description'),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+});
+
+// User achievement schema
+export const userAchievements = pgTable('user_achievements', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  achievementId: integer('achievement_id').notNull().references(() => achievements.id),
+  unlockedAt: timestamp('unlocked_at', { mode: 'date' }).notNull().defaultNow(),
+  viewed: boolean('viewed').notNull().default(false),
+});
+
+// Create insert schemas for achievements
+export const insertAchievementSchema = createInsertSchema(achievements);
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).pick({
+  userId: true,
+  achievementId: true,
+  viewed: true,
+});
+
+// Define achievement types
+export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
+export type Achievement = typeof achievements.$inferSelect;
+export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+
+// Custom type for achievements with unlocked status
+export type AchievementWithUnlocked = Achievement & { 
+  unlocked: boolean, 
+  unlockedAt?: Date, 
+  viewed: boolean 
+};
