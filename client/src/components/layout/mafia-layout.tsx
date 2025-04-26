@@ -438,11 +438,11 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
         <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
-          {/* Notification bell in top-left of content area */}
+          {/* Notification bell in top-right of content area (above Activities) */}
           {user && (
             <>
               {/* Desktop version */}
-              <div className="hidden md:block absolute top-6 left-6">
+              <div className="hidden md:flex absolute top-6 right-6 justify-end">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -455,7 +455,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
               </div>
               
               {/* Mobile version */}
-              <div className="md:hidden fixed top-20 left-4 z-30">
+              <div className="md:hidden fixed top-20 right-4 z-30">
                 <Button
                   variant="ghost"
                   size="icon"
