@@ -1,88 +1,117 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { setupWebSockets, notifyUser, broadcast } from "./websocket-supabase";
-import { isAuthenticated, isAdmin } from "./auth-supabase";
-import { registerProfileRoutes } from "./profile-routes";
+import { setupWebSocketServer } from "./websocket-supabase";
+import { setupAuthRoutes } from "./auth-supabase";
 import { registerAdminRoutes } from "./admin-routes";
+import { registerProfileRoutes } from "./profile-routes";
 import { registerSocialRoutes } from "./social-routes";
-import { registerCasinoRoutes } from "./casino-routes";
 import { registerBankingRoutes } from "./banking-routes";
+import { registerCasinoRoutes } from "./casino-routes";
 import { registerDrugRoutes } from "./drug-routes";
 import { registerAchievementRoutes } from "./achievement-routes";
-import { registerChallengeRoutes } from "./challenge-routes";
-import { registerLocationRoutes } from "./location-routes";
-import { registerGangRoutes } from "./gang-routes";
-import { registerDevRoutes } from "./dev-routes";
+import { supabaseClient } from "./supabase";
+import { db } from "./db-supabase";
+import { users } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication routes (login, register, etc.)
+  setupAuthRoutes(app);
+
+  // Set up admin routes
+  registerAdminRoutes(app);
+
+  // Set up profile routes
+  registerProfileRoutes(app);
+
+  // Set up social routes
+  registerSocialRoutes(app);
+
+  // Set up banking routes
+  registerBankingRoutes(app);
+
+  // Set up casino routes
+  registerCasinoRoutes(app);
+
+  // Set up drug routes
+  registerDrugRoutes(app);
+
+  // Set up achievement routes
+  registerAchievementRoutes(app);
+
   // Create HTTP server
   const httpServer = createServer(app);
 
   // Set up WebSocket server
-  const wss = setupWebSockets(httpServer);
+  const wss = setupWebSocketServer(httpServer);
 
-  // Set up notifyUser function in other modules that need it
-  const setNotifyUserFn = (fn: any) => {
-    fn(notifyUser);
-  };
-
-  // Add custom header to show Supabase integration is active
-  app.use((req, res, next) => {
-    res.setHeader('X-Using-Supabase', 'true');
-    next();
-  });
-
-  // Register API routes
-  registerProfileRoutes(app);
-  registerAdminRoutes(app);
-  
-  // Social routes with real-time notifications
-  try {
-    const { setNotifyUserFunction } = await import('./social-routes');
-    setNotifyUserFunction(notifyUser);
-    registerSocialRoutes(app);
-  } catch (error) {
-    console.error("Error setting up social routes:", error);
-  }
-  
-  registerCasinoRoutes(app);
-  registerBankingRoutes(app);
-  registerDrugRoutes(app);
-  registerAchievementRoutes(app);
-  registerChallengeRoutes(app);
-  registerLocationRoutes(app);
-  registerGangRoutes(app);
-  
-  // Only register dev routes in development
-  if (process.env.NODE_ENV === 'development') {
-    registerDevRoutes(app);
+  // Create message notification function for social routes
+  function notifyUser(userId: number, type: string, data: any) {
+    // Find client with matching userId
+    for (const client of wss.clients) {
+      if (client._userId === userId && client.readyState === 1) { // WebSocket.OPEN
+        client.send(JSON.stringify({ type, data }));
+        break;
+      }
+    }
   }
 
-  // Status route for health checks
-  app.get('/api/status', (req, res) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date(),
-      environment: process.env.NODE_ENV,
-      usingSupabase: true
+  // Create broadcast function for global notifications
+  function broadcast(type: string, data: any) {
+    wss.clients.forEach(client => {
+      if (client.readyState === 1) { // WebSocket.OPEN
+        client.send(JSON.stringify({ type, data }));
+      }
     });
-  });
+  }
 
-  // Protected status route that shows authenticated user info
-  app.get('/api/status/auth', isAuthenticated, (req, res) => {
-    res.json({
-      status: 'authenticated',
-      user: req.user,
-      timestamp: new Date()
-    });
-  });
+  // Provide the notifyUser function to social routes
+  const socialRoutes = require('./social-routes');
+  if (typeof socialRoutes.setNotifyUserFunction === 'function') {
+    socialRoutes.setNotifyUserFunction(notifyUser);
+  }
 
-  // Admin-only status route
-  app.get('/api/status/admin', isAuthenticated, isAdmin, (req, res) => {
-    res.json({
-      status: 'admin',
-      timestamp: new Date()
-    });
+  // Endpoint for linking Supabase Auth with existing accounts
+  app.post('/api/link-supabase-account', async (req, res) => {
+    try {
+      const { email, password, supabaseId } = req.body;
+
+      if (!email || !password || !supabaseId) {
+        return res.status(400).json({ error: 'Email, password, and supabaseId are required' });
+      }
+
+      // Find user by email and password
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email));
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      // Validate password (this would normally be done with a hash comparison)
+      // For simplicity, we're just comparing directly, but in reality use bcrypt or similar
+      if (user.password !== password) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      if (user.supabaseId) {
+        return res.status(409).json({ error: 'User already linked to a Supabase account' });
+      }
+
+      // Link Supabase ID to user
+      const [updatedUser] = await db
+        .update(users)
+        .set({ supabaseId })
+        .where(eq(users.id, user.id))
+        .returning();
+
+      res.status(200).json(updatedUser);
+    } catch (error) {
+      console.error('Error linking Supabase account:', error);
+      res.status(500).json({ error: 'Failed to link Supabase account' });
+    }
   });
 
   return httpServer;

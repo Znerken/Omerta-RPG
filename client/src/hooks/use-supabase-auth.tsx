@@ -1,235 +1,245 @@
-import { createContext, useContext, ReactNode, useState, useEffect } from 'react';
-import { User as SupabaseUser, Session } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
+import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { supabase, handleSupabaseError } from '@/lib/supabase';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import { apiRequest } from '@/lib/queryClient';
-import { InsertUser, User } from '@shared/schema';
+import { User } from '@shared/schema';
 
-type AuthState = {
+interface SupabaseAuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
-  session: Session | null;
   isLoading: boolean;
-  error: Error | null;
-};
-
-type LoginCredentials = {
-  email: string;
-  password: string;
-};
-
-type SupabaseAuthContextType = AuthState & {
-  signIn: (credentials: LoginCredentials) => Promise<void>;
-  signUp: (email: string, password: string, userData?: Partial<InsertUser>) => Promise<void>;
+  signIn: (credentials: { email: string; password: string }) => Promise<void>;
+  signUp: (email: string, password: string, userData: { username: string; email: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
-};
+}
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | null>(null);
 
-export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({
-    user: null,
-    supabaseUser: null,
-    session: null,
-    isLoading: true,
-    error: null,
-  });
-  const { toast } = useToast();
+interface SupabaseAuthProviderProps {
+  children: ReactNode;
+}
 
-  // Initialize auth state
-  useEffect(() => {
-    async function initializeAuth() {
-      try {
-        // Get current session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          throw sessionError;
-        }
+export function SupabaseAuthProvider({ children }: SupabaseAuthProviderProps) {
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-        // If session exists, get user data from our API
-        let user = null;
-        if (session) {
-          try {
-            const response = await apiRequest('GET', '/api/user');
-            user = await response.json();
-          } catch (apiError) {
-            console.error('Error fetching user data:', apiError);
-          }
-        }
-
-        // Set initial state
-        setState({
-          user,
-          supabaseUser: session?.user || null,
-          session,
-          isLoading: false,
-          error: null,
-        });
-
-        // Set up auth state change listener
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('Supabase auth state changed:', event);
-            
-            // Handle auth state changes
-            let user = null;
-            if (session) {
-              try {
-                const response = await apiRequest('GET', '/api/user');
-                user = await response.json();
-              } catch (apiError) {
-                console.error('Error fetching user data on auth state change:', apiError);
-              }
-            }
-
-            setState({
-              user,
-              supabaseUser: session?.user || null,
-              session,
-              isLoading: false,
-              error: null,
-            });
-          }
-        );
-
-        // Cleanup subscription on unmount
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        setState({
-          user: null,
-          supabaseUser: null,
-          session: null,
-          isLoading: false,
-          error: error as Error,
-        });
-      }
-    }
-
-    initializeAuth();
-  }, []);
-
-  // Sign in with email/password
-  const signIn = async (credentials: LoginCredentials) => {
+  /**
+   * Fetch user data from API
+   */
+  const fetchUserData = async () => {
     try {
-      setState({ ...state, isLoading: true, error: null });
-      
-      const { error } = await supabase.auth.signInWithPassword(credentials);
-      
-      if (error) {
-        throw error;
+      const response = await apiRequest('GET', '/api/user');
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      } else {
+        // If user is not found in our database but authenticated in Supabase
+        // we should create a user in our database
+        console.log('User authenticated in Supabase but not found in database');
+        setUser(null);
       }
-      
-      // Auth state will be updated by the onAuthStateChange listener
     } catch (error) {
-      setState({ ...state, isLoading: false, error: error as Error });
-      throw error;
+      console.error('Error fetching user data:', error);
+      setUser(null);
     }
   };
 
-  // Sign up with email/password
-  const signUp = async (email: string, password: string, userData?: Partial<InsertUser>) => {
+  /**
+   * Refresh user data (called after login, signup, or session change)
+   */
+  const refreshUser = async () => {
+    setIsLoading(true);
     try {
-      setState({ ...state, isLoading: true, error: null });
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Register with Supabase Auth
-      const { data: { user: supabaseUser }, error } = await supabase.auth.signUp({
+      if (session) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        setSupabaseUser(authUser);
+        await fetchUserData();
+      } else {
+        setSupabaseUser(null);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+      setSupabaseUser(null);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Sign in with email and password
+   */
+  const signIn = async (credentials: { email: string; password: string }) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword(credentials);
+      
+      if (error) {
+        throw new Error(handleSupabaseError(error, 'Login failed'));
+      }
+      
+      // Check if user exists in our database
+      const userResponse = await apiRequest('GET', '/api/user');
+      
+      if (!userResponse.ok) {
+        // If user is not found in our database but authenticated in Supabase,
+        // we need to link the accounts
+        try {
+          // Link Supabase account with existing database account
+          const linkResponse = await apiRequest('POST', '/api/link-supabase-account', {
+            email: credentials.email,
+            password: credentials.password,
+            supabaseId: data.user.id,
+          });
+          
+          if (!linkResponse.ok) {
+            throw new Error('Failed to link Supabase account with existing account');
+          }
+          
+          const userData = await linkResponse.json();
+          setUser(userData);
+        } catch (linkError) {
+          console.error('Error linking accounts:', linkError);
+          // Sign out from Supabase since we couldn't link accounts
+          await supabase.auth.signOut();
+          throw new Error('Failed to link your account. Please contact support.');
+        }
+      } else {
+        const userData = await userResponse.json();
+        setUser(userData);
+      }
+      
+      setSupabaseUser(data.user);
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Sign up with email and password
+   */
+  const signUp = async (email: string, password: string, userData: { username: string; email: string }) => {
+    setIsLoading(true);
+    try {
+      // First, check if username is taken
+      const checkResponse = await apiRequest('GET', `/api/check-username?username=${encodeURIComponent(userData.username)}`);
+      const checkData = await checkResponse.json();
+      
+      if (checkData.exists) {
+        throw new Error('Username is already taken');
+      }
+      
+      // Create Supabase auth user
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
       
-      if (error || !supabaseUser) {
-        throw error || new Error('Failed to create user');
-      }
-      
-      // Create user in our database
-      const response = await apiRequest('POST', '/api/register', {
-        ...userData,
-        email,
-        supabaseId: supabaseUser.id,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create user in application database');
-      }
-      
-      const user = await response.json();
-      
-      setState({
-        ...state,
-        user,
-        supabaseUser,
-        isLoading: false,
-        error: null,
-      });
-      
-      toast({
-        title: 'Account created',
-        description: 'Your account has been created successfully.',
-      });
-    } catch (error) {
-      setState({ ...state, isLoading: false, error: error as Error });
-      throw error;
-    }
-  };
-
-  // Sign out
-  const signOut = async () => {
-    try {
-      setState({ ...state, isLoading: true, error: null });
-      
-      const { error } = await supabase.auth.signOut();
-      
       if (error) {
-        throw error;
+        throw new Error(handleSupabaseError(error, 'Registration failed'));
       }
       
-      // Auth state will be updated by the onAuthStateChange listener
+      if (!data.user) {
+        throw new Error('User creation failed');
+      }
       
-      toast({
-        title: 'Signed out',
-        description: 'You have been signed out successfully.',
-      });
+      // Register user in our database
+      try {
+        const registerResponse = await apiRequest('POST', '/api/register', {
+          ...userData,
+          supabaseId: data.user.id,
+          confirmPassword: password, // Required by our API, but not stored
+        });
+        
+        if (!registerResponse.ok) {
+          // If registration fails, clean up Supabase user
+          await supabase.auth.admin.deleteUser(data.user.id);
+          throw new Error('Failed to create user profile');
+        }
+        
+        const newUser = await registerResponse.json();
+        setUser(newUser);
+        setSupabaseUser(data.user);
+      } catch (registerError) {
+        // Clean up Supabase user if our registration fails
+        if (data.user?.id) {
+          await supabase.auth.admin.deleteUser(data.user.id);
+        }
+        
+        console.error('Registration error:', registerError);
+        throw registerError;
+      }
     } catch (error) {
-      setState({ ...state, isLoading: false, error: error as Error });
+      console.error('Sign up error:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Refresh user data
-  const refreshUser = async () => {
+  /**
+   * Sign out user
+   */
+  const signOut = async () => {
+    setIsLoading(true);
     try {
-      if (!state.session) return;
-      
-      const response = await apiRequest('GET', '/api/user');
-      const user = await response.json();
-      
-      setState({
-        ...state,
-        user,
-        error: null,
-      });
+      await apiRequest('POST', '/api/logout');
+      await supabase.auth.signOut();
+      setUser(null);
+      setSupabaseUser(null);
     } catch (error) {
-      console.error('Error refreshing user:', error);
-      // Don't update error state for refresh failures
+      console.error('Sign out error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  /**
+   * Listen for authentication state changes
+   */
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session) {
+          setSupabaseUser(session.user);
+          await fetchUserData();
+        } else {
+          setSupabaseUser(null);
+          setUser(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    // Initial session check
+    refreshUser();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const value = {
+    user,
+    supabaseUser,
+    isLoading,
+    signIn,
+    signUp,
+    signOut,
+    refreshUser,
   };
 
   return (
-    <SupabaseAuthContext.Provider
-      value={{
-        ...state,
-        signIn,
-        signUp,
-        signOut,
-        refreshUser,
-      }}
-    >
+    <SupabaseAuthContext.Provider value={value}>
       {children}
     </SupabaseAuthContext.Provider>
   );

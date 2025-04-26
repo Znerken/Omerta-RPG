@@ -1,76 +1,111 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Check for environment variables
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.error('Missing Supabase environment variables');
+/**
+ * Create a Supabase client with public keys
+ * These keys should be exposed in the browser, but access is controlled through
+ * Row-Level Security (RLS) policies
+ */
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Validate environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    'Missing Supabase environment variables. Make sure you have VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY set.'
+  );
 }
 
-// Create Supabase client
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL as string,
-  import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-  {
-    auth: {
-      persistSession: true, // Persist session in localStorage
-      detectSessionInUrl: true, // Detect and handle OAuth session in URL
-      autoRefreshToken: true, // Automatically refresh token if expired
-    },
-  }
-);
-
-// General helper functions
 /**
- * Upload file to Supabase storage
+ * Supabase client for browser-side usage
+ * Use this client for authentication and data access that should be available to the user
  */
-export async function uploadFile(
-  bucket: string,
-  path: string,
-  file: File
-): Promise<{ path: string; error: Error | null }> {
-  try {
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(path, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
+export const supabase = createClient(supabaseUrl as string, supabaseAnonKey as string, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+  },
+});
 
-    if (error) {
-      throw error;
+/**
+ * Helper function to handle Supabase errors consistently
+ * @param error Error from Supabase operation
+ * @param defaultMessage Default message to show if error doesn't have a message
+ * @returns Formatted error message
+ */
+export function handleSupabaseError(error: unknown, defaultMessage: string = 'An error occurred'): string {
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+    return error.message;
+  }
+  
+  if (error && typeof error === 'object' && 'error_description' in error && typeof error.error_description === 'string') {
+    return error.error_description;
+  }
+  
+  return defaultMessage;
+}
+
+/**
+ * Create WebSocket connection to server for real-time communication
+ * @returns WebSocket instance
+ */
+export function createWebSocketConnection(): WebSocket {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws`;
+  return new WebSocket(wsUrl);
+}
+
+/**
+ * Connect to WebSocket and authenticate with Supabase token
+ * @param socket WebSocket instance
+ * @returns Promise that resolves when authentication is complete
+ */
+export async function authenticateWebSocket(socket: WebSocket): Promise<boolean> {
+  return new Promise((resolve) => {
+    // Wait for connection to open
+    if (socket.readyState === WebSocket.OPEN) {
+      sendAuthMessage();
+    } else {
+      socket.addEventListener('open', sendAuthMessage);
     }
 
-    return { path: data?.path || '', error: null };
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    return { path: '', error: error as Error };
-  }
-}
+    // Listen for authentication response
+    socket.addEventListener('message', handleAuthResponse);
 
-/**
- * Get public URL for a file in Supabase storage
- */
-export function getPublicUrl(bucket: string, path: string): string {
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
-}
+    // Send authentication message with token
+    async function sendAuthMessage() {
+      const { data: { session }} = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.error('No active session found for WebSocket authentication');
+        resolve(false);
+        return;
+      }
 
-/**
- * Delete file from Supabase storage
- */
-export async function deleteFile(
-  bucket: string,
-  path: string
-): Promise<{ success: boolean; error: Error | null }> {
-  try {
-    const { error } = await supabase.storage.from(bucket).remove([path]);
-
-    if (error) {
-      throw error;
+      socket.send(JSON.stringify({
+        type: 'auth',
+        token: session.access_token
+      }));
     }
 
-    return { success: true, error: null };
-  } catch (error) {
-    console.error('Error deleting file:', error);
-    return { success: false, error: error as Error };
-  }
+    // Handle authentication response
+    function handleAuthResponse(event: MessageEvent) {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'auth_response') {
+          socket.removeEventListener('message', handleAuthResponse);
+          
+          if (data.success) {
+            console.log('WebSocket authenticated successfully');
+            resolve(true);
+          } else {
+            console.error('WebSocket authentication failed:', data.error);
+            resolve(false);
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    }
+  });
 }
