@@ -519,6 +519,7 @@ h1, h2, h3, h4, h5, h6 {
 .omerta-section-heading {
   @apply font-heading text-2xl mb-8 relative text-center uppercase tracking-wider;
   letter-spacing: 0.1em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .omerta-section-heading::before,
@@ -534,6 +535,20 @@ h1, h2, h3, h4, h5, h6 {
 
 .omerta-section-heading::after {
   @apply left-1/3 right-1/3 -bottom-6;
+}
+
+/* OMERTÀ variations for section headings */
+.omerta-section-heading-left {
+  @apply font-heading text-xl mb-6 relative uppercase tracking-wider border-b border-secondary/30 pb-2;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.omerta-section-heading-left::after {
+  content: '';
+  @apply absolute h-[1px] bottom-0 left-0 w-1/3;
+  transform: translateY(1px);
+  background: linear-gradient(to right, rgba(255, 215, 0, 0.8), transparent);
 }
 
 /* OMERTÀ decorative separator */
@@ -628,17 +643,37 @@ h1, h2, h3, h4, h5, h6 {
   transition: box-shadow 0.3s ease-in-out;
 }
 
-/* Stats increase/decrease indicators */
+/* OMERTÀ stats indicators with enhanced styling */
 .stat-trend-up {
-  @apply text-green-500 flex items-center space-x-1 text-xs;
+  @apply text-green-500 flex items-center space-x-1 text-xs font-medium;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .stat-trend-down {
-  @apply text-red-500 flex items-center space-x-1 text-xs;
+  @apply text-red-500 flex items-center space-x-1 text-xs font-medium;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .stat-trend-neutral {
-  @apply text-yellow-500 flex items-center space-x-1 text-xs;
+  @apply text-yellow-500 flex items-center space-x-1 text-xs font-medium;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* OMERTÀ stat bars */
+.omerta-stat-bar {
+  @apply h-1.5 bg-secondary/10 rounded-sm overflow-hidden relative;
+}
+
+.omerta-stat-bar-fill {
+  @apply absolute top-0 left-0 h-full rounded-sm;
+  background: linear-gradient(to right, rgba(255, 215, 0, 0.7), rgba(255, 165, 0, 0.8));
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+}
+
+.omerta-stat-bar-label {
+  @apply text-xs text-secondary/80 flex justify-between items-center mb-1 font-medium;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
 }
 
 /* Paper texture overlay for cards */
@@ -651,6 +686,39 @@ h1, h2, h3, h4, h5, h6 {
   @apply absolute inset-0 opacity-5;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
   pointer-events: none;
+}
+
+/* OMERTÀ form inputs with enhanced styling */
+.omerta-input {
+  @apply bg-card/50 border border-secondary/20 rounded-sm px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-secondary/40 placeholder:text-muted-foreground/50;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.omerta-input:focus {
+  @apply border-secondary/40;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 5px rgba(255, 215, 0, 0.1);
+}
+
+.omerta-select {
+  @apply bg-card/50 border border-secondary/20 rounded-sm px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-secondary/40;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23806000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1em;
+  padding-right: 2.5rem;
+}
+
+.omerta-label {
+  @apply block text-xs font-medium text-secondary/80 mb-2 uppercase tracking-wide;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.05em;
+}
+
+.omerta-checkbox {
+  @apply h-4 w-4 rounded-sm bg-card/50 border border-secondary/30 text-primary checked:bg-primary focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-secondary/40 focus:ring-offset-background transition-colors;
 }
 
 /* Notification counter animation */
@@ -802,6 +870,52 @@ h1, h2, h3, h4, h5, h6 {
 /* Text shadow effect for dramatic headings */
 .text-shadow {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* OMERTÀ styled tables */
+.omerta-table {
+  @apply w-full text-sm border-collapse;
+}
+
+.omerta-table thead {
+  @apply border-b border-secondary/20;
+}
+
+.omerta-table th {
+  @apply py-3 px-4 text-left text-xs uppercase tracking-wider font-medium text-secondary/80;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
+}
+
+.omerta-table tbody tr {
+  @apply border-b border-secondary/10 transition-colors;
+}
+
+.omerta-table tbody tr:hover {
+  @apply bg-secondary/5;
+}
+
+.omerta-table td {
+  @apply py-3 px-4 text-foreground/80;
+}
+
+/* OMERTÀ styled table variants */
+.omerta-table-dark {
+  @apply bg-card/50;
+}
+
+.omerta-table-dark th {
+  @apply bg-background/90 text-secondary/90;
+}
+
+.omerta-table-dark tbody tr:nth-child(odd) {
+  @apply bg-card/30;
+}
+
+/* OMERTÀ styled code blocks */
+.omerta-code {
+  @apply font-mono text-xs p-4 rounded-sm bg-card/50 border border-secondary/20 overflow-x-auto;
+  box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.2);
 }
 
 /* Money rain animation on big wins */
