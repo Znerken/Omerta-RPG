@@ -36,25 +36,32 @@ import { ConnectionStatus } from "@/components/social/ConnectionStatus";
 import { SocialSidebar } from "@/components/social/SocialSidebar";
 import { MiniProfile } from "@/components/profile/MiniProfile";
 
-const navItems = [
-  { name: "Dashboard", path: "/", icon: <Home className="h-5 w-5 mr-3" /> },
-  { name: "Profile", path: "/profile", icon: <User className="h-5 w-5 mr-3" /> },
-  { name: "Crimes", path: "/crimes", icon: <Briefcase className="h-5 w-5 mr-3" /> },
-  { name: "Challenges", path: "/challenges", icon: <CheckCircle className="h-5 w-5 mr-3" /> },
-  { name: "Achievements", path: "/achievements", icon: <Award className="h-5 w-5 mr-3" /> },
-  { name: "Training", path: "/training", icon: <Dumbbell className="h-5 w-5 mr-3" /> },
-  { name: "Gang", path: "/gang", icon: <Users className="h-5 w-5 mr-3" /> },
-  { name: "Drugs", path: "/drugs", icon: <Pill className="h-5 w-5 mr-3" /> },
-  { name: "Jail", path: "/jail", icon: <Lock className="h-5 w-5 mr-3" /> },
-  { name: "Inventory", path: "/inventory", icon: <Package className="h-5 w-5 mr-3" /> },
-  { name: "Banking", path: "/banking", icon: <MoneyBriefcaseIcon className="h-5 w-5 mr-3" /> },
-  { name: "Casino", path: "/casino", icon: <DollarSign className="h-5 w-5 mr-3" /> },
-  { name: "Leaderboard", path: "/leaderboard", icon: <Trophy className="h-5 w-5 mr-3" /> },
+// Organize nav items into categories
+const personalItems = [
+  { name: "Dashboard", path: "/", icon: <Home className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Profile", path: "/profile", icon: <User className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Achievements", path: "/achievements", icon: <Award className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Jail", path: "/jail", icon: <Lock className="h-4.5 w-4.5 mr-2.5" /> },
+];
+
+const activityItems = [
+  { name: "Crimes", path: "/crimes", icon: <Briefcase className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Challenges", path: "/challenges", icon: <CheckCircle className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Training", path: "/training", icon: <Dumbbell className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Gang", path: "/gang", icon: <Users className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Drugs", path: "/drugs", icon: <Pill className="h-4.5 w-4.5 mr-2.5" /> },
+];
+
+const economyItems = [
+  { name: "Inventory", path: "/inventory", icon: <Package className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Banking", path: "/banking", icon: <MoneyBriefcaseIcon className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Casino", path: "/casino", icon: <DollarSign className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Leaderboard", path: "/leaderboard", icon: <Trophy className="h-4.5 w-4.5 mr-2.5" /> },
 ];
 
 const socialNavItems = [
-  { name: "Friends", path: "/friends", icon: <UserPlus className="h-5 w-5 mr-3" /> },
-  { name: "Messages", path: "/messages", icon: <MailIcon className="h-5 w-5 mr-3" /> },
+  { name: "Friends", path: "/friends", icon: <UserPlus className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Messages", path: "/messages", icon: <MailIcon className="h-4.5 w-4.5 mr-2.5" /> },
 ];
 
 export function MafiaLayout({ children }: { children: React.ReactNode }) {
@@ -72,84 +79,162 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
   const adminMenuItem = {
     name: "Admin Panel",
     path: "/admin",
-    icon: <Shield className="h-5 w-5 mr-3" />
+    icon: <Shield className="h-4.5 w-4.5 mr-2.5" />
   };
 
-  // Filter out "Jail" if user is not jailed
-  const filteredNavItems = [...navItems].filter(item => {
-    if (item.path === "/jail" && user && !user.isJailed) {
-      return false;
-    }
-    return true;
-  });
-  
-  // Add admin menu item if user is admin
-  if (user?.isAdmin) {
-    filteredNavItems.push(adminMenuItem);
-  }
+  // We don't need these anymore as we're using category arrays
+  const showJail = user && user.isJailed;
   
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Left Sidebar - Main Navigation */}
-      <aside className="hidden md:flex md:w-64 flex-col border-r border-border h-screen sticky top-0">
-        <div className="flex-1 px-6 py-6 overflow-y-auto">
-          <div className="mb-8">
+      <aside className="hidden md:flex md:w-64 flex-col border-r border-border h-screen sticky top-0 bg-gradient-to-b from-background to-background/95">
+        <div className="flex-1 px-4 py-6 overflow-y-auto">
+          <div className="mb-6">
             <h1 className="text-2xl text-gold-gradient font-heading mb-2">
               Mafia Empire
             </h1>
             <div className="flex items-center">
-              <TommyGunIcon className="h-5 w-5 mr-2 text-primary" />
-              <p className="text-xs text-muted-foreground">Rise to power. Rule the streets.</p>
+              <TommyGunIcon className="h-4.5 w-4.5 mr-2 text-primary" />
+              <p className="text-xs text-muted-foreground/70">Rise to power. Rule the streets.</p>
             </div>
           </div>
           
           {user && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-4">
-                <MiniProfile variant="sidebar" />
-                <div>
+            <div className="mb-5 mt-4">
+              <div className="flex items-center mb-4 w-full">
+                <MiniProfile variant="sidebar" className="w-full" />
+                <div className="ml-1">
                   <NotificationList />
                 </div>
               </div>
             </div>
           )}
-
-          <nav className="space-y-1">
-            {filteredNavItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <div
-                  className={cn(
-                    "group flex items-center px-3 py-2 text-sm font-medium rounded-sm transition-colors cursor-pointer",
-                    location === item.path
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  {item.icon}
-                  {item.name}
-                  
-                  {/* Display badges for notifications */}
-                  {item.path === "/achievements" && hasNewAchievements && (
-                    <Badge 
-                      variant="destructive" 
-                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+          
+          <div className="h-px bg-gradient-to-r from-border/5 via-border to-border/5 my-5"></div>
+          
+          {/* Personal Category */}
+          <div className="mb-5">
+            <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
+              Personal
+            </h3>
+            
+            <nav className="space-y-1">
+              {personalItems.map((item) => (
+                item.path !== "/jail" || (user && user.isJailed) ? (
+                  <Link key={item.path} href={item.path}>
+                    <div
+                      className={cn(
+                        "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                        location === item.path
+                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                      )}
                     >
-                      {unviewedCount}
-                    </Badge>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </nav>
+                      {item.icon}
+                      {item.name}
+                      
+                      {/* Display badges for notifications */}
+                      {item.path === "/achievements" && hasNewAchievements && (
+                        <Badge 
+                          variant="destructive" 
+                          className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                        >
+                          {unviewedCount}
+                        </Badge>
+                      )}
+                    </div>
+                  </Link>
+                ) : null
+              ))}
+            </nav>
+          </div>
+          
+          {/* Activities Category */}
+          <div className="mb-5">
+            <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
+              Activities
+            </h3>
+            
+            <nav className="space-y-1">
+              {activityItems.map((item) => (
+                <Link key={item.path} href={item.path}>
+                  <div
+                    className={cn(
+                      "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                      location === item.path
+                        ? "bg-primary/10 text-primary border-l-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                    )}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </div>
+                </Link>
+              ))}
+            </nav>
+          </div>
+          
+          {/* Economy Category */}
+          <div className="mb-5">
+            <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
+              Economy
+            </h3>
+            
+            <nav className="space-y-1">
+              {economyItems.map((item) => (
+                <Link key={item.path} href={item.path}>
+                  <div
+                    className={cn(
+                      "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                      location === item.path
+                        ? "bg-primary/10 text-primary border-l-2 border-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                    )}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </div>
+                </Link>
+              ))}
+            </nav>
+          </div>
+          
+          {/* Admin Section */}
+          {user?.isAdmin && (
+            <div className="mb-5">
+              <h3 className="text-[11px] uppercase tracking-wider font-medium text-destructive/70 mb-3 px-1.5">
+                Administration
+              </h3>
+              
+              <nav className="space-y-1">
+                <Link href="/admin">
+                  <div
+                    className={cn(
+                      "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                      location === "/admin"
+                        ? "bg-destructive/10 text-destructive border-l-2 border-destructive"
+                        : "text-muted-foreground hover:text-destructive hover:bg-destructive/5 border-l-2 border-transparent"
+                    )}
+                  >
+                    {adminMenuItem.icon}
+                    {adminMenuItem.name}
+                  </div>
+                </Link>
+              </nav>
+            </div>
+          )}
         </div>
-        <div className="px-6 mt-6">
-          <div className="h-px bg-gradient-to-r from-border/5 via-border to-border/5 mb-6"></div>
+        
+        <div className="px-4 mt-auto mb-4">
+          <div className="h-px bg-gradient-to-r from-border/5 via-border to-border/5 mb-4"></div>
           <Button 
             onClick={handleLogout} 
             variant="ghost" 
-            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+            size="sm"
+            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 h-10"
           >
-            <LogOut className="h-5 w-5 mr-3" />
+            <LogOut className="h-4 w-4 mr-2.5" />
             Logout
           </Button>
         </div>
@@ -181,52 +266,171 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile menu */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-30 bg-background/95 pt-16">
-          <nav className="px-4 py-4 space-y-2">
-            {[...filteredNavItems, ...socialNavItems].map((item) => (
-              <Link key={item.path} href={item.path}>
-                <div
-                  className={cn(
-                    "group flex items-center px-3 py-3 text-sm font-medium rounded-sm cursor-pointer",
-                    location === item.path
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {item.icon}
-                  {item.name}
-                  
-                  {/* Display badge for unviewed achievements in mobile menu */}
-                  {item.path === "/achievements" && hasNewAchievements && (
-                    <Badge 
-                      variant="destructive" 
-                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+          <div className="px-4 py-4 overflow-y-auto h-[calc(100%-4rem)]">
+            {/* Personal Category */}
+            <div className="mb-5">
+              <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
+                Personal
+              </h3>
+              
+              <nav className="space-y-1">
+                {personalItems.map((item) => (
+                  item.path !== "/jail" || (user && user.isJailed) ? (
+                    <Link key={item.path} href={item.path}>
+                      <div
+                        className={cn(
+                          "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                          location === item.path
+                            ? "bg-primary/10 text-primary border-l-2 border-primary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                        )}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {item.icon}
+                        {item.name}
+                        
+                        {/* Display badges for notifications */}
+                        {item.path === "/achievements" && hasNewAchievements && (
+                          <Badge 
+                            variant="destructive" 
+                            className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                          >
+                            {unviewedCount}
+                          </Badge>
+                        )}
+                      </div>
+                    </Link>
+                  ) : null
+                ))}
+              </nav>
+            </div>
+            
+            {/* Activities Category */}
+            <div className="mb-5">
+              <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
+                Activities
+              </h3>
+              
+              <nav className="space-y-1">
+                {activityItems.map((item) => (
+                  <Link key={item.path} href={item.path}>
+                    <div
+                      className={cn(
+                        "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                        location === item.path
+                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
                     >
-                      {unviewedCount}
-                    </Badge>
-                  )}
-                  
-                  {/* Display badge for unread messages in mobile menu */}
-                  {item.path === "/messages" && unreadCount > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                      {item.icon}
+                      {item.name}
+                    </div>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            
+            {/* Economy Category */}
+            <div className="mb-5">
+              <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
+                Economy
+              </h3>
+              
+              <nav className="space-y-1">
+                {economyItems.map((item) => (
+                  <Link key={item.path} href={item.path}>
+                    <div
+                      className={cn(
+                        "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                        location === item.path
+                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
                     >
-                      {unreadCount}
-                    </Badge>
-                  )}
-                </div>
-              </Link>
-            ))}
+                      {item.icon}
+                      {item.name}
+                    </div>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            
+            {/* Social Category */}
+            <div className="mb-5">
+              <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
+                Social
+              </h3>
+              
+              <nav className="space-y-1">
+                {socialNavItems.map((item) => (
+                  <Link key={item.path} href={item.path}>
+                    <div
+                      className={cn(
+                        "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                        location === item.path
+                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.icon}
+                      {item.name}
+                      
+                      {/* Display badge for unread messages */}
+                      {item.path === "/messages" && unreadCount > 0 && (
+                        <Badge 
+                          variant="destructive" 
+                          className="ml-auto px-1.5 py-0.5 min-w-[1.25rem] text-xs"
+                        >
+                          {unreadCount}
+                        </Badge>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            
+            {/* Admin Section */}
+            {user?.isAdmin && (
+              <div className="mb-5">
+                <h3 className="text-[11px] uppercase tracking-wider font-medium text-destructive/70 mb-3 px-1.5">
+                  Administration
+                </h3>
+                
+                <nav className="space-y-1">
+                  <Link href="/admin">
+                    <div
+                      className={cn(
+                        "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                        location === "/admin"
+                          ? "bg-destructive/10 text-destructive border-l-2 border-destructive"
+                          : "text-muted-foreground hover:text-destructive hover:bg-destructive/5 border-l-2 border-transparent"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {adminMenuItem.icon}
+                      {adminMenuItem.name}
+                    </div>
+                  </Link>
+                </nav>
+              </div>
+            )}
+            
+            <div className="h-px bg-gradient-to-r from-border/5 via-border to-border/5 my-4"></div>
+            
             <Button 
               onClick={handleLogout} 
               variant="ghost" 
-              className="w-full justify-start text-destructive mt-4 hover:text-destructive hover:bg-destructive/10"
+              size="sm"
+              className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 h-10 mt-3"
             >
-              <LogOut className="h-5 w-5 mr-3" />
+              <LogOut className="h-4 w-4 mr-2.5" />
               Logout
             </Button>
-          </nav>
+          </div>
         </div>
       )}
 
