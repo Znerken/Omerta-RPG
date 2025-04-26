@@ -1,368 +1,426 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { apiRequest, queryClient } from '@/lib/queryClient';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  MapPin, 
-  DollarSign, 
-  TrendingUp, 
-  Zap, 
-  Heart, 
-  Clock, 
-  Lock, 
-  Unlock, 
-  Info,
-  Navigation 
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  MapPin,
+  Timer,
+  Trophy,
+  Check,
+  XCircle,
+  DollarSign,
+  Star
+} from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
-export interface Location {
+interface LocationChallenge {
   id: number;
   name: string;
   description: string;
   latitude: number;
   longitude: number;
-  difficulty: string;
   type: string;
+  difficulty: string;
   rewards: {
     cash: number;
     xp: number;
     respect: number;
-    special_item_id?: number | null;
+    special_item_id: number | null;
   };
   cooldown_hours: number;
-  last_completed?: string | null;
   unlocked: boolean;
-  image_url?: string | null;
+  image_url: string | null;
+  last_completed?: Date | null;
 }
 
 interface ChallengeMapProps {
-  locations: Location[];
-  onLocationSelect: (location: Location) => void;
-  playerPosition?: { lat: number; lng: number } | null;
-  onRefreshLocation: () => void;
-  isLoadingLocation: boolean;
+  locations: LocationChallenge[];
+  onRefresh: () => void;
 }
 
-const ChallengeMap: React.FC<ChallengeMapProps> = ({
-  locations,
-  onLocationSelect,
-  playerPosition,
-  onRefreshLocation,
-  isLoadingLocation
-}) => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const [mapSize, setMapSize] = useState({ width: 0, height: 0 });
-  const [hoveredLocation, setHoveredLocation] = useState<Location | null>(null);
-  
-  // Set the map size on component mount and window resize
+const ChallengeMap: React.FC<ChallengeMapProps> = ({ locations, onRefresh }) => {
+  const { toast } = useToast();
+  const [userLocation, setUserLocation] = useState<{latitude: number; longitude: number} | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<LocationChallenge | null>(null);
+  const [activeChallenge, setActiveChallenge] = useState<number | null>(null);
+  const [inProgress, setInProgress] = useState<boolean>(false);
+
+  // Get user location when component mounts
   useEffect(() => {
-    const updateMapSize = () => {
-      if (mapRef.current) {
-        setMapSize({
-          width: mapRef.current.offsetWidth,
-          height: mapRef.current.offsetHeight
-        });
-      }
-    };
-    
-    updateMapSize();
-    window.addEventListener('resize', updateMapSize);
-    
-    return () => {
-      window.removeEventListener('resize', updateMapSize);
-    };
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ latitude, longitude });
+          
+          // Send location to server
+          updateServerLocation(latitude, longitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          toast({
+            title: "Location Error",
+            description: "Unable to get your location. Some features may be limited.",
+            variant: "destructive"
+          });
+          
+          // Use default location for demo purposes
+          setUserLocation({ latitude: 40.7128, longitude: -74.0060 }); // New York City
+          updateServerLocation(40.7128, -74.0060);
+        }
+      );
+    } else {
+      toast({
+        title: "Location Not Supported",
+        description: "Your browser does not support geolocation.",
+        variant: "destructive"
+      });
+    }
   }, []);
 
-  // Convert GPS coordinates to map position
-  const coordsToMapPosition = (lat: number, lng: number) => {
-    // These would be set based on the bounds of your game's virtual world map
-    const MAP_MIN_LAT = 40.7;
-    const MAP_MAX_LAT = 40.8;
-    const MAP_MIN_LNG = -74.0;
-    const MAP_MAX_LNG = -73.9;
-    
-    // Normalize to 0-1 range
-    const normalizedX = (lng - MAP_MIN_LNG) / (MAP_MAX_LNG - MAP_MIN_LNG);
-    const normalizedY = 1 - (lat - MAP_MIN_LAT) / (MAP_MAX_LAT - MAP_MIN_LAT); // Invert Y for screen coords
-    
-    // Convert to pixel coordinates
-    return {
-      x: normalizedX * mapSize.width,
-      y: normalizedY * mapSize.height
-    };
+  // Update server with user location
+  const updateServerLocation = async (latitude: number, longitude: number) => {
+    try {
+      const response = await apiRequest("POST", "/api/location/update", {
+        latitude,
+        longitude
+      });
+      
+      const data = await response.json();
+      console.log("Server location updated:", data);
+      
+      if (data.nearbyLocations?.length > 0) {
+        toast({
+          title: "Nearby Locations",
+          description: `Found ${data.nearbyLocations.length} nearby locations!`,
+        });
+      }
+    } catch (error) {
+      console.error("Error updating location:", error);
+    }
   };
 
-  // Calculate if a location is available (not on cooldown)
-  const isLocationAvailable = (location: Location) => {
-    if (!location.last_completed) return true;
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const d = R * c; // Distance in km
+    return d;
+  };
+
+  // Format distance to be more readable
+  const formatDistance = (distance: number): string => {
+    if (distance < 1) {
+      return `${Math.round(distance * 1000)} m`;
+    } else {
+      return `${distance.toFixed(1)} km`;
+    }
+  };
+
+  // Start a challenge
+  const startChallenge = async (locationId: number) => {
+    try {
+      setInProgress(true);
+      const response = await apiRequest("POST", `/api/locations/${locationId}/start`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setActiveChallenge(locationId);
+        toast({
+          title: "Challenge Started",
+          description: "Complete the objective to earn rewards!",
+        });
+      } else {
+        const error = await response.json();
+        
+        if (error.error === "Too far from location") {
+          toast({
+            title: "Too Far Away",
+            description: `You need to be within ${error.maxDistance}km of this location. Current distance: ${formatDistance(error.distance)}.`,
+            variant: "destructive"
+          });
+        } else if (error.error === "Location on cooldown") {
+          toast({
+            title: "On Cooldown",
+            description: `This location is on cooldown for ${error.remainingHours} more hour(s).`,
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: error.error || "Failed to start challenge",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error starting challenge:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start challenge",
+        variant: "destructive"
+      });
+    } finally {
+      setInProgress(false);
+    }
+  };
+
+  // Complete a challenge
+  const completeChallenge = async (locationId: number) => {
+    try {
+      setInProgress(true);
+      const response = await apiRequest("POST", `/api/locations/${locationId}/complete`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setActiveChallenge(null);
+        toast({
+          title: "Challenge Completed!",
+          description: `Earned $${data.rewards.cash}, ${data.rewards.xp} XP, and ${data.rewards.respect} respect.`,
+          variant: "success"
+        });
+        
+        // Refresh locations
+        onRefresh();
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.error || "Failed to complete challenge",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error completing challenge:", error);
+      toast({
+        title: "Error",
+        description: "Failed to complete challenge",
+        variant: "destructive"
+      });
+    } finally {
+      setInProgress(false);
+    }
+  };
+
+  const isLocationAvailable = (location: LocationChallenge): boolean => {
+    if (!location.unlocked) return false;
     
-    const lastCompletedDate = new Date(location.last_completed);
+    if (location.last_completed) {
+      const lastCompleted = new Date(location.last_completed);
+      const cooldownMs = location.cooldown_hours * 60 * 60 * 1000;
+      const now = new Date();
+      
+      if (now.getTime() - lastCompleted.getTime() < cooldownMs) {
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  const getCooldownRemaining = (location: LocationChallenge): string => {
+    if (!location.last_completed) return "Available";
+    
+    const lastCompleted = new Date(location.last_completed);
     const cooldownMs = location.cooldown_hours * 60 * 60 * 1000;
     const now = new Date();
+    const remainingMs = Math.max(0, cooldownMs - (now.getTime() - lastCompleted.getTime()));
     
-    return now.getTime() - lastCompletedDate.getTime() > cooldownMs;
-  };
-
-  // Calculate time until a location is available again
-  const getTimeUntilAvailable = (location: Location) => {
-    if (!location.last_completed) return null;
+    if (remainingMs <= 0) return "Available";
     
-    const lastCompletedDate = new Date(location.last_completed);
-    const cooldownMs = location.cooldown_hours * 60 * 60 * 1000;
-    const availableDate = new Date(lastCompletedDate.getTime() + cooldownMs);
-    const now = new Date();
+    const remainingHrs = Math.ceil(remainingMs / (1000 * 60 * 60));
+    const remainingMins = Math.ceil((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
     
-    if (now >= availableDate) return null;
-    
-    const diffMs = availableDate.getTime() - now.getTime();
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${diffHrs}h ${diffMins}m`;
-  };
-
-  // Handle clicking a location pin
-  const handleLocationClick = (location: Location) => {
-    setSelectedLocation(location);
-    onLocationSelect(location);
-  };
-
-  // Get icon based on location type
-  const getLocationIcon = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'drugs':
-        return <div className="bg-green-700/80 p-1 rounded-full"><MapPin className="h-5 w-5 text-white" /></div>;
-      case 'crime':
-        return <div className="bg-red-700/80 p-1 rounded-full"><MapPin className="h-5 w-5 text-white" /></div>;
-      case 'training':
-        return <div className="bg-blue-700/80 p-1 rounded-full"><MapPin className="h-5 w-5 text-white" /></div>;
-      case 'secret':
-        return <div className="bg-purple-700/80 p-1 rounded-full"><MapPin className="h-5 w-5 text-white" /></div>;
-      default:
-        return <div className="bg-gray-700/80 p-1 rounded-full"><MapPin className="h-5 w-5 text-white" /></div>;
+    if (remainingHrs > 0) {
+      return `${remainingHrs} hour(s) remaining`;
+    } else {
+      return `${remainingMins} minute(s) remaining`;
     }
   };
 
   return (
-    <div className="relative w-full h-[500px] overflow-hidden rounded-md">
-      {/* Background Map Image */}
-      <div 
-        ref={mapRef}
-        className="w-full h-full bg-center bg-cover paper-texture relative"
-        style={{ 
-          backgroundImage: `url('/assets/mafia-city-map.jpg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        {/* Location Pins */}
-        {locations.map((location) => {
-          const position = coordsToMapPosition(location.latitude, location.longitude);
-          const isAvailable = isLocationAvailable(location);
-          const isUnlocked = location.unlocked;
-          
-          return (
-            <TooltipProvider key={location.id} delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <motion.div
-                    className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 z-10 ${
-                      !isUnlocked ? 'opacity-60' : isAvailable ? 'opacity-100' : 'opacity-70'
-                    }`}
-                    style={{ 
-                      left: position.x, 
-                      top: position.y 
-                    }}
-                    whileHover={{ scale: 1.2 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => handleLocationClick(location)}
-                    onMouseEnter={() => setHoveredLocation(location)}
-                    onMouseLeave={() => setHoveredLocation(null)}
-                  >
-                    {isUnlocked ? (
-                      getLocationIcon(location.type)
-                    ) : (
-                      <div className="bg-gray-800/80 p-1 rounded-full">
-                        <Lock className="h-5 w-5 text-white" />
-                      </div>
-                    )}
-                    
-                    {/* Pulsing effect for available locations */}
-                    {isUnlocked && isAvailable && (
-                      <motion.div
-                        className="absolute top-0 left-0 w-full h-full rounded-full bg-white"
-                        initial={{ opacity: 0.3, scale: 1 }}
-                        animate={{ opacity: 0, scale: 2 }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                      />
-                    )}
-                  </motion.div>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <div className="px-2 py-1 text-center">
-                    <p className="font-bold text-sm">{location.name}</p>
-                    {!isUnlocked ? (
-                      <p className="text-xs text-muted-foreground">Locked</p>
-                    ) : !isAvailable ? (
-                      <p className="text-xs text-yellow-300">
-                        <Clock className="h-3 w-3 inline mr-1" />
-                        {getTimeUntilAvailable(location)}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-green-300">Available</p>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          );
-        })}
-        
-        {/* Player Position Pin */}
-        {playerPosition && (
-          <motion.div
-            className="absolute w-6 h-6 bg-blue-600 rounded-full border-2 border-white shadow-lg z-20 transform -translate-x-1/2 -translate-y-1/2"
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            style={{ 
-              left: coordsToMapPosition(playerPosition.lat, playerPosition.lng).x,
-              top: coordsToMapPosition(playerPosition.lat, playerPosition.lng).y
-            }}
-          >
-            <motion.div
-              className="absolute top-0 left-0 w-full h-full rounded-full bg-blue-400"
-              initial={{ opacity: 0.4, scale: 1 }}
-              animate={{ opacity: 0, scale: 1.5 }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-          </motion.div>
-        )}
-        
-        {/* Location Detail Popup */}
-        {hoveredLocation && (
-          <div
-            className="absolute bottom-4 left-4 max-w-sm z-30 glass-effect"
-            style={{ 
-              opacity: selectedLocation?.id === hoveredLocation.id ? 1 : 0.9 
-            }}
-          >
-            <Card className="p-3 border-0 bg-transparent">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-sm font-bold">{hoveredLocation.name}</h3>
-                  <p className="text-xs text-muted-foreground line-clamp-1">
-                    {hoveredLocation.description}
-                  </p>
-                </div>
-                <Badge variant={hoveredLocation.unlocked ? "outline" : "secondary"}>
-                  {hoveredLocation.unlocked ? (
-                    <Unlock className="h-3 w-3 mr-1" />
-                  ) : (
-                    <Lock className="h-3 w-3 mr-1" />
-                  )}
-                  {hoveredLocation.difficulty}
-                </Badge>
-              </div>
-              
-              {hoveredLocation.unlocked && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {hoveredLocation.rewards.cash > 0 && (
-                    <Badge variant="outline" className="bg-card/30">
-                      <DollarSign className="h-3 w-3 mr-1 text-green-400" />
-                      ${hoveredLocation.rewards.cash}
-                    </Badge>
-                  )}
-                  {hoveredLocation.rewards.xp > 0 && (
-                    <Badge variant="outline" className="bg-card/30">
-                      <Zap className="h-3 w-3 mr-1 text-blue-400" />
-                      {hoveredLocation.rewards.xp} XP
-                    </Badge>
-                  )}
-                  {hoveredLocation.rewards.respect > 0 && (
-                    <Badge variant="outline" className="bg-card/30">
-                      <Heart className="h-3 w-3 mr-1 text-red-400" />
-                      +{hoveredLocation.rewards.respect}
-                    </Badge>
-                  )}
-                </div>
-              )}
-            </Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Territory Map</h2>
+        <div className="bg-black/20 rounded-lg p-4 min-h-[300px] relative">
+          <div className="mb-4 text-center">
+            {userLocation ? (
+              <p className="text-sm">Your location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}</p>
+            ) : (
+              <p className="text-sm">Obtaining your location...</p>
+            )}
           </div>
-        )}
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {locations.map(location => {
+              const distance = userLocation 
+                ? calculateDistance(
+                    userLocation.latitude, 
+                    userLocation.longitude, 
+                    location.latitude, 
+                    location.longitude
+                  ) 
+                : null;
+              
+              const isNearby = distance !== null && distance <= 1; // Within 1km
+              const isAvailable = isLocationAvailable(location);
+              
+              return (
+                <Card 
+                  key={location.id}
+                  className={`cursor-pointer transition-transform duration-200 ${
+                    selectedLocation?.id === location.id ? 'ring-2 ring-primary' : ''
+                  } ${!location.unlocked ? 'opacity-60' : ''}`}
+                  onClick={() => setSelectedLocation(location)}
+                >
+                  <CardContent className="p-4 flex flex-col h-full">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold truncate">{location.name}</h3>
+                      <Badge variant={location.difficulty === "easy" ? "default" : location.difficulty === "medium" ? "secondary" : "destructive"}>
+                        {location.difficulty}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center mt-2 mb-2 text-xs text-muted-foreground gap-1">
+                      <MapPin size={14} />
+                      {distance ? (
+                        <span className={isNearby ? 'text-green-500' : ''}>
+                          {formatDistance(distance)} away
+                        </span>
+                      ) : (
+                        <span>Distance unknown</span>
+                      )}
+                    </div>
+                    
+                    <div className="mt-auto">
+                      <div className="text-xs flex items-center gap-1">
+                        <Timer size={14} />
+                        <span className={isAvailable ? 'text-green-500' : 'text-red-500'}>
+                          {getCooldownRemaining(location)}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
       </div>
       
-      {/* Controls Overlay */}
-      <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="outline"
-                className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                onClick={onRefreshLocation}
-                disabled={isLoadingLocation}
-              >
-                <Navigation className={`h-4 w-4 ${isLoadingLocation ? 'animate-spin' : ''}`} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <p className="text-xs">Update your location</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="outline"
-                className="bg-background/80 backdrop-blur-sm hover:bg-background/90"
-              >
-                <Info className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left">
-              <div className="space-y-2 p-1">
-                <p className="text-xs font-medium">Map Legend:</p>
-                <div className="flex gap-2">
-                  <div className="bg-red-700/80 p-1 rounded-full">
-                    <MapPin className="h-3 w-3 text-white" />
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Location Details</h2>
+        {selectedLocation ? (
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold">{selectedLocation.name}</h3>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant={selectedLocation.difficulty === "easy" ? "default" : selectedLocation.difficulty === "medium" ? "secondary" : "destructive"}>
+                        {selectedLocation.difficulty}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Difficulty: {selectedLocation.difficulty}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              
+              <p className="text-sm text-muted-foreground mb-4">{selectedLocation.description}</p>
+              
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="bg-black/20 p-3 rounded-lg">
+                  <h4 className="text-xs uppercase tracking-wider mb-2">Location</h4>
+                  <div className="flex items-center gap-2">
+                    <MapPin size={16} />
+                    <span className="text-sm">
+                      {selectedLocation.latitude.toFixed(4)}, {selectedLocation.longitude.toFixed(4)}
+                    </span>
                   </div>
-                  <span className="text-xs">Crime</span>
                 </div>
-                <div className="flex gap-2">
-                  <div className="bg-green-700/80 p-1 rounded-full">
-                    <MapPin className="h-3 w-3 text-white" />
+                
+                <div className="bg-black/20 p-3 rounded-lg">
+                  <h4 className="text-xs uppercase tracking-wider mb-2">Cooldown</h4>
+                  <div className="flex items-center gap-2">
+                    <Timer size={16} />
+                    <span className="text-sm">
+                      {selectedLocation.cooldown_hours} hours
+                    </span>
                   </div>
-                  <span className="text-xs">Drugs</span>
-                </div>
-                <div className="flex gap-2">
-                  <div className="bg-blue-700/80 p-1 rounded-full">
-                    <MapPin className="h-3 w-3 text-white" />
-                  </div>
-                  <span className="text-xs">Training</span>
-                </div>
-                <div className="flex gap-2">
-                  <div className="bg-gray-800/80 p-1 rounded-full">
-                    <Lock className="h-3 w-3 text-white" />
-                  </div>
-                  <span className="text-xs">Locked</span>
                 </div>
               </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              
+              <div className="bg-black/20 p-3 rounded-lg mb-4">
+                <h4 className="text-xs uppercase tracking-wider mb-2">Rewards</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex items-center gap-1">
+                    <DollarSign size={16} className="text-green-500" />
+                    <span className="text-sm">${selectedLocation.rewards.cash}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star size={16} className="text-yellow-500" />
+                    <span className="text-sm">{selectedLocation.rewards.xp} XP</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Trophy size={16} className="text-purple-500" />
+                    <span className="text-sm">{selectedLocation.rewards.respect} Respect</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col gap-2">
+                {!selectedLocation.unlocked ? (
+                  <Button disabled variant="secondary" className="w-full">
+                    <XCircle className="mr-2 h-4 w-4" />
+                    Locked
+                  </Button>
+                ) : !isLocationAvailable(selectedLocation) ? (
+                  <Button disabled className="w-full">
+                    <Timer className="mr-2 h-4 w-4" />
+                    {getCooldownRemaining(selectedLocation)}
+                  </Button>
+                ) : activeChallenge === selectedLocation.id ? (
+                  <Button 
+                    onClick={() => completeChallenge(selectedLocation.id)} 
+                    className="w-full" 
+                    disabled={inProgress}
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Complete Challenge
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={() => startChallenge(selectedLocation.id)} 
+                    variant="outline" 
+                    className="w-full"
+                    disabled={inProgress || Boolean(activeChallenge)}
+                  >
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Start Challenge
+                  </Button>
+                )}
+              </div>
+              
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">Select a location to view details</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

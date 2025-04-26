@@ -26,6 +26,9 @@ import {
   CrimeWithHistory,
   ItemWithDetails,
   GangWithMembers,
+  LocationChallenge, InsertLocationChallenge,
+  LocationProgress, InsertLocationProgress,
+  UserLocation, InsertUserLocation,
   users,
   stats,
   crimes,
@@ -41,7 +44,10 @@ import {
   achievements,
   userAchievements,
   userStatus,
-  userFriends
+  userFriends,
+  locationChallenges,
+  locationProgress,
+  userLocations
 } from "@shared/schema";
 import { eq, and, desc, gte, lte, sql, asc, inArray } from "drizzle-orm";
 import { db, pool } from "./db";
@@ -1616,6 +1622,380 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
 
   async getOnlineUsers(limit: number = 50): Promise<UserWithStatus[]> {
     return getOnlineUsers(limit);
+  }
+
+  // Location-based challenge methods
+  async getAllLocations(): Promise<LocationChallenge[]> {
+    try {
+      return await db.select().from(locationChallenges);
+    } catch (error) {
+      console.error("Error in getAllLocations:", error);
+      return [];
+    }
+  }
+
+  async getLocationById(id: number): Promise<LocationChallenge | undefined> {
+    try {
+      const [location] = await db
+        .select()
+        .from(locationChallenges)
+        .where(eq(locationChallenges.id, id));
+      return location;
+    } catch (error) {
+      console.error("Error in getLocationById:", error);
+      return undefined;
+    }
+  }
+
+  async getUserLocationsWithProgress(userId: number): Promise<(LocationChallenge & { 
+    unlocked: boolean;
+    last_completed?: Date | null;
+    cooldown_hours: number;
+  })[]> {
+    try {
+      // First get all locations
+      const allLocations = await this.getAllLocations();
+      
+      // Get progress records for this user
+      const progressRecords = await db
+        .select()
+        .from(locationProgress)
+        .where(eq(locationProgress.userId, userId));
+      
+      // Map progress to locations
+      const progressMap = new Map<number, LocationProgress>();
+      progressRecords.forEach(progress => {
+        progressMap.set(progress.locationId, progress);
+      });
+      
+      // Combine location data with progress
+      return allLocations.map(location => {
+        const progress = progressMap.get(location.id);
+        
+        return {
+          ...location,
+          unlocked: location.unlocked || (progress?.unlocked || false),
+          last_completed: progress?.last_completed || null,
+          cooldown_hours: location.cooldown_hours
+        };
+      });
+    } catch (error) {
+      console.error("Error in getUserLocationsWithProgress:", error);
+      return [];
+    }
+  }
+
+  async getLocationProgress(userId: number, locationId: number): Promise<LocationProgress | undefined> {
+    try {
+      const [progress] = await db
+        .select()
+        .from(locationProgress)
+        .where(
+          and(
+            eq(locationProgress.userId, userId),
+            eq(locationProgress.locationId, locationId)
+          )
+        );
+      return progress;
+    } catch (error) {
+      console.error("Error in getLocationProgress:", error);
+      return undefined;
+    }
+  }
+
+  async getNearbyLocations(userId: number, latitude: number, longitude: number, radiusKm: number = 1): Promise<LocationChallenge[]> {
+    try {
+      // Get all locations
+      const allLocations = await this.getAllLocations();
+      
+      // Calculate distance for each location
+      const nearbyLocations = allLocations.filter(location => {
+        const distance = this.calculateDistance(
+          latitude,
+          longitude,
+          location.latitude,
+          location.longitude
+        );
+        
+        return distance <= radiusKm;
+      });
+      
+      return nearbyLocations;
+    } catch (error) {
+      console.error("Error in getNearbyLocations:", error);
+      return [];
+    }
+  }
+
+  async updateUserLocation(userId: number, latitude: number, longitude: number): Promise<UserLocation> {
+    try {
+      // Check if user location already exists
+      const [existingLocation] = await db
+        .select()
+        .from(userLocations)
+        .where(eq(userLocations.userId, userId));
+      
+      if (existingLocation) {
+        // Update existing location
+        const [updatedLocation] = await db
+          .update(userLocations)
+          .set({
+            latitude,
+            longitude,
+            last_updated: new Date()
+          })
+          .where(eq(userLocations.userId, userId))
+          .returning();
+        
+        return updatedLocation;
+      } else {
+        // Create new location
+        const [newLocation] = await db
+          .insert(userLocations)
+          .values({
+            userId,
+            latitude,
+            longitude,
+            last_updated: new Date()
+          })
+          .returning();
+        
+        return newLocation;
+      }
+    } catch (error) {
+      console.error("Error in updateUserLocation:", error);
+      throw new Error("Failed to update user location");
+    }
+  }
+
+  async getUserLocation(userId: number): Promise<UserLocation | undefined> {
+    try {
+      const [location] = await db
+        .select()
+        .from(userLocations)
+        .where(eq(userLocations.userId, userId));
+      return location;
+    } catch (error) {
+      console.error("Error in getUserLocation:", error);
+      return undefined;
+    }
+  }
+
+  async createLocation(locationData: InsertLocationChallenge): Promise<LocationChallenge> {
+    try {
+      const [location] = await db
+        .insert(locationChallenges)
+        .values(locationData)
+        .returning();
+      
+      return location;
+    } catch (error) {
+      console.error("Error in createLocation:", error);
+      throw new Error("Failed to create location");
+    }
+  }
+
+  async updateLocation(id: number, data: Partial<LocationChallenge>): Promise<LocationChallenge | undefined> {
+    try {
+      const [location] = await db
+        .update(locationChallenges)
+        .set(data)
+        .where(eq(locationChallenges.id, id))
+        .returning();
+      
+      return location;
+    } catch (error) {
+      console.error("Error in updateLocation:", error);
+      return undefined;
+    }
+  }
+
+  async deleteLocation(id: number): Promise<boolean> {
+    try {
+      await db
+        .delete(locationChallenges)
+        .where(eq(locationChallenges.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error("Error in deleteLocation:", error);
+      return false;
+    }
+  }
+
+  async unlockLocationForUser(userId: number, locationId: number): Promise<LocationProgress> {
+    try {
+      // Check if progress record exists
+      const existingProgress = await this.getLocationProgress(userId, locationId);
+      
+      if (existingProgress) {
+        // Update existing progress
+        const [progress] = await db
+          .update(locationProgress)
+          .set({
+            unlocked: true
+          })
+          .where(
+            and(
+              eq(locationProgress.userId, userId),
+              eq(locationProgress.locationId, locationId)
+            )
+          )
+          .returning();
+        
+        return progress;
+      } else {
+        // Create new progress
+        const [progress] = await db
+          .insert(locationProgress)
+          .values({
+            userId,
+            locationId,
+            unlocked: true,
+            last_completed: null,
+            started_at: null,
+            progress_value: 0
+          })
+          .returning();
+        
+        return progress;
+      }
+    } catch (error) {
+      console.error("Error in unlockLocationForUser:", error);
+      throw new Error("Failed to unlock location for user");
+    }
+  }
+
+  async startLocationChallenge(userId: number, locationId: number): Promise<LocationProgress> {
+    try {
+      // Check if progress record exists
+      const existingProgress = await this.getLocationProgress(userId, locationId);
+      
+      if (existingProgress) {
+        // Update existing progress
+        const [progress] = await db
+          .update(locationProgress)
+          .set({
+            started_at: new Date(),
+            progress_value: 0
+          })
+          .where(
+            and(
+              eq(locationProgress.userId, userId),
+              eq(locationProgress.locationId, locationId)
+            )
+          )
+          .returning();
+        
+        return progress;
+      } else {
+        // Create new progress
+        const [progress] = await db
+          .insert(locationProgress)
+          .values({
+            userId,
+            locationId,
+            unlocked: true,
+            last_completed: null,
+            started_at: new Date(),
+            progress_value: 0
+          })
+          .returning();
+        
+        return progress;
+      }
+    } catch (error) {
+      console.error("Error in startLocationChallenge:", error);
+      throw new Error("Failed to start location challenge");
+    }
+  }
+
+  async completeLocationChallenge(
+    userId: number, 
+    locationId: number, 
+    rewards: { 
+      cash: number; 
+      xp: number; 
+      respect: number; 
+      special_item_id?: number | null 
+    }
+  ): Promise<{ 
+    progress: LocationProgress; 
+    user?: User; 
+    inventory?: UserInventory 
+  }> {
+    try {
+      // Update progress
+      const [progress] = await db
+        .update(locationProgress)
+        .set({
+          last_completed: new Date(),
+          progress_value: 100
+        })
+        .where(
+          and(
+            eq(locationProgress.userId, userId),
+            eq(locationProgress.locationId, locationId)
+          )
+        )
+        .returning();
+      
+      if (!progress) {
+        throw new Error("Failed to update location progress");
+      }
+      
+      // Apply rewards to user
+      const user = await this.getUser(userId);
+      if (!user) {
+        throw new Error("User not found");
+      }
+      
+      // Update user cash and XP
+      const updatedUser = await this.updateUser(userId, {
+        cash: user.cash + rewards.cash,
+        xp: user.xp + rewards.xp,
+        respect: user.respect + rewards.respect
+      });
+      
+      let inventory: UserInventory | undefined;
+      
+      // Add special item if provided
+      if (rewards.special_item_id) {
+        // Check if item exists
+        const item = await this.getItem(rewards.special_item_id);
+        if (item) {
+          inventory = await this.addItemToInventory({
+            userId,
+            itemId: rewards.special_item_id,
+            quantity: 1,
+            equipped: false
+          });
+        }
+      }
+      
+      return {
+        progress,
+        user: updatedUser,
+        inventory
+      };
+    } catch (error) {
+      console.error("Error in completeLocationChallenge:", error);
+      throw new Error("Failed to complete location challenge");
+    }
+  }
+
+  // Helper method for calculating distance between two points
+  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Radius of the Earth in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const d = R * c; // Distance in km
+    return d;
   }
 }
 
