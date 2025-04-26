@@ -16,7 +16,11 @@ import {
   Shapes,
   Sparkle,
   Settings,
-  LayoutGrid
+  LayoutGrid,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
