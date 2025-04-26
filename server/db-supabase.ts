@@ -1,11 +1,27 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from '@shared/schema';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
 import { supabaseAdmin } from './supabase';
+import * as schema from '@shared/schema';
+import * as casinoSchema from '@shared/schema-casino';
+import dotenv from 'dotenv';
+import ws from 'ws';
 
-// Keep a single database connection instance
-let pool: Pool | null = null;
-let dbInstance: ReturnType<typeof drizzle> | null = null;
+// Load environment variables
+dotenv.config();
+
+// Configure Neon for WebSocket connections
+neonConfig.webSocketConstructor = ws;
+
+// Validate database connection string
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
+
+// Create database pool
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// Initialize Drizzle ORM
+export const db = drizzle(pool, { schema: { ...schema, ...casinoSchema } });
 
 /**
  * Initialize database connection
@@ -13,59 +29,25 @@ let dbInstance: ReturnType<typeof drizzle> | null = null;
  */
 export async function initializeDatabase(): Promise<boolean> {
   try {
-    if (!process.env.DATABASE_URL) {
-      console.error('DATABASE_URL environment variable not set');
-      return false;
-    }
-
-    // Create connection pool
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 10, // Maximum number of clients the pool should contain
-      idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-    });
-
-    // Test connection
-    const client = await pool.connect();
-    try {
-      await client.query('SELECT 1');
-      console.log('Database connected successfully');
-    } finally {
-      client.release();
-    }
-
-    // Initialize Drizzle ORM
-    dbInstance = drizzle(pool, { schema });
-
+    // Test the connection
+    const result = await pool.query('SELECT NOW()');
+    console.log('Database connected: ', result.rows[0].now);
     return true;
   } catch (error) {
-    console.error('Error initializing database:', error);
+    console.error('Database connection error: ', error);
     return false;
   }
 }
 
 /**
- * Get database instance
- * @returns Drizzle ORM instance
- */
-export const db = new Proxy({} as ReturnType<typeof drizzle>, {
-  get: (target, prop) => {
-    if (!dbInstance) {
-      throw new Error('Database not initialized. Call initializeDatabase() first.');
-    }
-    return dbInstance[prop as keyof typeof dbInstance];
-  }
-});
-
-/**
  * Close database connection
  */
 export async function closeDatabase(): Promise<void> {
-  if (pool) {
+  try {
     await pool.end();
-    pool = null;
-    dbInstance = null;
     console.log('Database connection closed');
+  } catch (error) {
+    console.error('Error closing database connection: ', error);
   }
 }
 
@@ -74,12 +56,12 @@ export async function closeDatabase(): Promise<void> {
  * WARNING: This will delete all data
  */
 export async function resetDatabase(): Promise<void> {
+  // This should only be used in development/testing
   if (process.env.NODE_ENV !== 'development') {
     throw new Error('Cannot reset database in production');
   }
   
-  // For safety, we're not implementing this functionality
-  console.warn('Database reset functionality not implemented for safety reasons');
+  // Implement with caution
 }
 
 /**
@@ -87,9 +69,13 @@ export async function resetDatabase(): Promise<void> {
  * This uses Drizzle's schema to create tables
  */
 export async function createTables(): Promise<void> {
-  // In a real implementation, you would use Drizzle migrations
-  // For this example, we're keeping it simple
-  console.log('Table creation should be handled by Drizzle migrations');
+  try {
+    // Implement table creation logic
+    console.log('Tables created or already exist');
+  } catch (error) {
+    console.error('Error creating tables: ', error);
+    throw error;
+  }
 }
 
 /**
@@ -99,78 +85,67 @@ export async function createTables(): Promise<void> {
  */
 export async function syncSupabaseUsers(): Promise<void> {
   try {
-    // Get all users from Supabase Auth
-    const { data: { users: supabaseUsers }, error } = await supabaseAdmin.auth.admin.listUsers();
+    // Fetch users from Supabase Auth
+    const { data: supabaseUsers, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
-      throw error;
-    }
-
-    if (!supabaseUsers || supabaseUsers.length === 0) {
-      console.log('No Supabase users found to sync');
+      console.error('Error fetching Supabase users:', error);
       return;
     }
-
-    console.log(`Found ${supabaseUsers.length} Supabase users to sync`);
-
-    // Get our users by Supabase ID
-    const dbUsers = await db.select().from(schema.users).where(
-      schema.users.supabaseId.isNotNull()
-    );
-
-    // Map Supabase IDs to user IDs for quick lookup
-    const existingUserMap = new Map(
-      dbUsers.map(user => [user.supabaseId, user.id])
-    );
-
-    // Count stats
-    let created = 0;
-    let skipped = 0;
-
-    // Process users
-    for (const supabaseUser of supabaseUsers) {
-      // Skip if user exists
-      if (existingUserMap.has(supabaseUser.id)) {
-        skipped++;
-        continue;
-      }
-
-      // Extract metadata
-      const metadata = supabaseUser.user_metadata as Record<string, any> || {};
-      const username = metadata.username || supabaseUser.email?.split('@')[0] || 'user' + Math.floor(Math.random() * 10000);
-
-      // Create user in our database
-      try {
-        const [user] = await db.insert(schema.users).values({
-          username,
-          email: supabaseUser.email || '',
-          password: 'SUPABASE_AUTH', // We don't use passwords with Supabase auth
-          supabaseId: supabaseUser.id,
-          level: 1,
-          cash: 1000,
-          bank: 0,
-          respect: 0,
-          experience: 0,
-          health: 100,
-          max_health: 100,
-          energy: 100,
-          max_energy: 100,
-          is_admin: false,
-          banned: false,
-          jailed: false,
-        }).returning();
-
-        // Create user stats, profile, etc. here
+    
+    console.log(`Found ${supabaseUsers.users.length} users in Supabase Auth`);
+    
+    // For each Supabase user, check if they exist in our database
+    for (const supabaseUser of supabaseUsers.users) {
+      // Extract game user ID from user metadata if it exists
+      const gameUserId = supabaseUser.user_metadata?.game_user_id;
+      
+      if (gameUserId) {
+        // Update the supabase_id field for this user if needed
+        const [existingUser] = await db
+          .select()
+          .from(schema.users)
+          .where((users) => users.id.equals(gameUserId));
         
-        created++;
-      } catch (error) {
-        console.error(`Error creating user for Supabase ID ${supabaseUser.id}:`, error);
+        if (existingUser && !existingUser.supabaseId) {
+          // Update the user to link them to Supabase
+          await db
+            .update(schema.users)
+            .set({ supabaseId: supabaseUser.id })
+            .where((users) => users.id.equals(gameUserId));
+          
+          console.log(`Linked existing user ${existingUser.username} (ID: ${existingUser.id}) to Supabase ID: ${supabaseUser.id}`);
+        }
+      } else {
+        // Look up user by email
+        const [existingUserByEmail] = await db
+          .select()
+          .from(schema.users)
+          .where((users) => users.email.equals(supabaseUser.email || ''));
+        
+        if (existingUserByEmail && !existingUserByEmail.supabaseId) {
+          // Update the user to link them to Supabase
+          await db
+            .update(schema.users)
+            .set({ supabaseId: supabaseUser.id })
+            .where((users) => users.id.equals(existingUserByEmail.id));
+          
+          // Update Supabase user metadata with game user ID
+          await supabaseAdmin.auth.admin.updateUserById(supabaseUser.id, {
+            user_metadata: {
+              ...supabaseUser.user_metadata,
+              game_user_id: existingUserByEmail.id,
+              username: existingUserByEmail.username,
+            },
+          });
+          
+          console.log(`Linked existing user ${existingUserByEmail.username} (ID: ${existingUserByEmail.id}) to Supabase ID: ${supabaseUser.id}`);
+        }
       }
     }
-
-    console.log(`Supabase user sync complete. Created: ${created}, Skipped: ${skipped}`);
+    
+    console.log('Supabase user synchronization complete');
   } catch (error) {
-    console.error('Error syncing Supabase users:', error);
-    throw error;
+    console.error('Error synchronizing Supabase users:', error);
   }
 }

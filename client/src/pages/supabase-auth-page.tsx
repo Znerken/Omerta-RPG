@@ -1,50 +1,54 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'wouter';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { Redirect } from 'wouter';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import noiseOverlayURL from '@assets/noise-50.png';
 
-// Form schemas for validation
+// Login form schema
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
 });
 
+// Registration form schema
 const registerSchema = z.object({
-  username: z.string().min(3, { message: 'Username must be at least 3 characters' }),
+  username: z
+    .string()
+    .min(3, { message: 'Username must be at least 3 characters' })
+    .max(20, { message: 'Username cannot be longer than 20 characters' })
+    .regex(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain letters, numbers, and underscores' }),
   email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(8, { message: 'Password must be at least 8 characters' }),
+  password: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters' })
+    .regex(/[A-Z]/, { message: 'Password must contain at least one uppercase letter' })
+    .regex(/[a-z]/, { message: 'Password must contain at least one lowercase letter' })
+    .regex(/[0-9]/, { message: 'Password must contain at least one number' })
+    .regex(/[^a-zA-Z0-9]/, { message: 'Password must contain at least one special character' }),
   confirmPassword: z.string(),
-}).refine(data => data.password === data.confirmPassword, {
+}).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
 });
 
-type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
+type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function SupabaseAuthPage() {
+  const { user, gameUser, isLoading, signIn, signUp } = useSupabaseAuth();
   const [activeTab, setActiveTab] = useState<string>('login');
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const { user, signIn, signUp, isLoading } = useSupabaseAuth();
-  
-  // Redirect if already logged in
-  if (user) {
-    navigate('/');
-    return null;
-  }
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Login form setup
-  const loginForm = useForm<LoginFormData>({
+  // Login form
+  const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
@@ -52,8 +56,8 @@ export default function SupabaseAuthPage() {
     },
   });
 
-  // Register form setup
-  const registerForm = useForm<RegisterFormData>({
+  // Registration form
+  const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       username: '',
@@ -63,75 +67,77 @@ export default function SupabaseAuthPage() {
     },
   });
 
-  // Handle login submission
-  const onLoginSubmit = async (data: LoginFormData) => {
+  // Reset forms when switching tabs
+  useEffect(() => {
+    if (activeTab === 'login') {
+      loginForm.reset();
+    } else {
+      registerForm.reset();
+    }
+  }, [activeTab, loginForm, registerForm]);
+
+  // Handle login form submission
+  const onLoginSubmit = async (values: LoginFormValues) => {
+    setIsSubmitting(true);
     try {
-      await signIn(data);
-      toast({
-        title: 'Login successful',
-        description: 'Welcome back!',
-      });
-      navigate('/');
+      await signIn(values.email, values.password);
     } catch (error) {
       console.error('Login error:', error);
-      toast({
-        title: 'Login failed',
-        description: error instanceof Error ? error.message : 'Something went wrong',
-        variant: 'destructive',
-      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Handle registration submission
-  const onRegisterSubmit = async (data: RegisterFormData) => {
+  // Handle registration form submission
+  const onRegisterSubmit = async (values: RegisterFormValues) => {
+    setIsSubmitting(true);
     try {
-      await signUp(data.email, data.password, { 
-        username: data.username
-      });
-      
-      toast({
-        title: 'Registration successful',
-        description: 'Your account has been created. You can now log in.',
-      });
-      
-      // Switch to login tab after successful registration
-      setActiveTab('login');
+      await signUp(values.email, values.password, values.username, values.confirmPassword);
     } catch (error) {
       console.error('Registration error:', error);
-      toast({
-        title: 'Registration failed',
-        description: error instanceof Error ? error.message : 'Something went wrong',
-        variant: 'destructive',
-      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Redirect if user is already authenticated and has game user data
+  if (user && gameUser) {
+    return <Redirect to="/" />;
+  }
+
+  // Redirect to complete profile if user is authenticated but no game user
+  if (user && !gameUser && !isLoading) {
+    return <Redirect to="/complete-profile" />;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-950 p-4">
-      <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-        {/* Auth Form Section */}
-        <div className="w-full max-w-md mx-auto">
-          <Card className="border-gray-800 bg-black/40 backdrop-blur-md">
-            <CardHeader className="space-y-2">
-              <CardTitle className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-red-600">
-                OMERTÀ
-              </CardTitle>
-              <CardDescription className="text-center text-gray-400">
-                Enter the world of organized crime
-              </CardDescription>
+    <div className="flex flex-col min-h-screen bg-black text-white">
+      {/* Noise overlay */}
+      <div 
+        className="fixed inset-0 pointer-events-none opacity-30 z-10" 
+        style={{ backgroundImage: `url(${noiseOverlayURL})` }}
+      />
+      
+      {/* Main content */}
+      <div className="container flex-1 flex py-12 z-20">
+        <div className="grid w-full lg:grid-cols-2 gap-8 items-center max-w-6xl mx-auto">
+          {/* Auth form column */}
+          <Card className="w-full max-w-md mx-auto bg-black/50 border-red-900/30 backdrop-blur-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-4xl font-bold text-red-600 tracking-wider">OMERTÀ</CardTitle>
+              <CardDescription className="text-gray-400">THE CODE OF SILENCE</CardDescription>
             </CardHeader>
-            
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-2 w-full bg-gray-900/50">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-              
-              {/* Login Form */}
-              <TabsContent value="login" className="space-y-4 mt-4">
-                <Form {...loginForm}>
-                  <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                    <CardContent className="space-y-4">
+            <CardContent>
+              <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="login">Sign In</TabsTrigger>
+                  <TabsTrigger value="register">Register</TabsTrigger>
+                </TabsList>
+                
+                {/* Login Form */}
+                <TabsContent value="login">
+                  <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                       <FormField
                         control={loginForm.control}
                         name="email"
@@ -139,17 +145,12 @@ export default function SupabaseAuthPage() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="you@example.com" 
-                                {...field} 
-                                className="bg-gray-900 border-gray-800"
-                              />
+                              <Input placeholder="your@email.com" {...field} className="bg-black/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={loginForm.control}
                         name="password"
@@ -157,40 +158,24 @@ export default function SupabaseAuthPage() {
                           <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                {...field}
-                                className="bg-gray-900 border-gray-800"
-                              />
+                              <Input type="password" placeholder="••••••••" {...field} className="bg-black/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </CardContent>
-                    
-                    <CardFooter>
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-gradient-to-r from-amber-600 to-red-700 hover:from-amber-500 hover:to-red-600 text-white"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : null}
+                      <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                         Sign In
                       </Button>
-                    </CardFooter>
-                  </form>
-                </Form>
-              </TabsContent>
-              
-              {/* Register Form */}
-              <TabsContent value="register" className="space-y-4 mt-4">
-                <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                    <CardContent className="space-y-4">
+                    </form>
+                  </Form>
+                </TabsContent>
+                
+                {/* Registration Form */}
+                <TabsContent value="register">
+                  <Form {...registerForm}>
+                    <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                       <FormField
                         control={registerForm.control}
                         name="username"
@@ -198,17 +183,12 @@ export default function SupabaseAuthPage() {
                           <FormItem>
                             <FormLabel>Username</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="kingpin" 
-                                {...field}
-                                className="bg-gray-900 border-gray-800"
-                              />
+                              <Input placeholder="Enter your alias" {...field} className="bg-black/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={registerForm.control}
                         name="email"
@@ -216,17 +196,12 @@ export default function SupabaseAuthPage() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="you@example.com" 
-                                {...field}
-                                className="bg-gray-900 border-gray-800"
-                              />
+                              <Input placeholder="your@email.com" {...field} className="bg-black/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={registerForm.control}
                         name="password"
@@ -234,18 +209,12 @@ export default function SupabaseAuthPage() {
                           <FormItem>
                             <FormLabel>Password</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                {...field}
-                                className="bg-gray-900 border-gray-800"
-                              />
+                              <Input type="password" placeholder="••••••••" {...field} className="bg-black/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
                       <FormField
                         control={registerForm.control}
                         name="confirmPassword"
@@ -253,68 +222,53 @@ export default function SupabaseAuthPage() {
                           <FormItem>
                             <FormLabel>Confirm Password</FormLabel>
                             <FormControl>
-                              <Input 
-                                type="password" 
-                                placeholder="••••••••" 
-                                {...field}
-                                className="bg-gray-900 border-gray-800"
-                              />
+                              <Input type="password" placeholder="••••••••" {...field} className="bg-black/50" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </CardContent>
-                    
-                    <CardFooter>
-                      <Button 
-                        type="submit" 
-                        className="w-full bg-gradient-to-r from-amber-600 to-red-700 hover:from-amber-500 hover:to-red-600 text-white"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : null}
-                        Create Account
+                      <Button type="submit" className="w-full" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                        Register
                       </Button>
-                    </CardFooter>
-                  </form>
-                </Form>
-              </TabsContent>
-            </Tabs>
+                    </form>
+                  </Form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+            <CardFooter className="text-xs text-center text-gray-500 flex flex-col">
+              <p>By signing up, you agree to the Terms of Service and Privacy Policy.</p>
+            </CardFooter>
           </Card>
-        </div>
-        
-        {/* Hero Section */}
-        <div className="flex flex-col items-center text-center lg:text-left lg:items-start">
-          <div className="space-y-6">
-            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-red-500 to-amber-600">
-              The Code of Silence
-            </h1>
+          
+          {/* Hero content column */}
+          <div className="hidden lg:flex flex-col space-y-6">
+            <div className="space-y-4 text-center lg:text-left">
+              <h1 className="text-5xl font-bold text-red-600 tracking-wider">OMERTÀ</h1>
+              <p className="text-xl text-gray-300">The underground awaits your command</p>
+              <p className="text-gray-400 max-w-md">
+                Build your criminal empire, recruit your crew, and rise through the ranks of the underworld.
+                Take on high-stakes missions, engage in turf wars, and establish your dominance in the shadows.
+              </p>
+            </div>
             
-            <p className="text-gray-400 max-w-md mx-auto lg:mx-0">
-              Build your criminal empire, form powerful alliances, and rise through the ranks of the mafia underworld.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-4 max-w-md mx-auto lg:mx-0">
-              <div className="bg-black/30 backdrop-blur-sm p-4 rounded-lg border border-gray-800">
-                <h3 className="font-bold text-amber-500 mb-1">Crime Operations</h3>
-                <p className="text-sm text-gray-400">Run illicit operations and expand your territory in the criminal underworld.</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-gray-900 to-black rounded-lg p-5 border border-red-900/20">
+                <h3 className="text-lg font-bold mb-2">Criminal Operations</h3>
+                <p className="text-sm text-gray-400">Run rackets, smuggle contraband, and expand your territory across the city.</p>
               </div>
-              
-              <div className="bg-black/30 backdrop-blur-sm p-4 rounded-lg border border-gray-800">
-                <h3 className="font-bold text-amber-500 mb-1">Gang Warfare</h3>
-                <p className="text-sm text-gray-400">Form alliances, declare war, and fight for control of the city.</p>
+              <div className="bg-gradient-to-r from-gray-900 to-black rounded-lg p-5 border border-red-900/20">
+                <h3 className="text-lg font-bold mb-2">Gang Warfare</h3>
+                <p className="text-sm text-gray-400">Form alliances, battle rival gangs, and dominate strategic locations.</p>
               </div>
-              
-              <div className="bg-black/30 backdrop-blur-sm p-4 rounded-lg border border-gray-800">
-                <h3 className="font-bold text-amber-500 mb-1">Black Market</h3>
-                <p className="text-sm text-gray-400">Trade contraband and illegal goods in the underworld economy.</p>
+              <div className="bg-gradient-to-r from-gray-900 to-black rounded-lg p-5 border border-red-900/20">
+                <h3 className="text-lg font-bold mb-2">Underground Economy</h3>
+                <p className="text-sm text-gray-400">Manage illegal businesses, launder money, and invest in legitimate fronts.</p>
               </div>
-              
-              <div className="bg-black/30 backdrop-blur-sm p-4 rounded-lg border border-gray-800">
-                <h3 className="font-bold text-amber-500 mb-1">Rise in Power</h3>
-                <p className="text-sm text-gray-400">Climb the ranks from street soldier to feared mafia boss.</p>
+              <div className="bg-gradient-to-r from-gray-900 to-black rounded-lg p-5 border border-red-900/20">
+                <h3 className="text-lg font-bold mb-2">Criminal Network</h3>
+                <p className="text-sm text-gray-400">Recruit skilled associates, build loyalty, and protect your empire from threats.</p>
               </div>
             </div>
           </div>

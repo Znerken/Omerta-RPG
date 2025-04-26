@@ -1,74 +1,113 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { json, urlencoded } from 'express';
 import path from 'path';
-import dotenv from 'dotenv';
-import { viteNodeApp } from './vite';
+import cors from 'cors';
+import multer from 'multer';
+import fs from 'fs';
 import { registerRoutes } from './routes-supabase';
-import { initializeDatabase } from './db-supabase';
+import { initializeDatabase, syncSupabaseUsers } from './db-supabase';
+import { registerVite } from './vite';
 
-// Load environment variables
-dotenv.config();
-
-// Print environment for debugging
-console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
-
-// Create Express app
+// Initialize Express
 const app = express();
 
-// Configure middleware
-app.use(json());
-app.use(urlencoded({ extended: true }));
+// Configure CORS
+app.use(cors());
 
-// Serve static files for asset files
-app.use('/attached_assets', express.static(path.resolve(process.cwd(), 'attached_assets')));
+// Parse JSON and URL-encoded data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (req, file, cb) => {
+    // Use user ID + timestamp + random number for unique filenames
+    const userId = req.user?.id || 'anonymous';
+    const timestamp = Date.now();
+    const randomNum = Math.floor(Math.random() * 1000000000);
+    const ext = path.extname(file.originalname);
+    cb(null, `${userId}-${timestamp}-${randomNum}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (_req, file, cb) => {
+    // Allow only images
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WEBP are allowed.'));
+    }
+  },
+});
+
+// Make the uploads directory accessible
+app.use('/uploads', express.static(uploadsDir));
+
+// File upload endpoint
+app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  // Return the file URL
+  const fileUrl = `/uploads/${req.file.filename}`;
+  return res.json({ url: fileUrl });
+});
 
 // Initialize database
 initializeDatabase()
-  .then((success) => {
-    if (!success) {
-      console.error('Failed to initialize database, exiting...');
-      process.exit(1);
-    }
-
-    // In development mode, use Vite's dev server
-    if (process.env.NODE_ENV === 'development') {
-      app.use(viteNodeApp);
-    } else {
-      // In production, serve built client files
-      app.use(express.static(path.resolve(process.cwd(), 'dist/client')));
-      
-      // For any GET request that doesn't match an API or static file, serve the index.html
-      app.get('*', (_req, res) => {
-        res.sendFile(path.resolve(process.cwd(), 'dist/client/index.html'));
-      });
-    }
-
-    // Register API routes & WebSocket
-    registerRoutes(app)
-      .then((server) => {
-        // Get port from environment or use default
-        const PORT = process.env.PORT || 5000;
-
-        // Start the server
-        server.listen(PORT, '0.0.0.0', () => {
-          console.log(`[express] serving on port ${PORT}`);
-        });
-      })
-      .catch((err) => {
-        console.error('Failed to register routes:', err);
-        process.exit(1);
-      });
+  .then(() => {
+    // Sync Supabase users with our database
+    return syncSupabaseUsers();
   })
-  .catch((err) => {
-    console.error('Error during initialization:', err);
+  .then(() => {
+    console.log('Supabase synchronization complete');
+  })
+  .catch((error) => {
+    console.error('Error initializing database:', error);
     process.exit(1);
   });
 
-// Global error handler
+// Register API routes
+const httpServer = registerRoutes(app);
+
+// Configure Vite in development
+if (process.env.NODE_ENV !== 'production') {
+  registerVite(app);
+}
+
+// Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+  console.error('Application error:', err);
+  
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error',
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
   });
+});
+
+// Catch-all route for SPA
+app.get('*', (_req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, '../client/index.html'));
+});
+
+// Start the server
+const port = process.env.PORT || 5000;
+
+httpServer.listen(port, '0.0.0.0', () => {
+  console.log(`serving on port ${port}`);
 });

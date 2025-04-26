@@ -1,10 +1,9 @@
-import { Request, Response, NextFunction, Express } from 'express';
-import { verifyToken, getUserById } from './supabase';
-import { storage } from './storage';
+import { Express, Request, Response, NextFunction } from 'express';
+import { verifyToken } from './supabase';
+import { db } from './db-supabase';
+import { users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
-/**
- * Custom express request with user property
- */
 declare global {
   namespace Express {
     interface Request {
@@ -19,111 +18,107 @@ declare global {
  * @param app Express app
  */
 export function setupAuthRoutes(app: Express) {
-  // Auth middleware - verify JWT token and attach user to request
+  // Extract JWT from Authorization header and verify it
   app.use(async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    
     if (!authHeader) {
-      return next(); // No auth header, continue without user
+      return next();
     }
     
-    try {
-      // Verify JWT token
-      const supabaseUser = await verifyToken(authHeader);
-      
-      if (!supabaseUser) {
-        return next(); // Invalid token, continue without user
-      }
-      
-      // Look up user in our database by Supabase ID
-      const user = await storage.getUserBySupabaseId(supabaseUser.id);
-      
-      if (user) {
-        // Set both users on the request
-        req.user = user;
-        req.supabaseUser = supabaseUser;
-      } else {
-        console.warn(`Supabase user ${supabaseUser.id} not found in database`);
-      }
-      
-      next();
-    } catch (error) {
-      console.error('Auth middleware error:', error);
-      next();
+    // Verify token with Supabase
+    const supabaseUser = await verifyToken(authHeader);
+    if (!supabaseUser) {
+      return next();
     }
+    
+    // Save Supabase user in request
+    req.supabaseUser = supabaseUser;
+    
+    // Get game user from database using Supabase ID
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.supabaseId, supabaseUser.id))
+      .limit(1);
+    
+    if (user) {
+      req.user = user;
+      
+      // Update last seen timestamp
+      await db
+        .update(users)
+        .set({ lastSeen: new Date() })
+        .where(eq(users.id, user.id));
+    }
+    
+    next();
   });
   
-  // User endpoint - returns current user data
+  // Return current authenticated user
   app.use('/api/user', authProtected, (req: Request, res: Response) => {
     res.json(req.user);
   });
   
-  // Register endpoint - create a new user
+  // Register a new user
   app.post('/api/register', async (req: Request, res: Response) => {
     try {
-      const { username, email, password, confirmPassword, supabaseId } = req.body;
+      // Get Supabase ID from request body
+      const { supabaseId, username, email, password, confirmPassword } = req.body;
       
+      // Validate required fields
       if (!username || !email || !password || !confirmPassword) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
       
+      // Validate passwords match
       if (password !== confirmPassword) {
         return res.status(400).json({ message: 'Passwords do not match' });
       }
       
       // Check if username already exists
-      const existingUser = await storage.getUserByUsername(username);
+      const [existingUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+      
       if (existingUser) {
-        return res.status(400).json({ message: 'Username already taken' });
+        return res.status(400).json({ message: 'Username already exists' });
       }
       
       // Check if email already exists
-      const existingEmail = await storage.getUserByEmail(email);
+      const [existingEmail] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      
       if (existingEmail) {
-        return res.status(400).json({ message: 'Email already in use' });
+        return res.status(400).json({ message: 'Email already exists' });
       }
       
       // Create user in our database
-      const user = await storage.createUser({
-        username,
-        email,
-        password: 'SUPABASE_AUTH', // We don't store password, Supabase does
-        supabaseId, // Link to Supabase user if ID provided
-        isAdmin: false,
-        cash: 1000, // Starting cash
-        respect: 0,
-        level: 1,
-        experience: 0,
-        health: 100,
-        maxHealth: 100,
-        energy: 100,
-        maxEnergy: 100,
-        strength: 10,
-        defense: 10,
-        dexterity: 10,
-        intelligence: 10,
-        charisma: 10,
-        avatar: null,
-        profileTheme: 'classic',
-        rank: 'Street Thug',
-        jailStatus: false,
-        jailReleaseTime: null,
-        lastAction: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+      const [user] = await db
+        .insert(users)
+        .values({
+          username,
+          email,
+          password: 'supabase', // Password is handled by Supabase
+          supabaseId,
+          level: 1,
+          experience: 0,
+          cash: 1000,
+          respect: 0,
+          profileTheme: 'dark',
+          createdAt: new Date(),
+        })
+        .returning();
       
-      res.status(201).json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        supabaseId: user.supabaseId,
-        createdAt: user.createdAt,
-      });
+      // Return the created user
+      res.status(201).json(user);
     } catch (error) {
-      console.error('Register error:', error);
-      res.status(500).json({ message: 'Failed to register user' });
+      console.error('Error registering user:', error);
+      res.status(500).json({ message: 'Error registering user' });
     }
   });
 }
@@ -133,7 +128,7 @@ export function setupAuthRoutes(app: Express) {
  */
 export function authProtected(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
-    return res.status(401).json({ message: 'Authentication required' });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
   
   next();
@@ -144,11 +139,11 @@ export function authProtected(req: Request, res: Response, next: NextFunction) {
  */
 export function adminProtected(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
-    return res.status(401).json({ message: 'Authentication required' });
+    return res.status(401).json({ message: 'Unauthorized' });
   }
   
   if (!req.user.isAdmin) {
-    return res.status(403).json({ message: 'Admin privileges required' });
+    return res.status(403).json({ message: 'Forbidden - Admin required' });
   }
   
   next();
