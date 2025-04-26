@@ -73,8 +73,12 @@ export function StatCard({
     },
     onSuccess: (data) => {
       setIsTraining(false);
+      
+      // Invalidate all queries that might contain user stats
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/crimes"] }); // Might contain calculated success chances
       
       const title = "Training Complete";
       const message = data.message || `${name.charAt(0).toUpperCase() + name.slice(1)} increased by ${data.increase || 1} point!`;
@@ -137,7 +141,13 @@ export function StatCard({
             </Button>
             <ProgressCountdown
               expiryTimestamp={new Date(cooldownTime)}
-              onComplete={() => queryClient.invalidateQueries({ queryKey: ["/api/stats"] })}
+              onComplete={() => {
+                // Invalidate all related queries when cooldown expires
+                queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/crimes"] });
+              }}
               className="mt-2"
             />
           </div>
