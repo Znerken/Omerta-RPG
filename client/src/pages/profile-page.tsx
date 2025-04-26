@@ -737,8 +737,47 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
     });
   };
 
+  // Get the theme classes based on selected theme from customization
+  const getProfileThemeClasses = () => {
+    // Use selected theme from customization if available
+    const effectiveTheme = selectedProfileTheme?.id || profileTheme;
+    
+    switch (effectiveTheme) {
+      case 'noir':
+        return 'profile-page noir';
+      case 'mafia':
+        return 'profile-page mafia';
+      case 'elegant':
+        return 'profile-page elegant';
+      case 'vintage':
+        return 'profile-page vintage';
+      default:
+        return 'profile-page';
+    }
+  };
+  
+  // Generate name effect styles based on selected effect
+  const getNameEffectStyles = () => {
+    if (!selectedNameEffect || selectedNameEffect.id === 'none') {
+      return null;
+    }
+    
+    // Return style element with custom CSS for the selected name effect
+    return (
+      <style>
+        {`.omerta-profile-name {
+          ${selectedNameEffect.id === 'gradient' ? 'background: linear-gradient(to right, #ff6b6b, #ff9500, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent;' : ''}
+          ${selectedNameEffect.id === 'neon' ? 'text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6, 0 0 25px #0073e6;' : ''}
+          ${selectedNameEffect.id === 'retro' ? 'text-shadow: 3px 3px 0px rgba(255, 107, 129, 0.8);' : ''}
+          ${selectedNameEffect.id === 'gold' ? 'color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);' : ''}
+          ${selectedNameEffect.id === 'blood' ? 'color: #ff2d2d; text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);' : ''}
+        }`}
+      </style>
+    );
+  };
+
   return (
-    <div className={`profile-page ${profileTheme}`}>
+    <div className={getProfileThemeClasses()}>
       {/* Floating action buttons for save/cancel during edit mode only */}
       {isViewingOwnProfile && isEditing && (
         <div className="fixed top-20 right-6 z-50">
