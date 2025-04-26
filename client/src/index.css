@@ -133,45 +133,45 @@
 
 @layer base {
   :root {
-    /* Dark, rich background for a noir mafia feel */
-    --background: 220 20% 7%;
-    --foreground: 40 10% 95%;
+    /* OMERTÀ theme - darker, more sophisticated noir aesthetic */
+    --background: 220 30% 4%;
+    --foreground: 40 15% 98%;
     
-    /* Slightly elevated card surface */
-    --card: 220 15% 10%;
-    --card-foreground: 40 10% 95%;
+    /* Rich leather-like card surface */
+    --card: 220 25% 7%;
+    --card-foreground: 40 15% 98%;
     
-    /* Popover styling */
-    --popover: 220 15% 9%;
-    --popover-foreground: 40 10% 95%;
+    /* Popover styling with depth */
+    --popover: 220 25% 6%;
+    --popover-foreground: 40 15% 98%;
     
-    /* Deep crimson red - classic mafia color */
-    --primary: 350 70% 40%;
+    /* Deep blood red - signifying the blood oath of OMERTÀ */
+    --primary: 354 75% 38%;
     --primary-foreground: 0 0% 100%;
     
-    /* Gold accent for luxury feel */
-    --secondary: 35 90% 55%;
-    --secondary-foreground: 220 20% 10%;
+    /* Antique gold for luxury and tradition */
+    --secondary: 36 80% 50%;
+    --secondary-foreground: 220 30% 10%;
     
-    /* Subtle grays for muted elements */
-    --muted: 220 10% 15%;
-    --muted-foreground: 220 10% 70%;
+    /* Rich dark grays for muted elements */
+    --muted: 220 15% 12%;
+    --muted-foreground: 220 15% 65%;
     
-    /* Deep burgundy accent */
-    --accent: 350 50% 30%;
-    --accent-foreground: 40 10% 95%;
+    /* Deep burgundy accent - wine color */
+    --accent: 345 60% 25%;
+    --accent-foreground: 40 15% 98%;
     
     /* Blood red for destructive actions */
-    --destructive: 0 80% 40%;
-    --destructive-foreground: 40 10% 95%;
+    --destructive: 0 85% 35%;
+    --destructive-foreground: 40 15% 98%;
     
     /* Dark borders with subtle contrast */
-    --border: 220 15% 15%;
-    --input: 220 15% 12%;
-    --ring: 350 50% 30%;
+    --border: 220 25% 12%;
+    --input: 220 25% 9%;
+    --ring: 345 60% 25%;
     
-    /* Sharper corners for a more dramatic look */
-    --radius: 0.25rem;
+    /* Sharper corners for a dramatic look */
+    --radius: 0.2rem;
   }
 }
 
@@ -209,28 +209,53 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.01em;
 }
 
-/* Gold gradient text for important headers */
+/* OMERTÀ gold gradient for headers */
 .text-gold-gradient {
   @apply font-bold;
-  background: linear-gradient(135deg, hsl(35 90% 55%), hsl(35 90% 75%));
+  background: linear-gradient(135deg, hsl(36 80% 45%), hsl(36 90% 65%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: 0 2px 10px rgba(255, 215, 0, 0.15);
 }
 
-/* Blood red gradient text for dangerous/action items */
+/* OMERTÀ blood red gradient for dangerous/action items */
 .text-blood-gradient {
   @apply font-bold;
-  background: linear-gradient(135deg, hsl(350 70% 40%), hsl(0 80% 50%));
+  background: linear-gradient(135deg, hsl(354 75% 35%), hsl(0 80% 45%));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  text-shadow: 0 2px 10px rgba(180, 0, 0, 0.2);
 }
 
-/* Stylish card with inset border for that vintage mafia feel */
+/* OMERTÀ special title styling for main brand */
+.text-omerta {
+  font-family: 'Georgia', serif;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* OMERTÀ styled card with luxury leather texture feel */
 .card-mafia {
-  @apply bg-card rounded-sm border-2 border-secondary/20 shadow-xl;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 4px 20px rgba(0, 0, 0, 0.4);
+  @apply bg-card rounded-sm border border-secondary/20 shadow-xl relative overflow-hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05), 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.card-mafia::before {
+  content: '';
+  @apply absolute inset-0 opacity-10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52' viewBox='0 0 52 52'%3E%3Cpath fill='%23906030' fill-opacity='0.15' d='M0 17.83V0h17.83a3 3 0 0 1-5.66 2H5.9A5 5 0 0 1 2 5.9v6.27a3 3 0 0 1-2 5.66zm0 18.34a3 3 0 0 1 2 5.66v6.27A5 5 0 0 1 5.9 52h6.27a3 3 0 0 1 5.66 0H0V36.17zM36.17 52a3 3 0 0 1 5.66 0h6.27a5 5 0 0 1 3.9-3.9v-6.27a3 3 0 0 1 0-5.66V52H36.17zM52 36.17V52H36.17a3 3 0 0 1 0-5.66h6.27a5 5 0 0 1 3.9-3.9v-6.27a3 3 0 0 1 5.66 0zM17.83 52H0V36.17a3 3 0 0 1 5.66 0v6.27a5 5 0 0 1 3.9 3.9h6.27a3 3 0 0 1 2 5.66zm0-18.34H0V17.83a3 3 0 0 1 5.66 0v6.27a5 5 0 0 1 3.9 3.9h6.27a3 3 0 0 1 0 5.66zm18.34-5.66A5 5 0 0 1 40 26a5 5 0 0 1 2.83-4.5 5 5 0 0 1 0-7A5 5 0 0 1 40 10a5 5 0 0 1-8.5-2.83 5 5 0 0 1-7 0A5 5 0 0 1 20 10a5 5 0 0 1-2.83 4.5 5 5 0 0 1 0 7A5 5 0 0 1 20 26a5 5 0 0 1 8.5 2.83 5 5 0 0 1 7 0z'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* OMERTÀ premium card with gold accents */
+.card-omerta-premium {
+  @apply bg-card rounded-sm shadow-xl relative overflow-hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.1), 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid;
+  border-image: linear-gradient(135deg, rgba(255, 215, 0, 0.4), rgba(255, 215, 0, 0.1)) 1;
 }
 
 /* Dramatic backdrop for important sections */
@@ -241,13 +266,51 @@ h1, h2, h3, h4, h5, h6 {
     url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23333344' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
 }
 
-/* Button styles with mafia aesthetics */
+/* OMERTÀ themed buttons */
+.btn-omerta {
+  @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all rounded-sm bg-primary text-white 
+  hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:ring-offset-1 focus:ring-offset-background;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.02em;
+}
+
+.btn-omerta-secondary {
+  @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all rounded-sm bg-card text-secondary
+  border border-secondary/30 hover:border-secondary/60 focus:outline-none focus:ring-1 focus:ring-secondary/40 focus:ring-offset-1 focus:ring-offset-background;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  letter-spacing: 0.02em;
+}
+
+.btn-omerta-gold {
+  @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all rounded-sm bg-secondary/10 text-secondary-foreground
+  border border-secondary/30 hover:bg-secondary/20 hover:border-secondary/50 focus:outline-none focus:ring-1 focus:ring-secondary/40 focus:ring-offset-1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.02em;
+}
+
+.btn-omerta-ghost {
+  @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all rounded-sm bg-transparent 
+  text-muted-foreground hover:bg-black/10 focus:outline-none focus:ring-1 focus:ring-white/10 focus:ring-offset-1;
+  letter-spacing: 0.02em;
+}
+
+.btn-omerta-danger {
+  @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all rounded-sm bg-destructive/90 text-white
+  hover:bg-destructive focus:outline-none focus:ring-1 focus:ring-destructive/50 focus:ring-offset-1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  letter-spacing: 0.02em;
+}
+
+/* Legacy mafia button styles for backward compatibility */
 .btn-mafia {
-  @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all bg-primary rounded-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background;
+  @apply btn-omerta;
 }
 
 .btn-mafia-secondary {
-  @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium text-secondary-foreground transition-all bg-secondary rounded-sm hover:bg-secondary/90 focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:ring-offset-2 focus:ring-offset-background;
+  @apply btn-omerta-secondary;
 }
 
 /* Status indicators */
@@ -304,21 +367,85 @@ h1, h2, h3, h4, h5, h6 {
   @apply border border-white/10 rounded-sm;
 }
 
-/* Badge styles representing ranks */
+/* OMERTÀ badge styles for ranks */
 .badge-boss {
-  @apply px-2 py-0.5 text-xs font-medium rounded-sm bg-secondary/20 text-secondary border border-secondary/40;
+  @apply px-3 py-0.5 text-xs font-medium uppercase tracking-wider rounded-sm text-secondary border-b border-secondary/60;
+  background: linear-gradient(to bottom, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
 }
 
 .badge-capo {
-  @apply px-2 py-0.5 text-xs font-medium rounded-sm bg-blue-500/20 text-blue-400 border border-blue-500/40;
+  @apply px-3 py-0.5 text-xs font-medium uppercase tracking-wider rounded-sm text-blue-400 border-b border-blue-500/40;
+  background: linear-gradient(to bottom, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.05));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
 }
 
 .badge-soldier {
-  @apply px-2 py-0.5 text-xs font-medium rounded-sm bg-green-500/20 text-green-400 border border-green-500/40;
+  @apply px-3 py-0.5 text-xs font-medium uppercase tracking-wider rounded-sm text-green-400 border-b border-green-500/40;
+  background: linear-gradient(to bottom, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
 }
 
 .badge-associate {
-  @apply px-2 py-0.5 text-xs font-medium rounded-sm bg-gray-500/20 text-gray-400 border border-gray-500/40;
+  @apply px-3 py-0.5 text-xs font-medium uppercase tracking-wider rounded-sm text-gray-400 border-b border-gray-500/40;
+  background: linear-gradient(to bottom, rgba(156, 163, 175, 0.15), rgba(156, 163, 175, 0.05));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
+}
+
+/* OMERTÀ achievement badge */
+.badge-achievement {
+  @apply px-3 py-1 text-xs font-medium rounded-sm text-white inline-flex items-center space-x-1 relative overflow-hidden;
+  background: linear-gradient(to bottom, rgba(59, 130, 246, 0.6), rgba(59, 130, 246, 0.4));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.badge-achievement::before {
+  content: '';
+  @apply absolute inset-0 opacity-20;
+  background-image: linear-gradient(45deg, 
+    rgba(255, 255, 255, 0.1) 25%, 
+    transparent 25%, 
+    transparent 50%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    rgba(255, 255, 255, 0.1) 75%, 
+    transparent 75%, 
+    transparent);
+  background-size: 10px 10px;
+}
+
+/* OMERTÀ status badges */
+.badge-omerta-status {
+  @apply px-2 py-0.5 text-xs font-medium rounded-sm inline-flex items-center justify-center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.badge-omerta-active {
+  @apply badge-omerta-status bg-green-700/80 text-white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.badge-omerta-pending {
+  @apply badge-omerta-status bg-yellow-600/80 text-white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.badge-omerta-inactive {
+  @apply badge-omerta-status bg-gray-600/80 text-white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+.badge-omerta-danger {
+  @apply badge-omerta-status bg-red-700/80 text-white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
 }
 
 /* Game-like UI elements */
@@ -386,6 +513,57 @@ h1, h2, h3, h4, h5, h6 {
 
 .pulse-badge {
   animation: pulse-glow 2s infinite;
+}
+
+/* OMERTÀ section heading with decorative elements */
+.omerta-section-heading {
+  @apply font-heading text-2xl mb-8 relative text-center uppercase tracking-wider;
+  letter-spacing: 0.1em;
+}
+
+.omerta-section-heading::before,
+.omerta-section-heading::after {
+  content: '';
+  @apply absolute h-[1px];
+  background: linear-gradient(to right, transparent, rgba(255, 215, 0, 0.5), transparent);
+}
+
+.omerta-section-heading::before {
+  @apply left-0 right-0 -bottom-3;
+}
+
+.omerta-section-heading::after {
+  @apply left-1/3 right-1/3 -bottom-6;
+}
+
+/* OMERTÀ decorative separator */
+.omerta-separator {
+  @apply relative h-4 my-6 flex items-center justify-center;
+}
+
+.omerta-separator::before {
+  content: '';
+  @apply absolute h-[1px] left-0 right-0 bg-secondary/20;
+}
+
+.omerta-separator::after {
+  content: '⊝';
+  @apply relative bg-card px-4 text-secondary/50 text-lg;
+}
+
+/* OMERTÀ styled quote block */
+.omerta-quote {
+  @apply pl-4 border-l-2 border-secondary/30 italic text-muted-foreground my-4 relative;
+}
+
+.omerta-quote::before {
+  content: '"';
+  @apply absolute -top-2 -left-1 text-4xl font-serif text-secondary/40;
+}
+
+.omerta-quote::after {
+  content: '"';
+  @apply absolute -bottom-5 -right-1 text-4xl font-serif text-secondary/40;
 }
 
 /* Game section heading with decorative elements */
