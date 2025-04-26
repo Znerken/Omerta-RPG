@@ -1,8 +1,12 @@
 import { Express, Request, Response } from "express";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { users, userFriends, friendRequests, userStatus } from "@shared/schema";
+import { users, userFriends, friendRequests, userStatus, stats, userDrugs, drugs } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { scrypt, randomBytes } from "crypto";
+import { promisify } from "util";
+import { storage } from "./storage";
+import { drugStorage } from "./storage-drugs";
 
 // Middleware to restrict dev routes to development environment
 const developmentOnly = (req: Request, res: Response, next: Function) => {
@@ -11,6 +15,25 @@ const developmentOnly = (req: Request, res: Response, next: Function) => {
   }
   next();
 };
+
+// Hash password helper function
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+// Utility to generate random strings
+function generateRandomString(length: number) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
 
 // Register development routes
 export function registerDevRoutes(app: Express) {
