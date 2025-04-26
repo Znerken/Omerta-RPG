@@ -15,6 +15,19 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { RichTextEditor } from "@/components/profile/RichTextEditor";
 import { 
+  ProfileCustomizationButton, 
+  ProfileCustomizationDialog,
+  AVATAR_FRAMES,
+  PROFILE_THEMES,
+  NAME_EFFECTS,
+  BACKGROUND_EFFECTS,
+  type AvatarFrame,
+  type ProfileTheme,
+  type NameEffect,
+  type BackgroundEffect,
+  getNameEffectStyles 
+} from "@/components/profile/ProfileCustomization";
+import { 
   User, 
   DollarSign, 
   Award, 
@@ -47,19 +60,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  ProfileCustomizationDialog, 
-  AVATAR_FRAMES, 
-  PROFILE_THEMES, 
-  NAME_EFFECTS,
-  BACKGROUND_EFFECTS,
-  AvatarFrame,
-  ProfileTheme,
-  NameEffect,
-  BackgroundEffect,
-  getNameEffectStyles,
-  ProfileCustomizationButton
-} from "@/components/profile/ProfileCustomization";
+// ProfileCustomization components already imported above
 
 interface ProfilePageProps {
   userId?: number;
@@ -130,6 +131,21 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   const [selectedNameEffect, setSelectedNameEffect] = useState<NameEffect>(NAME_EFFECTS[0]);
   const [selectedBgEffect, setSelectedBgEffect] = useState<BackgroundEffect>(BACKGROUND_EFFECTS[0]);
   const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
+  
+  // Save profile customization settings
+  const saveCustomization = () => {
+    // In a real implementation, this would send the customization data to the server
+    // For now, we just log the selections and show a toast
+    console.log("Avatar Frame:", selectedFrame);
+    console.log("Profile Theme:", selectedProfileTheme);
+    console.log("Name Effect:", selectedNameEffect);
+    console.log("Background Effect:", selectedBgEffect);
+    
+    toast({
+      title: "Profile customization saved",
+      description: "Your profile customization settings have been updated.",
+    });
+  };
   
   // Function to apply Billie Eilish theme
   const applyBillieEilishTheme = () => {
@@ -1187,7 +1203,7 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       </div>
       
       {/* Custom CSS for the HTML showcase */}
-      <style jsx global>{`
+      <style>{`
         .profile-html-content {
           max-width: 100%;
           overflow-x: hidden;
@@ -1221,6 +1237,30 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
           --border-color: rgba(205,133,63,0.2);
         }
       `}</style>
+      
+      {/* Profile Customization Dialog */}
+      {isViewingOwnProfile && (
+        <ProfileCustomizationDialog
+          open={isCustomizationOpen}
+          selectedFrame={selectedFrame}
+          selectedTheme={selectedProfileTheme}
+          selectedNameEffect={selectedNameEffect}
+          selectedBackgroundEffect={selectedBgEffect}
+          userAvatar={avatarPreview || userProfile?.avatar || undefined}
+          userName={username}
+          onFrameChange={setSelectedFrame}
+          onThemeChange={setSelectedProfileTheme}
+          onNameEffectChange={setSelectedNameEffect}
+          onBgEffectChange={setSelectedBgEffect}
+          onClose={() => {
+            setIsCustomizationOpen(false);
+            saveCustomization();
+          }}
+        />
+      )}
+      
+      {/* Apply name effect styles */}
+      {getNameEffectStyles()}
     </div>
   );
 }
