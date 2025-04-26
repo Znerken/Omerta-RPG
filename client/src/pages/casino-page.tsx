@@ -1013,7 +1013,7 @@ export default function CasinoPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="flex flex-col justify-center items-center">
               <div className={cn(
-                "relative w-40 h-40 sm:w-48 sm:h-48 md:w-60 md:h-60 transition-transform duration-[3s]",
+                "relative w-40 h-40 sm:w-48 sm:h-48 md:w-60 md:h-60 transition-transform duration-[3000ms]",
                 wheelSpinning && "animate-spin-slow"
               )}>
                 <img 
