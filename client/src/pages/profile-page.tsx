@@ -125,18 +125,60 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  // Profile customization state - use default "none" effects
+  // Load profile customization settings from localStorage
+  const loadCustomizationSettings = () => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // Framework ID
+      const savedFrameId = localStorage.getItem('profile-frame');
+      const frameToUse = savedFrameId 
+        ? AVATAR_FRAMES.find(frame => frame.id === savedFrameId) 
+        : AVATAR_FRAMES.find(frame => frame.id === 'classic');
+      
+      // Profile Theme
+      const savedThemeId = localStorage.getItem('profile-theme');
+      const themeToUse = savedThemeId 
+        ? PROFILE_THEMES.find(theme => theme.id === savedThemeId) 
+        : PROFILE_THEMES.find(theme => theme.id === 'dark');
+      
+      // Name Effect
+      const savedNameEffectId = localStorage.getItem('profile-name-effect');
+      const nameEffectToUse = savedNameEffectId 
+        ? NAME_EFFECTS.find(effect => effect.id === savedNameEffectId) 
+        : NAME_EFFECTS.find(effect => effect.id === 'none');
+      
+      // Background Effect
+      const savedBgEffectId = localStorage.getItem('profile-bg-effect');
+      const bgEffectToUse = savedBgEffectId 
+        ? BACKGROUND_EFFECTS.find(effect => effect.id === savedBgEffectId) 
+        : BACKGROUND_EFFECTS.find(effect => effect.id === 'none');
+      
+      return {
+        frame: frameToUse || AVATAR_FRAMES[0],
+        theme: themeToUse || PROFILE_THEMES[0],
+        nameEffect: nameEffectToUse || NAME_EFFECTS[0],
+        bgEffect: bgEffectToUse || BACKGROUND_EFFECTS[0]
+      };
+    } catch (error) {
+      console.error("Error loading customization settings:", error);
+      return null;
+    }
+  };
+  
+  // Profile customization state - load from localStorage or use defaults
+  const savedSettings = loadCustomizationSettings();
   const [selectedFrame, setSelectedFrame] = useState<AvatarFrame>(
-    AVATAR_FRAMES.find(frame => frame.id === 'none') || AVATAR_FRAMES[0]
+    savedSettings?.frame || AVATAR_FRAMES.find(frame => frame.id === 'classic') || AVATAR_FRAMES[0]
   );
   const [selectedProfileTheme, setSelectedProfileTheme] = useState<ProfileTheme>(
-    PROFILE_THEMES.find(theme => theme.id === 'dark') || PROFILE_THEMES[0]
+    savedSettings?.theme || PROFILE_THEMES.find(theme => theme.id === 'dark') || PROFILE_THEMES[0]
   );
   const [selectedNameEffect, setSelectedNameEffect] = useState<NameEffect>(
-    NAME_EFFECTS.find(effect => effect.id === 'none') || NAME_EFFECTS[0]
+    savedSettings?.nameEffect || NAME_EFFECTS.find(effect => effect.id === 'none') || NAME_EFFECTS[0]
   );
   const [selectedBgEffect, setSelectedBgEffect] = useState<BackgroundEffect>(
-    BACKGROUND_EFFECTS.find(effect => effect.id === 'none') || BACKGROUND_EFFECTS[0]
+    savedSettings?.bgEffect || BACKGROUND_EFFECTS.find(effect => effect.id === 'none') || BACKGROUND_EFFECTS[0]
   );
   const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
   
@@ -755,29 +797,20 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         return 'profile-page';
     }
   };
-  
-  // Generate name effect styles based on selected effect
-  const getNameEffectStyles = () => {
-    if (!selectedNameEffect || selectedNameEffect.id === 'none') {
-      return null;
-    }
-    
-    // Return style element with custom CSS for the selected name effect
-    return (
-      <style>
-        {`.omerta-profile-name {
-          ${selectedNameEffect.id === 'gradient' ? 'background: linear-gradient(to right, #ff6b6b, #ff9500, #ffd700); -webkit-background-clip: text; -webkit-text-fill-color: transparent;' : ''}
-          ${selectedNameEffect.id === 'neon' ? 'text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6, 0 0 25px #0073e6;' : ''}
-          ${selectedNameEffect.id === 'retro' ? 'text-shadow: 3px 3px 0px rgba(255, 107, 129, 0.8);' : ''}
-          ${selectedNameEffect.id === 'gold' ? 'color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);' : ''}
-          ${selectedNameEffect.id === 'blood' ? 'color: #ff2d2d; text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);' : ''}
-        }`}
-      </style>
-    );
-  };
 
   return (
     <div className={getProfileThemeClasses()}>
+      {/* Add CSS for name effects */}
+      {selectedNameEffect && selectedNameEffect.id !== 'none' && (
+        <style>
+          {`.omerta-profile-name {
+            ${selectedNameEffect.id === 'gradient-red' ? 'background: linear-gradient(to right, #ff6b6b, #ff2d2d); -webkit-background-clip: text; -webkit-text-fill-color: transparent;' : ''}
+            ${selectedNameEffect.id === 'gradient-gold' ? 'background: linear-gradient(to right, #ffd700, #ff9500); -webkit-background-clip: text; -webkit-text-fill-color: transparent;' : ''}
+            ${selectedNameEffect.id === 'neon' ? 'text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6, 0 0 25px #0073e6;' : ''}
+            ${selectedNameEffect.id === 'rainbow' ? 'animation: rainbow-text 6s linear infinite;' : ''}
+          }`}
+        </style>
+      )}
       {/* Floating action buttons for save/cancel during edit mode only */}
       {isViewingOwnProfile && isEditing && (
         <div className="fixed top-20 right-6 z-50">
@@ -1377,7 +1410,25 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
           onBgEffectChange={setSelectedBgEffect}
           onClose={() => {
             setIsCustomizationOpen(false);
-            saveCustomization();
+            // Save current selections to localStorage for persistence
+            localStorage.setItem('profile-frame', selectedFrame.id);
+            localStorage.setItem('profile-theme', selectedProfileTheme.id);
+            localStorage.setItem('profile-name-effect', selectedNameEffect.id);
+            localStorage.setItem('profile-bg-effect', selectedBgEffect.id);
+            
+            // Also save combined data for easier loading
+            const customizationData = {
+              frameId: selectedFrame.id,
+              themeId: selectedProfileTheme.id,
+              nameEffectId: selectedNameEffect.id,
+              backgroundEffectId: selectedBgEffect.id
+            };
+            localStorage.setItem('userCustomization', JSON.stringify(customizationData));
+            
+            toast({
+              title: "Profile customization saved",
+              description: "Your profile style has been updated",
+            });
           }}
         />
       )}
