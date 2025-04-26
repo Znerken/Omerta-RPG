@@ -34,6 +34,7 @@ import {
 import { NotificationList } from "@/components/notification/notification-list";
 import { ConnectionStatus } from "@/components/social/ConnectionStatus";
 import { SocialSidebar } from "@/components/social/SocialSidebar";
+import { MiniProfile } from "@/components/profile/MiniProfile";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: <Home className="h-5 w-5 mr-3" /> },
@@ -105,13 +106,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
           {user && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                  <User className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">{user.username}</p>
-                  <p className="text-xs text-muted-foreground">Level {user.level}</p>
-                </div>
+                <MiniProfile variant="sidebar" />
                 <div>
                   <NotificationList />
                 </div>
@@ -162,19 +157,21 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile menu toggle */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-3 py-2">
           <h1 className="text-xl text-gold-gradient">Mafia Empire</h1>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
+            {user && <MiniProfile variant="navbar" className="max-w-[60%]" />}
             {user && <NotificationList />}
             <Button 
               variant="ghost" 
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="h-8 w-8"
             >
               {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-5 w-5" />
               )}
             </Button>
           </div>

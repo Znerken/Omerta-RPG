@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ActivityTable } from "@/components/activity/ActivityTable";
 import { PageHeader } from "@/components/ui/page-header";
+import { UserAvatar } from "@/components/profile/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -423,31 +424,37 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         {/* Avatar - Positioned to overlap banner and content */}
         <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
           <div className="relative">
-            <Avatar className="h-32 w-32 border-4 border-background bg-primary ring-4 ring-primary/20">
-              {avatarPreview ? (
-                <AvatarImage src={avatarPreview} alt={username} />
-              ) : (
-                <AvatarFallback className="text-5xl font-heading">{getInitials(username)}</AvatarFallback>
+            <div className="relative">
+              <UserAvatar 
+                username={username} 
+                avatarUrl={avatarPreview || userProfile.avatar} 
+                size="xl" 
+                linkToProfile={false}
+                withBorder={true}
+                withRing={true}
+                borderColor="border-background"
+                ringColor="ring-primary/30"
+                className="shadow-lg"
+              />
+              
+              {isEditing && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8"
+                  onClick={() => avatarInputRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4" />
+                  <input
+                    type="file"
+                    ref={avatarInputRef}
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
+                </Button>
               )}
-            </Avatar>
-            
-            {isEditing && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8"
-                onClick={() => avatarInputRef.current?.click()}
-              >
-                <Camera className="h-4 w-4" />
-                <input
-                  type="file"
-                  ref={avatarInputRef}
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
-              </Button>
-            )}
+            </div>
           </div>
         </div>
       </div>

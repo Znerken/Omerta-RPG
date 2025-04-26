@@ -1,0 +1,115 @@
+import React from "react";
+import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { UserAvatar } from "./UserAvatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronRight, Medal, Shield } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+interface MiniProfileProps {
+  variant?: "sidebar" | "navbar";
+  className?: string;
+}
+
+export function MiniProfile({ 
+  variant = "sidebar",
+  className = ""
+}: MiniProfileProps) {
+  // Fetch user profile data
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ["/api/user/profile"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/user/profile");
+      return await response.json();
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className={cn("flex items-center gap-3", className)}>
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return null;
+  }
+
+  const { username, level, cash, respect, isAdmin, avatar } = profile;
+  
+  // Navbar variant is horizontal, sidebar variant is more compact
+  if (variant === "navbar") {
+    return (
+      <div className={cn("flex items-center p-2 rounded-lg bg-black/20 border border-border/50 hover:bg-black/30 transition", className)}>
+        <UserAvatar 
+          username={username} 
+          avatarUrl={avatar} 
+          size="md"
+          withBorder={true}
+          withRing={true}
+          borderColor="border-background" 
+          ringColor="ring-gold/30"
+        />
+        
+        <div className="ml-3 flex-1">
+          <div className="flex items-center">
+            <p className="font-medium text-sm">{username}</p>
+            {isAdmin && (
+              <Badge variant="outline" className="ml-2 py-0 h-5">
+                <Shield className="h-3 w-3 mr-1 text-primary" />
+                Admin
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Medal className="h-3.5 w-3.5 mr-1 text-gold" />
+            Level {level}
+            <span className="mx-1.5">•</span>
+            ${cash?.toLocaleString()}
+          </div>
+        </div>
+        
+        <Link href="/profile">
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
+    );
+  }
+  
+  // Sidebar variant (default)
+  return (
+    <div className={cn("flex items-center gap-3", className)}>
+      <UserAvatar 
+        username={username} 
+        avatarUrl={avatar} 
+        size="md"
+        withBorder={true}
+        withRing={true}
+      />
+      <div className="flex-1">
+        <div className="flex items-center">
+          <p className="font-medium text-sm">{username}</p>
+          {isAdmin && (
+            <Badge variant="outline" className="ml-2 py-0 h-5">
+              <Shield className="h-3 w-3 mr-1 text-primary" />
+              Admin
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Level {level}
+        </p>
+      </div>
+    </div>
+  );
+}
