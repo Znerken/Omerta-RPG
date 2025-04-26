@@ -1,212 +1,247 @@
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
 import { Server } from 'http';
 import { supabaseClient } from './supabase';
-import { storage } from './storage-supabase';
-import url from 'url';
+import { db } from './db-supabase';
+import { users, userStatus } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
-// Store active WebSocket connections by user ID
-const userConnections: Map<number, Set<WebSocket>> = new Map();
-// Store user IDs associated with WebSocket connections
-const connectionUsers: Map<WebSocket, number> = new Map();
+// Client tracking
+type Client = {
+  id: string;
+  userId?: number;
+  ws: any;
+};
 
-// Set up WebSocket server
-export function setupWebSockets(httpServer: Server) {
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  wss.on('connection', async (ws, req) => {
-    let userId: number | null = null;
+// Connected clients map
+const clients: Map<string, Client> = new Map();
+
+/**
+ * Set up WebSocket server and Supabase realtime subscriptions
+ */
+export function setupWebSocketServer(server: Server) {
+  // Create WebSocket server
+  const wss = new WebSocketServer({ server, path: '/ws' });
+
+  console.log('WebSocket server initialized');
+
+  // Set up Supabase realtime subscriptions
+  setupSupabaseRealtime();
+
+  // Handle WebSocket connections
+  wss.on('connection', (ws: any) => {
+    // Generate a unique client ID
+    const clientId = generateId();
     
-    try {
-      // Extract access token from URL
-      const { query } = url.parse(req.url || '', true);
-      const accessToken = query.access_token as string;
-      
-      if (!accessToken) {
-        ws.close(1008, 'Authentication required');
-        return;
-      }
-      
-      // Verify token with Supabase
-      const { data: { user }, error } = await supabaseClient.auth.getUser(accessToken);
-      
-      if (error || !user) {
-        ws.close(1008, 'Invalid token');
-        return;
-      }
-      
-      // Get internal user ID from our database
-      const dbUser = await storage.getUserByEmail(user.email || '');
-      
-      if (!dbUser) {
-        ws.close(1008, 'User not found');
-        return;
-      }
-      
-      userId = dbUser.id;
-      
-      // Store connection
-      if (!userConnections.has(userId)) {
-        userConnections.set(userId, new Set());
-      }
-      userConnections.get(userId)!.add(ws);
-      connectionUsers.set(ws, userId);
-      
-      console.log(`User ${userId} connected via WebSocket. Active connections: ${userConnections.get(userId)!.size}`);
-      
-      // Update user status to online
-      updateUserStatus(userId, 'online');
-      
-      // Broadcast user status to other users
-      broadcastUserStatus(userId, dbUser.username, dbUser.avatar, 'online');
-      
-      // Send list of online users to the newly connected user
-      sendOnlineUsers(ws);
-    } catch (error) {
-      console.error('WebSocket connection error:', error);
-      ws.close(1011, 'Server error');
-    }
+    console.log(`WebSocket client connected: ${clientId}`);
     
-    // Setup message handling
-    ws.on('message', async (message) => {
+    // Store the client
+    clients.set(clientId, { id: clientId, ws });
+
+    // Handle authentication (required to link the socket to a user)
+    ws.on('message', async (message: string) => {
       try {
-        const parsedMessage = JSON.parse(message.toString());
-        console.log('Received message from user', userId, ':', parsedMessage);
+        const data = JSON.parse(message);
         
-        // Handle different message types
-        switch (parsedMessage.type) {
-          case 'heartbeat':
-            // Keep connection alive
-            ws.send(JSON.stringify({ type: 'heartbeat_ack' }));
-            break;
+        // Handle authentication
+        if (data.type === 'authenticate') {
+          const { token } = data;
+          
+          // Verify token with Supabase
+          const { data: { user }, error } = await supabaseClient.auth.getUser(token);
+          
+          if (error || !user) {
+            sendToClient(clientId, { type: 'auth_error', message: 'Authentication failed' });
+            return;
+          }
+          
+          // Get user from database
+          const [dbUser] = await db
+            .select()
+            .from(users)
+            .where(eq(users.supabaseId, user.id));
             
-          case 'chat_message':
-            // Handle chat messages
-            if (userId && parsedMessage.data && parsedMessage.data.recipientId) {
-              const { recipientId, content } = parsedMessage.data;
-              // Store message in database
-              // Notify recipient if online
-              notifyUser(recipientId, 'new_message', {
-                senderId: userId,
-                content,
-                timestamp: new Date().toISOString()
-              });
-            }
-            break;
+          if (!dbUser) {
+            sendToClient(clientId, { type: 'auth_error', message: 'User not found' });
+            return;
+          }
+          
+          // Update client with user ID
+          const client = clients.get(clientId);
+          if (client) {
+            client.userId = dbUser.id;
             
-          default:
-            console.log('Unknown message type:', parsedMessage.type);
+            // Update user status to online
+            await db
+              .update(userStatus)
+              .set({ status: 'online', lastActive: new Date() })
+              .where(eq(userStatus.userId, dbUser.id));
+              
+            sendToClient(clientId, { type: 'auth_success', userId: dbUser.id });
+            
+            // Broadcast user status change
+            broadcastUserStatusChange(dbUser.id, 'online');
+          }
+        }
+        
+        // Handle other message types
+        if (data.type === 'ping') {
+          sendToClient(clientId, { type: 'pong' });
         }
       } catch (error) {
         console.error('Error processing message:', error);
       }
     });
-    
+
     // Handle disconnection
-    ws.on('close', () => {
-      if (userId) {
-        // Remove from collections
-        if (userConnections.has(userId)) {
-          userConnections.get(userId)!.delete(ws);
-          if (userConnections.get(userId)!.size === 0) {
-            userConnections.delete(userId);
-            // Update status to offline if no connections left
-            updateUserStatus(userId, 'offline');
-            // Broadcast offline status
-            broadcastUserStatus(userId, null, null, 'offline');
-            console.log(`No active connections for user ${userId}`);
-          } else {
-            console.log(`User ${userId} disconnected. Remaining connections: ${userConnections.get(userId)!.size}`);
-          }
-        }
-        connectionUsers.delete(ws);
+    ws.on('close', async () => {
+      const client = clients.get(clientId);
+      
+      console.log(`WebSocket client disconnected: ${clientId}`);
+      
+      // If this was an authenticated user, update their status
+      if (client?.userId) {
+        await db
+          .update(userStatus)
+          .set({ status: 'offline', lastActive: new Date() })
+          .where(eq(userStatus.userId, client.userId));
+          
+        // Broadcast user status change
+        broadcastUserStatusChange(client.userId, 'offline');
       }
+      
+      // Remove client
+      clients.delete(clientId);
     });
+
+    // Send welcome message
+    sendToClient(clientId, { type: 'welcome', message: 'Connected to OMERTÀ game server' });
   });
-  
-  // Set up interval to check for dead connections
-  setInterval(() => {
-    wss.clients.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.ping();
-      }
-    });
-  }, 30000);
-  
+
   return wss;
 }
 
-// Function to send a message to a specific user
-export function notifyUser(userId: number, type: string, data: any) {
-  if (userConnections.has(userId)) {
-    const connections = userConnections.get(userId)!;
-    const message = JSON.stringify({ type, data });
-    
-    connections.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
+/**
+ * Set up Supabase Realtime subscriptions
+ */
+function setupSupabaseRealtime() {
+  // Subscribe to friend requests table
+  const friendRequestSubscription = supabaseClient
+    .channel('friend-requests')
+    .on('postgres_changes', 
+      { event: 'INSERT', schema: 'public', table: 'friend_requests' }, 
+      payload => {
+        const { new: newRequest } = payload;
+        
+        // Find the receiver's client connection
+        const receiverClient = findClientByUserId(newRequest.receiver_id);
+        if (receiverClient) {
+          sendToClient(receiverClient.id, {
+            type: 'friend_request',
+            requestId: newRequest.id,
+            senderId: newRequest.sender_id,
+          });
+        }
       }
-    });
-  }
-}
-
-// Function to broadcast a message to all connected users
-export function broadcast(type: string, data: any) {
-  const message = JSON.stringify({ type, data });
+    )
+    .subscribe();
+    
+  // Subscribe to messages table
+  const messagesSubscription = supabaseClient
+    .channel('messages')
+    .on('postgres_changes', 
+      { event: 'INSERT', schema: 'public', table: 'messages' }, 
+      payload => {
+        const { new: newMessage } = payload;
+        
+        // If it's a personal message, send to receiver
+        if (newMessage.type === 'personal' && newMessage.receiver_id) {
+          const receiverClient = findClientByUserId(newMessage.receiver_id);
+          if (receiverClient) {
+            sendToClient(receiverClient.id, {
+              type: 'new_message',
+              messageId: newMessage.id,
+              senderId: newMessage.sender_id,
+              content: newMessage.content,
+              messageType: newMessage.type,
+            });
+          }
+        }
+        
+        // If it's a gang message, send to all gang members
+        if (newMessage.type === 'gang' && newMessage.gang_id) {
+          // This would require querying gang members - we'll implement this as needed
+        }
+        
+        // Global messages would go to all authenticated clients
+        if (newMessage.type === 'global') {
+          broadcastToAuthenticated({
+            type: 'new_message',
+            messageId: newMessage.id,
+            senderId: newMessage.sender_id,
+            content: newMessage.content,
+            messageType: newMessage.type,
+          });
+        }
+      }
+    )
+    .subscribe();
+    
+  // Add more subscriptions as needed
   
-  userConnections.forEach((connections) => {
-    connections.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(message);
-      }
-    });
-  });
+  // Return subscriptions for cleanup
+  return {
+    friendRequestSubscription,
+    messagesSubscription,
+  };
 }
 
-// Update user status in database
-async function updateUserStatus(userId: number, status: 'online' | 'offline') {
-  try {
-    // Ideally we would update in the database, but for now we'll just track in memory
-    console.log(`User ${userId} is now ${status}`);
-  } catch (error) {
-    console.error('Error updating user status:', error);
-  }
-}
-
-// Broadcast user status change to other users
-function broadcastUserStatus(userId: number, username: string | null, avatar: string | null, status: 'online' | 'offline') {
-  broadcast('friend_status', {
-    userId,
-    username,
-    avatar,
-    status
-  });
-}
-
-// Send list of online users to a client
-async function sendOnlineUsers(ws: WebSocket) {
-  try {
-    const onlineUserIds = Array.from(userConnections.keys());
-    
-    // Get user details from the database
-    const onlineUsers = [];
-    for (const id of onlineUserIds) {
-      const user = await storage.getUser(id);
-      if (user) {
-        onlineUsers.push({
-          userId: user.id,
-          username: user.username,
-          avatar: user.avatar,
-          status: 'online'
-        });
-      }
+/**
+ * Find a client by user ID
+ */
+function findClientByUserId(userId: number): Client | undefined {
+  for (const client of clients.values()) {
+    if (client.userId === userId) {
+      return client;
     }
-    
-    // Send the list to the client
-    ws.send(JSON.stringify({
-      type: 'online_users',
-      data: onlineUsers
-    }));
-  } catch (error) {
-    console.error('Error sending online users:', error);
   }
+  return undefined;
+}
+
+/**
+ * Send a message to a specific client
+ */
+function sendToClient(clientId: string, data: any) {
+  const client = clients.get(clientId);
+  if (client && client.ws.readyState === 1) { // WebSocket.OPEN
+    client.ws.send(JSON.stringify(data));
+  }
+}
+
+/**
+ * Broadcast a message to all authenticated clients
+ */
+function broadcastToAuthenticated(data: any) {
+  for (const client of clients.values()) {
+    if (client.userId && client.ws.readyState === 1) { // WebSocket.OPEN
+      client.ws.send(JSON.stringify(data));
+    }
+  }
+}
+
+/**
+ * Broadcast user status change to all authenticated clients
+ */
+function broadcastUserStatusChange(userId: number, status: 'online' | 'offline' | 'away' | 'busy') {
+  broadcastToAuthenticated({
+    type: 'user_status_change',
+    userId,
+    status,
+  });
+}
+
+/**
+ * Generate a random ID
+ */
+function generateId(): string {
+  return Math.random().toString(36).substr(2, 9);
 }

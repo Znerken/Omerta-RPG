@@ -1,210 +1,311 @@
-import { users, type User, type InsertUser, 
-         userStats, type UserStats, type InsertUserStats,
-         userGangs, type UserGang, type InsertUserGang,
-         gangs, type Gang, type InsertGang } from "@shared/schema";
-import { db, sql } from "./db-supabase";
-import { eq, and, not, isNull, desc, asc, gt, lt } from "drizzle-orm";
+import { db } from './db-supabase';
+import { supabaseClient } from './supabase';
+import { 
+  users, User, InsertUser, 
+  userStatus, UserStatus, InsertUserStatus,
+  userFriends, UserFriend, InsertUserFriend,
+  friendRequests, FriendRequest, InsertFriendRequest
+} from '@shared/schema';
+import { eq, and, desc, asc, sql } from 'drizzle-orm';
+import { PostgresError } from '@neondatabase/serverless';
 import session from "express-session";
 import connectPg from "connect-pg-simple";
-import { supabaseAdmin } from "./supabase";
+import type { IStorage } from './storage';
 
-export interface IStorage {
-  // User methods
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(insertUser: InsertUser): Promise<User>;
-  updateUser(id: number, userData: Partial<User>): Promise<User | undefined>;
-  deleteUser(id: number): Promise<boolean>;
-  getAllUsers(limit?: number): Promise<User[]>;
-  getUserCount(): Promise<number>;
-  
-  // Stats methods
-  getUserStats(userId: number): Promise<UserStats | undefined>;
-  createUserStats(stats: InsertUserStats): Promise<UserStats>;
-  updateUserStats(userId: number, statUpdates: Partial<UserStats>): Promise<UserStats | undefined>;
-  
-  // Gang methods
-  getGang(id: number): Promise<Gang | undefined>;
-  createGang(gangData: InsertGang): Promise<Gang>;
-  updateGang(id: number, updates: Partial<Gang>): Promise<Gang | undefined>;
-  getAllGangs(limit?: number): Promise<Gang[]>;
-  getUserGangs(userId: number): Promise<Gang[]>;
-  addGangMember(memberData: InsertUserGang): Promise<UserGang>;
-  
-  // Session store for authentication
-  sessionStore: session.Store;
-}
-
+// Set up session store
 const PostgresSessionStore = connectPg(session);
+const pool = {
+  query: async (text: string, params: any[]) => {
+    return await db.execute(sql.raw(text, params));
+  }
+};
 
+/**
+ * Supabase Storage Implementation
+ */
 export class SupabaseStorage implements IStorage {
-  sessionStore: session.Store;
-  
+  sessionStore: session.SessionStore;
+
   constructor() {
-    // Set up session store using Supabase PostgreSQL connection
-    const connectionString = process.env.SUPABASE_URL!.replace('supabase', 'supabase-postgres') + '/?apikey=' + process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    
-    this.sessionStore = new PostgresSessionStore({
-      conString: connectionString,
-      createTableIfMissing: true
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
     });
   }
-  
-  // User methods
+
+  // User Methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
-  }
-  
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
-  }
-  
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
-  }
-  
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    
-    // After creating a user, also create their stats
-    await this.createUserStats({
-      userId: user.id,
-      strength: 10,
-      stealth: 10,
-      charisma: 10,
-      intelligence: 10,
-      strengthTrainingCooldown: new Date(),
-      stealthTrainingCooldown: new Date(),
-      charismaTrainingCooldown: new Date(),
-      intelligenceTrainingCooldown: new Date()
-    });
-    
-    return user;
-  }
-  
-  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
-    const [updatedUser] = await db
-      .update(users)
-      .set(userData)
-      .where(eq(users.id, id))
-      .returning();
-    
-    return updatedUser;
-  }
-  
-  async deleteUser(id: number): Promise<boolean> {
     try {
-      // First find the user to get their email
-      const user = await this.getUser(id);
-      
-      if (user?.email) {
-        // Find the Supabase Auth user by email
-        const { data: { users: supaUsers }, error: fetchError } = await supabaseAdmin.auth.admin.listUsers();
-        
-        if (!fetchError && supaUsers) {
-          const supaUser = supaUsers.find(u => u.email === user.email);
-          
-          if (supaUser) {
-            // Delete the user from Supabase Auth
-            await supabaseAdmin.auth.admin.deleteUser(supaUser.id);
-          }
+      const [user] = await db.select().from(users).where(eq(users.id, id));
+      return user;
+    } catch (error) {
+      console.error('Error getting user:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.username, username));
+      return user;
+    } catch (error) {
+      console.error('Error getting user by username:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.email, email));
+      return user;
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      return undefined;
+    }
+  }
+
+  async getUserBySupabaseId(supabaseId: string): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(eq(users.supabaseId, supabaseId));
+      return user;
+    } catch (error) {
+      console.error('Error getting user by Supabase ID:', error);
+      return undefined;
+    }
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    try {
+      const [user] = await db.insert(users).values(userData).returning();
+      return user;
+    } catch (error) {
+      if (error instanceof PostgresError) {
+        if (error.code === '23505') { // Unique violation
+          throw new Error('Username or email already exists');
         }
       }
-      
-      // Delete related records from our database
-      await db.delete(userStats).where(eq(userStats.userId, id));
-      await db.delete(userGangs).where(eq(userGangs.userId, id));
-      
-      // Finally delete the user from our database
-      const result = await db.delete(users).where(eq(users.id, id));
+      console.error('Error creating user:', error);
+      throw error;
+    }
+  }
+
+  async updateUser(id: number, userData: Partial<User>): Promise<User | undefined> {
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set(userData)
+        .where(eq(users.id, id))
+        .returning();
+      return updatedUser;
+    } catch (error) {
+      console.error('Error updating user:', error);
+      return undefined;
+    }
+  }
+
+  // User Status Methods
+  async getUserStatus(userId: number): Promise<UserStatus | undefined> {
+    try {
+      const [status] = await db
+        .select()
+        .from(userStatus)
+        .where(eq(userStatus.userId, userId));
+      return status;
+    } catch (error) {
+      console.error('Error getting user status:', error);
+      return undefined;
+    }
+  }
+
+  async createUserStatus(status: InsertUserStatus): Promise<UserStatus> {
+    try {
+      const [newStatus] = await db
+        .insert(userStatus)
+        .values(status)
+        .returning();
+      return newStatus;
+    } catch (error) {
+      console.error('Error creating user status:', error);
+      throw error;
+    }
+  }
+
+  async updateUserStatus(userId: number, status: Partial<UserStatus>): Promise<UserStatus | undefined> {
+    try {
+      const [updatedStatus] = await db
+        .update(userStatus)
+        .set(status)
+        .where(eq(userStatus.userId, userId))
+        .returning();
+      return updatedStatus;
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      return undefined;
+    }
+  }
+
+  // Friend Methods
+  async getUserFriends(userId: number): Promise<UserFriend[]> {
+    try {
+      // Get all friendships where the user is either user1 or user2
+      const userFriendships = await db
+        .select()
+        .from(userFriends)
+        .where(
+          sql`${userFriends.userId1} = ${userId} OR ${userFriends.userId2} = ${userId}`
+        );
+      return userFriendships;
+    } catch (error) {
+      console.error('Error getting user friends:', error);
+      return [];
+    }
+  }
+
+  async getFriendship(userId1: number, userId2: number): Promise<UserFriend | undefined> {
+    try {
+      // Find friendship regardless of which user is user1 or user2
+      const [friendship] = await db
+        .select()
+        .from(userFriends)
+        .where(
+          sql`(${userFriends.userId1} = ${userId1} AND ${userFriends.userId2} = ${userId2})
+               OR (${userFriends.userId1} = ${userId2} AND ${userFriends.userId2} = ${userId1})`
+        );
+      return friendship;
+    } catch (error) {
+      console.error('Error getting friendship:', error);
+      return undefined;
+    }
+  }
+
+  async createFriendship(friendshipData: InsertUserFriend): Promise<UserFriend> {
+    try {
+      const [friendship] = await db
+        .insert(userFriends)
+        .values(friendshipData)
+        .returning();
+      return friendship;
+    } catch (error) {
+      console.error('Error creating friendship:', error);
+      throw error;
+    }
+  }
+
+  async removeFriendship(userId1: number, userId2: number): Promise<boolean> {
+    try {
+      await db
+        .delete(userFriends)
+        .where(
+          sql`(${userFriends.userId1} = ${userId1} AND ${userFriends.userId2} = ${userId2})
+               OR (${userFriends.userId1} = ${userId2} AND ${userFriends.userId2} = ${userId1})`
+        );
       return true;
     } catch (error) {
-      console.error("Error deleting user:", error);
+      console.error('Error removing friendship:', error);
       return false;
     }
   }
-  
-  async getAllUsers(limit: number = 100): Promise<User[]> {
-    return await db.select().from(users).limit(limit);
+
+  // Friend Request Methods
+  async getFriendRequest(senderId: number, receiverId: number): Promise<FriendRequest | undefined> {
+    try {
+      const [request] = await db
+        .select()
+        .from(friendRequests)
+        .where(
+          and(
+            eq(friendRequests.senderId, senderId),
+            eq(friendRequests.receiverId, receiverId)
+          )
+        );
+      return request;
+    } catch (error) {
+      console.error('Error getting friend request:', error);
+      return undefined;
+    }
   }
-  
-  async getUserCount(): Promise<number> {
-    const [result] = await db.select({
-      count: sql<number>`count(*)`
-    }).from(users);
-    
-    return result?.count || 0;
+
+  async createFriendRequest(requestData: InsertFriendRequest): Promise<FriendRequest> {
+    try {
+      const [request] = await db
+        .insert(friendRequests)
+        .values(requestData)
+        .returning();
+      return request;
+    } catch (error) {
+      console.error('Error creating friend request:', error);
+      throw error;
+    }
   }
-  
-  // Stats methods
-  async getUserStats(userId: number): Promise<UserStats | undefined> {
-    const [stats] = await db.select().from(userStats).where(eq(userStats.userId, userId));
-    return stats;
+
+  async updateFriendRequest(
+    requestId: number,
+    data: Partial<FriendRequest>
+  ): Promise<FriendRequest | undefined> {
+    try {
+      const [updatedRequest] = await db
+        .update(friendRequests)
+        .set(data)
+        .where(eq(friendRequests.id, requestId))
+        .returning();
+      return updatedRequest;
+    } catch (error) {
+      console.error('Error updating friend request:', error);
+      return undefined;
+    }
   }
-  
-  async createUserStats(stats: InsertUserStats): Promise<UserStats> {
-    const [createdStats] = await db.insert(userStats).values(stats).returning();
-    return createdStats;
+
+  async deleteFriendRequest(requestId: number): Promise<boolean> {
+    try {
+      await db
+        .delete(friendRequests)
+        .where(eq(friendRequests.id, requestId));
+      return true;
+    } catch (error) {
+      console.error('Error deleting friend request:', error);
+      return false;
+    }
   }
-  
-  async updateUserStats(userId: number, statUpdates: Partial<UserStats>): Promise<UserStats | undefined> {
-    const [updatedStats] = await db
-      .update(userStats)
-      .set(statUpdates)
-      .where(eq(userStats.userId, userId))
-      .returning();
-    
-    return updatedStats;
+
+  async getPendingFriendRequests(userId: number): Promise<FriendRequest[]> {
+    try {
+      const requests = await db
+        .select()
+        .from(friendRequests)
+        .where(
+          and(
+            eq(friendRequests.receiverId, userId),
+            eq(friendRequests.status, 'pending')
+          )
+        )
+        .orderBy(desc(friendRequests.createdAt));
+      return requests;
+    } catch (error) {
+      console.error('Error getting pending friend requests:', error);
+      return [];
+    }
   }
-  
-  // Gang methods
-  async getGang(id: number): Promise<Gang | undefined> {
-    const [gang] = await db.select().from(gangs).where(eq(gangs.id, id));
-    return gang;
+
+  async getSentFriendRequests(userId: number): Promise<FriendRequest[]> {
+    try {
+      const requests = await db
+        .select()
+        .from(friendRequests)
+        .where(
+          and(
+            eq(friendRequests.senderId, userId),
+            eq(friendRequests.status, 'pending')
+          )
+        )
+        .orderBy(desc(friendRequests.createdAt));
+      return requests;
+    } catch (error) {
+      console.error('Error getting sent friend requests:', error);
+      return [];
+    }
   }
-  
-  async createGang(gangData: InsertGang): Promise<Gang> {
-    const [gang] = await db.insert(gangs).values(gangData).returning();
-    return gang;
-  }
-  
-  async updateGang(id: number, updates: Partial<Gang>): Promise<Gang | undefined> {
-    const [updatedGang] = await db
-      .update(gangs)
-      .set(updates)
-      .where(eq(gangs.id, id))
-      .returning();
-    
-    return updatedGang;
-  }
-  
-  async getAllGangs(limit: number = 100): Promise<Gang[]> {
-    return await db.select().from(gangs).limit(limit);
-  }
-  
-  async getUserGangs(userId: number): Promise<Gang[]> {
-    // Get all gangs that the user is a member of
-    const query = db
-      .select({
-        gang: gangs
-      })
-      .from(userGangs)
-      .innerJoin(gangs, eq(userGangs.gangId, gangs.id))
-      .where(eq(userGangs.userId, userId));
-    
-    const result = await query;
-    return result.map(r => r.gang);
-  }
-  
-  async addGangMember(memberData: InsertUserGang): Promise<UserGang> {
-    const [membership] = await db.insert(userGangs).values(memberData).returning();
-    return membership;
-  }
+
+  // Additional methods will be added as needed...
 }
 
-// Export an instance of the storage
 export const storage = new SupabaseStorage();

@@ -1,40 +1,70 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { supabaseAdmin } from './supabase';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import * as schema from '@shared/schema';
-import * as casinoSchema from '@shared/schema-casino';
+import dotenv from 'dotenv';
 
-// We'll use the Postgres.js adapter for Drizzle with Supabase
-// Get Supabase connection string from environment
-const connectionString = process.env.SUPABASE_URL!.replace('supabase', 'supabase-postgres') + '/?apikey=' + process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Load environment variables
+dotenv.config();
 
-// Create Postgres client
-const client = postgres(connectionString, { max: 1 });
+// Check for database URL
+if (!process.env.DATABASE_URL) {
+  throw new Error('Missing DATABASE_URL environment variable');
+}
 
-// Create Drizzle database instance
-export const db: PostgresJsDatabase<typeof schema & typeof casinoSchema> = drizzle(client, { 
-  schema: { ...schema, ...casinoSchema } 
+// Create PostgreSQL connection
+const queryClient = postgres(process.env.DATABASE_URL, {
+  ssl: process.env.NODE_ENV === 'production' ? 'require' : false,
+  max: 10, // Maximum number of connections
+  idle_timeout: 30, // Max idle time for connections in seconds
 });
 
-// Function to initialize the database tables if needed
-export async function initializeDatabase() {
+// Create drizzle ORM instance
+export const db = drizzle(queryClient, { 
+  schema,
+  logger: process.env.NODE_ENV !== 'production',
+});
+
+/**
+ * Initialize the database connection and verify it works
+ * @returns true if connection is successful, false otherwise
+ */
+export async function initializeDatabase(): Promise<boolean> {
   try {
-    console.log('Checking database connection...');
+    // Test query to verify database connection
+    const result = await db.select({ count: schema.users.id.count() }).from(schema.users);
     
-    // Verify that we can connect and query
-    const result = await db.execute(sql`SELECT NOW()`);
-    console.log('Database connection successful:', result);
-    
-    // Here we could add any initialization queries or migrations
+    console.log(`Database connection successful. Users in database: ${result[0].count}`);
     
     return true;
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('Database connection failed:', error);
     return false;
   }
 }
 
-// SQL helper for raw queries
-import { sql } from 'drizzle-orm';
-export { sql };
+/**
+ * Apply database migrations
+ * This function should be called during server initialization
+ */
+export async function runMigrations(): Promise<void> {
+  try {
+    console.log('Running database migrations...');
+    
+    // Create a separate connection for migrations
+    const migrationClient = postgres(process.env.DATABASE_URL, { 
+      max: 1,
+      ssl: process.env.NODE_ENV === 'production' ? 'require' : false,
+    });
+    
+    const migrationDb = drizzle(migrationClient);
+    
+    // Apply migrations from the drizzle folder
+    await migrate(migrationDb, { migrationsFolder: './drizzle' });
+    
+    console.log('Database migrations completed successfully');
+  } catch (error) {
+    console.error('Failed to run database migrations:', error);
+    throw error;
+  }
+}
