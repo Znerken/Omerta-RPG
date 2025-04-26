@@ -1,23 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
-import { decode, JwtPayload } from 'jsonwebtoken';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
-// Get Supabase secrets from environment
-const supabaseUrl = process.env.SUPABASE_URL ?? '';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''; 
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? '';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Check if environment variables are set
-if (!supabaseUrl || !supabaseKey || !supabaseAnonKey) {
-  console.error('Missing required Supabase environment variables');
-  console.error('Make sure SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SUPABASE_ANON_KEY are set in .env file');
-  process.exit(1);
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing Supabase environment variables');
 }
 
-// Create Supabase admin client with service role key (for server-side operations)
+/**
+ * Supabase admin client for server-side operations
+ * Uses the service role key which has full access to all tables
+ * Only use this on the server, never expose this client to the client-side
+ */
 export const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: false,
@@ -26,82 +24,117 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
 });
 
 /**
- * Validates a Supabase JWT token
- * @param token JWT token from client
- * @returns User data if token is valid, null if invalid
+ * Verify a JWT token from Supabase Auth
+ * @param token JWT token from Authorization header
+ * @returns User data if token is valid, null otherwise
  */
-export async function validateSupabaseToken(token: string) {
-  if (!token) return null;
-
+export async function verifyToken(token: string) {
   try {
-    // Extract JWT parts
-    const jwt = decodeJWT(token);
-    if (!jwt) return null;
-
-    // In a production environment, we'd verify the signature here
-    // For now, we'll validate with Supabase API
-    const { data, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !data.user) {
-      console.warn('Invalid token:', error?.message);
+    // Remove Bearer prefix if present
+    const jwt = token.replace(/^Bearer\s/, '');
+    
+    const { data, error } = await supabaseAdmin.auth.getUser(jwt);
+    
+    if (error) {
+      console.error('Token verification error:', error);
       return null;
     }
-
+    
     return data.user;
   } catch (error) {
-    console.error('Error validating token:', error);
+    console.error('Token verification error:', error);
     return null;
   }
 }
 
 /**
- * Decode a JWT token
- * @param token JWT token
- * @returns Decoded JWT payload or null
- */
-function decodeJWT(token: string): JwtPayload | null {
-  try {
-    // Note: This doesn't verify the signature, just decodes the payload
-    const decoded = decode(token);
-    return decoded as JwtPayload;
-  } catch (error) {
-    console.error('Error decoding JWT:', error);
-    return null;
-  }
-}
-
-/**
- * Check if a token is expired
- * @param exp Expiration timestamp
- * @returns True if token is expired, false otherwise
- */
-function isTokenExpired(exp: number | undefined): boolean {
-  if (!exp) return true;
-  
-  // Add a small buffer to account for clock skew
-  const bufferSeconds = 30;
-  const currentTime = Math.floor(Date.now() / 1000);
-  
-  return currentTime >= exp - bufferSeconds;
-}
-
-/**
- * Get Supabase user by ID using admin client
+ * Get user by ID from Supabase Auth
  * @param userId Supabase user ID
  * @returns User data if found, null otherwise
  */
-export async function getSupabaseUserById(userId: string) {
+export async function getUserById(userId: string) {
   try {
     const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
     
-    if (error || !data.user) {
-      console.warn('User not found:', error?.message);
+    if (error) {
+      console.error('Get user by ID error:', error);
       return null;
     }
     
     return data.user;
   } catch (error) {
-    console.error('Error getting user by ID:', error);
+    console.error('Get user by ID error:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a new user in Supabase Auth
+ * @param email User email
+ * @param password User password
+ * @param userData Additional user data
+ * @returns User data if created, null otherwise
+ */
+export async function createUser(email: string, password: string, userData: any = {}) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: userData,
+    });
+    
+    if (error) {
+      console.error('Create user error:', error);
+      return null;
+    }
+    
+    return data.user;
+  } catch (error) {
+    console.error('Create user error:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a user from Supabase Auth
+ * @param userId Supabase user ID
+ * @returns True if deleted, false otherwise
+ */
+export async function deleteUser(userId: string) {
+  try {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (error) {
+      console.error('Delete user error:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Delete user error:', error);
+    return false;
+  }
+}
+
+/**
+ * Update a user in Supabase Auth
+ * @param userId Supabase user ID
+ * @param userData User data to update
+ * @returns Updated user data if successful, null otherwise
+ */
+export async function updateUser(userId: string, userData: any) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, userData);
+    
+    if (error) {
+      console.error('Update user error:', error);
+      return null;
+    }
+    
+    return data.user;
+  } catch (error) {
+    console.error('Update user error:', error);
     return null;
   }
 }

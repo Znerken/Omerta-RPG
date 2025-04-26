@@ -1,8 +1,6 @@
-import { Express, Request, Response, NextFunction } from 'express';
-import { validateSupabaseToken } from './supabase';
-import { db } from './db-supabase';
-import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { Request, Response, NextFunction, Express } from 'express';
+import { verifyToken, getUserById } from './supabase';
+import { storage } from './storage';
 
 /**
  * Custom express request with user property
@@ -21,119 +19,111 @@ declare global {
  * @param app Express app
  */
 export function setupAuthRoutes(app: Express) {
-  // Authentication middleware
+  // Auth middleware - verify JWT token and attach user to request
   app.use(async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return next(); // No auth header, continue without user
+    }
+    
     try {
-      // Skip auth for specific routes
-      if (req.path === '/api/register' && req.method === 'POST') {
-        return next();
-      }
-
-      // Check for auth header
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        // Allow unauthenticated requests to continue but without user data
-        return next();
-      }
-
-      // Extract token
-      const token = authHeader.split(' ')[1];
-
-      // Validate token with Supabase
-      const supabaseUser = await validateSupabaseToken(token);
+      // Verify JWT token
+      const supabaseUser = await verifyToken(authHeader);
+      
       if (!supabaseUser) {
-        // Token is invalid, but don't block the request
-        return next();
+        return next(); // Invalid token, continue without user
       }
-
-      // Store Supabase user in request
-      req.supabaseUser = supabaseUser;
-
-      // Get user from database using supabase ID
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.supabaseId, supabaseUser.id));
-
+      
+      // Look up user in our database by Supabase ID
+      const user = await storage.getUserBySupabaseId(supabaseUser.id);
+      
       if (user) {
-        // Store user in request
+        // Set both users on the request
         req.user = user;
+        req.supabaseUser = supabaseUser;
+      } else {
+        console.warn(`Supabase user ${supabaseUser.id} not found in database`);
       }
-
+      
       next();
     } catch (error) {
       console.error('Auth middleware error:', error);
       next();
     }
   });
-
-  // Add auth-protected middleware
+  
+  // User endpoint - returns current user data
   app.use('/api/user', authProtected, (req: Request, res: Response) => {
-    // User is already attached to req by the authProtected middleware
     res.json(req.user);
   });
-
-  // Register API
+  
+  // Register endpoint - create a new user
   app.post('/api/register', async (req: Request, res: Response) => {
     try {
-      const { username, email, password, supabaseId } = req.body;
-
-      // Validate input
-      if (!username || !email || !password || !supabaseId) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      const { username, email, password, confirmPassword, supabaseId } = req.body;
+      
+      if (!username || !email || !password || !confirmPassword) {
+        return res.status(400).json({ message: 'Missing required fields' });
       }
-
+      
+      if (password !== confirmPassword) {
+        return res.status(400).json({ message: 'Passwords do not match' });
+      }
+      
       // Check if username already exists
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
-
+      const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
-        return res.status(400).json({ error: 'Username already exists' });
+        return res.status(400).json({ message: 'Username already taken' });
       }
-
+      
       // Check if email already exists
-      const [existingEmail] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email));
-
+      const existingEmail = await storage.getUserByEmail(email);
       if (existingEmail) {
-        return res.status(400).json({ error: 'Email already exists' });
+        return res.status(400).json({ message: 'Email already in use' });
       }
-
-      // Insert new user
-      const [user] = await db
-        .insert(users)
-        .values({
-          username,
-          email,
-          password: 'SUPABASE_AUTH', // We don't store passwords anymore
-          supabaseId,
-          level: 1,
-          cash: 1000,
-          bank: 0,
-          respect: 0,
-          experience: 0,
-          health: 100,
-          max_health: 100,
-          energy: 100,
-          max_energy: 100,
-          is_admin: false,
-          banned: false,
-          jailed: false,
-        })
-        .returning();
-
-      // Create initial profile, stats, etc here as needed
-      // This could be moved to separate functions
-
-      // Return new user
-      res.status(201).json(user);
+      
+      // Create user in our database
+      const user = await storage.createUser({
+        username,
+        email,
+        password: 'SUPABASE_AUTH', // We don't store password, Supabase does
+        supabaseId, // Link to Supabase user if ID provided
+        isAdmin: false,
+        cash: 1000, // Starting cash
+        respect: 0,
+        level: 1,
+        experience: 0,
+        health: 100,
+        maxHealth: 100,
+        energy: 100,
+        maxEnergy: 100,
+        strength: 10,
+        defense: 10,
+        dexterity: 10,
+        intelligence: 10,
+        charisma: 10,
+        avatar: null,
+        profileTheme: 'classic',
+        rank: 'Street Thug',
+        jailStatus: false,
+        jailReleaseTime: null,
+        lastAction: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      
+      res.status(201).json({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        supabaseId: user.supabaseId,
+        createdAt: user.createdAt,
+      });
     } catch (error) {
       console.error('Register error:', error);
-      res.status(500).json({ error: 'Server error during registration' });
+      res.status(500).json({ message: 'Failed to register user' });
     }
   });
 }
@@ -143,8 +133,9 @@ export function setupAuthRoutes(app: Express) {
  */
 export function authProtected(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ message: 'Authentication required' });
   }
+  
   next();
 }
 
@@ -153,11 +144,11 @@ export function authProtected(req: Request, res: Response, next: NextFunction) {
  */
 export function adminProtected(req: Request, res: Response, next: NextFunction) {
   if (!req.user) {
-    return res.status(401).json({ error: 'Authentication required' });
+    return res.status(401).json({ message: 'Authentication required' });
   }
   
-  if (!req.user.is_admin) {
-    return res.status(403).json({ error: 'Admin access required' });
+  if (!req.user.isAdmin) {
+    return res.status(403).json({ message: 'Admin privileges required' });
   }
   
   next();

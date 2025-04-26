@@ -1,74 +1,75 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+import { createClient, User } from '@supabase/supabase-js';
 
-// Environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? '';
+// Initialize Supabase client with environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// Validate Supabase config
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
-}
-
-// Create Supabase client
-export const supabase = createClient<Database>(
-  supabaseUrl,
-  supabaseAnonKey,
-  {
-    auth: {
-      persistSession: true,
-      storageKey: 'omerta-auth-token',
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  }
-);
-
-/**
- * Get current user session
- * @returns User session if logged in, null otherwise
- */
-export async function getSession() {
-  const { data, error } = await supabase.auth.getSession();
-  
-  if (error) {
-    console.error('Error getting session:', error);
-    return null;
-  }
-  
-  return data.session;
+  console.error(
+    'Supabase environment variables are not set. Make sure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are defined in your .env file.'
+  );
 }
 
 /**
- * Get current user
- * @returns User if logged in, null otherwise
+ * Supabase client instance
+ * Use this for most Supabase operations
  */
-export async function getUser() {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (error || !user) {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
+
+/**
+ * Get the current authenticated user
+ * @returns User object or null if not authenticated
+ */
+export async function getUser(): Promise<User | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  } catch (error) {
     console.error('Error getting user:', error);
     return null;
   }
-  
-  return user;
+}
+
+/**
+ * Get the current authentication token
+ * @returns JWT token or null
+ */
+export async function getAuthToken(): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
 }
 
 /**
  * Sign in with email and password
  * @param email User email
  * @param password User password
- * @returns User data if successful, throws error otherwise
+ * @returns User object or throws an error
  */
-export async function signInWithEmail(email: string, password: string) {
+export async function signInWithEmail(email: string, password: string): Promise<User> {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
-  
+
   if (error) {
     throw error;
   }
-  
+
+  if (!data.user) {
+    throw new Error('No user returned from sign-in');
+  }
+
   return data.user;
 }
 
@@ -76,10 +77,14 @@ export async function signInWithEmail(email: string, password: string) {
  * Sign up with email and password
  * @param email User email
  * @param password User password
- * @param metadata Additional user metadata
- * @returns User data if successful, throws error otherwise
+ * @param metadata Optional user metadata
+ * @returns User object or throws an error
  */
-export async function signUpWithEmail(email: string, password: string, metadata?: { [key: string]: any }) {
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  metadata?: { [key: string]: any }
+): Promise<User> {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -87,160 +92,127 @@ export async function signUpWithEmail(email: string, password: string, metadata?
       data: metadata,
     },
   });
-  
+
   if (error) {
     throw error;
   }
-  
+
+  if (!data.user) {
+    throw new Error('No user returned from sign-up');
+  }
+
   return data.user;
 }
 
 /**
- * Sign out current user
- * @returns true if successful, false otherwise
+ * Sign out the current user
  */
-export async function signOut(): Promise<boolean> {
+export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut();
   
   if (error) {
     console.error('Error signing out:', error);
-    return false;
+    throw error;
   }
-  
-  return true;
 }
 
 /**
- * Reset password
+ * Reset password for a user
  * @param email User email
- * @returns true if email sent, false otherwise
+ * @returns 
  */
-export async function resetPassword(email: string): Promise<boolean> {
+export async function resetPassword(email: string): Promise<void> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/reset-password`,
+    redirectTo: `${window.location.origin}/reset-password`,
   });
-  
+
   if (error) {
-    console.error('Error resetting password:', error);
-    return false;
+    throw error;
   }
-  
-  return true;
 }
 
 /**
  * Update user password
- * @param newPassword New password
- * @returns true if successful, false otherwise
+ * @param password New password
  */
-export async function updatePassword(newPassword: string): Promise<boolean> {
+export async function updatePassword(password: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({
-    password: newPassword,
+    password,
   });
-  
+
   if (error) {
-    console.error('Error updating password:', error);
-    return false;
+    throw error;
   }
-  
-  return true;
 }
 
 /**
- * Update user profile
- * @param data Profile data to update
- * @returns Updated user if successful, null otherwise
+ * Get user by ID (admin only)
+ * This should only be used on the server side
+ * @param userId Supabase user ID
  */
-export async function updateProfile(data: { [key: string]: any }) {
-  const { data: userData, error } = await supabase.auth.updateUser({
-    data,
-  });
+export async function getUserById(userId: string): Promise<User | null> {
+  const { data: { user }, error } = await supabase.auth.admin.getUserById(userId);
   
   if (error) {
-    console.error('Error updating profile:', error);
+    console.error('Error getting user by ID:', error);
     return null;
   }
   
-  return userData.user;
+  return user;
 }
 
 /**
- * Get auth token for use with API requests
- * @returns JWT token if logged in, null otherwise
+ * Listen for auth state changes
+ * @param callback Function to call when auth state changes
  */
-export async function getAuthToken(): Promise<string | null> {
-  const session = await getSession();
-  return session?.access_token ?? null;
+export function onAuthStateChange(
+  callback: (event: string, session: any) => void
+): () => void {
+  const { data } = supabase.auth.onAuthStateChange(callback);
+  return () => data.subscription.unsubscribe();
 }
 
-// Interfaces for TypeScript
-export interface Database {
-  public: {
-    Tables: {
-      users: {
-        Row: {
-          id: number;
-          username: string;
-          email: string;
-          created_at: string;
-          updated_at: string;
-          supabase_id: string;
-          is_admin: boolean;
-          banned: boolean;
-          ban_reason: string | null;
-          jailed: boolean;
-          jail_reason: string | null;
-          jail_until: string | null;
-        };
-        Insert: {
-          username: string;
-          email: string;
-          supabase_id: string;
-          is_admin?: boolean;
-          banned?: boolean;
-          ban_reason?: string | null;
-          jailed?: boolean;
-          jail_reason?: string | null;
-          jail_until?: string | null;
-        };
-        Update: {
-          username?: string;
-          email?: string;
-          supabase_id?: string;
-          is_admin?: boolean;
-          banned?: boolean;
-          ban_reason?: string | null;
-          jailed?: boolean;
-          jail_reason?: string | null;
-          jail_until?: string | null;
-        };
-      };
-      user_profiles: {
-        Row: {
-          id: number;
-          user_id: number;
-          avatar: string | null;
-          banner: string | null;
-          bio: string | null;
-          location: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          user_id: number;
-          avatar?: string | null;
-          banner?: string | null;
-          bio?: string | null;
-          location?: string | null;
-        };
-        Update: {
-          user_id?: number;
-          avatar?: string | null;
-          banner?: string | null;
-          bio?: string | null;
-          location?: string | null;
-        };
-      };
-    };
+/**
+ * Set up realtime subscription
+ * @param channel Channel name
+ * @param eventHandler Function to handle events
+ */
+export function subscribeToChannel(
+  channel: string,
+  eventHandler: (payload: any) => void
+): () => void {
+  const subscription = supabase
+    .channel(channel)
+    .on('broadcast', { event: 'message' }, eventHandler)
+    .subscribe();
+
+  return () => {
+    subscription.unsubscribe();
   };
+}
+
+/**
+ * Upload file to Supabase storage
+ * @param bucket Bucket name
+ * @param path File path
+ * @param file File object
+ */
+export async function uploadFile(bucket: string, path: string, file: File): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: true
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(data.path);
+
+  return publicUrl;
 }
