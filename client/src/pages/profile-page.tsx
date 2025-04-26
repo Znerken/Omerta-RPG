@@ -29,7 +29,7 @@ import {
 } from "@/components/profile/ProfileCustomization";
 import {
   PROFILE_WIDGETS,
-  type ProfileWidget,
+  ProfileWidget,
   type WidgetPosition,
   WidgetContainer
 } from "@/components/profile/ProfileWidgets";
@@ -1077,19 +1077,11 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       {/* Top Widgets Area */}
       {selectedWidgets.filter(w => w.position === 'top').length > 0 && (
         <div className="mb-6">
-          <WidgetContainer position="top">
-            {selectedWidgets
-              .filter(widget => widget.position === 'top')
-              .map(widget => (
-                <ProfileWidget 
-                  key={widget.id} 
-                  widget={widget} 
-                  userData={userProfile}
-                  position="top"
-                />
-              ))
-            }
-          </WidgetContainer>
+          <WidgetContainer 
+            widgets={selectedWidgets.filter(widget => widget.position === 'top')} 
+            userData={userProfile}
+            position="top"
+          />
         </div>
       )}
       
@@ -1097,19 +1089,11 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         {/* Left Widgets Area */}
         {selectedWidgets.filter(w => w.position === 'left').length > 0 && (
           <div className="xl:col-span-3">
-            <WidgetContainer position="left">
-              {selectedWidgets
-                .filter(widget => widget.position === 'left')
-                .map(widget => (
-                  <ProfileWidget 
-                    key={widget.id} 
-                    widget={widget} 
-                    userData={userProfile}
-                    position="left"
-                  />
-                ))
-              }
-            </WidgetContainer>
+            <WidgetContainer
+              widgets={selectedWidgets.filter(widget => widget.position === 'left')}
+              userData={userProfile}
+              position="left"
+            />
           </div>
         )}
         
