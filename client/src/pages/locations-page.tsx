@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import MafiaLayout from "@/components/layout/mafia-layout";
+import { MafiaLayout } from "@/components/layout/mafia-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 import ChallengeMap from "@/components/challenges/ChallengeMap";
 

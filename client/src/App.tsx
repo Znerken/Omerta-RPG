@@ -33,6 +33,7 @@ import DrugsPage from "@/pages/drugs-page";
 import CasinoPage from "@/pages/casino-page";
 import FriendsPage from "@/pages/friends-page";
 import FriendSystemTestPage from "@/pages/friend-system-test";
+import LocationsPage from "@/pages/locations-page";
 
 // Protected route with layout wrapper
 function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
@@ -160,6 +161,12 @@ function AppRouter() {
       <Route path="/friend-system-test">
         {() => (
           <ProtectedRoute path="/friend-system-test" component={() => <ProtectedPage component={FriendSystemTestPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/locations">
+        {() => (
+          <ProtectedRoute path="/locations" component={() => <ProtectedPage component={LocationsPage} />} />
         )}
       </Route>
       
