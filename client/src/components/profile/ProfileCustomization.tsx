@@ -15,7 +15,8 @@ import {
   PaintBucket,
   Shapes,
   Sparkle,
-  Settings
+  Settings,
+  LayoutGrid
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
