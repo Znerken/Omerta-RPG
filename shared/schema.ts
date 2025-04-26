@@ -360,6 +360,7 @@ export const insertUserStatusSchema = createInsertSchema(userStatus).pick({
   userId: true,
   status: true,
   lastLocation: true,
+  lastActive: true,
 });
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
