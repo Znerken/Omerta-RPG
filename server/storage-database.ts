@@ -1202,6 +1202,19 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     }
   }
   
+  async getTopUsersByCash(limit: number = 10): Promise<User[]> {
+    try {
+      return await db
+        .select()
+        .from(users)
+        .orderBy(desc(users.cash))
+        .limit(limit);
+    } catch (error) {
+      console.error("Error in getTopUsersByCash:", error);
+      return [];
+    }
+  }
+  
   // Release a user from jail
   async releaseFromJail(userId: number): Promise<User | undefined> {
     try {

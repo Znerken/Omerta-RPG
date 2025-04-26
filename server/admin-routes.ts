@@ -23,6 +23,11 @@ const banUserSchema = z.object({
   duration: z.number().positive("Duration must be positive"), // Duration in milliseconds
 });
 
+const jailUserSchema = z.object({
+  reason: z.string().min(3, "Reason must be at least 3 characters"),
+  duration: z.number().positive("Duration must be positive"), // Duration in minutes
+});
+
 const editStatsSchema = z.object({
   strength: z.number().min(1).max(100),
   stealth: z.number().min(1).max(100),
@@ -167,6 +172,72 @@ export function registerAdminRoutes(app: Express) {
     } catch (error) {
       console.error("Error unbanning user:", error);
       res.status(400).json({ message: "Failed to unban user", error: error.message });
+    }
+  });
+
+  // Jail a user
+  app.post("/api/admin/users/:id/jail", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { reason, duration } = jailUserSchema.parse(req.body);
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.isAdmin) {
+        return res.status(403).json({ message: "Cannot jail an admin user" });
+      }
+      
+      // Calculate jail end time (duration is in minutes)
+      const jailTimeEnd = new Date();
+      jailTimeEnd.setMinutes(jailTimeEnd.getMinutes() + duration);
+      
+      await storage.updateUser(userId, {
+        isJailed: true,
+        jailTimeEnd: jailTimeEnd,
+        jailReason: reason
+      });
+      
+      res.json({
+        message: `User ${user.username} has been jailed until ${jailTimeEnd.toLocaleString()}`,
+        jailTimeEnd,
+      });
+    } catch (error) {
+      console.error("Error jailing user:", error);
+      res.status(400).json({ message: "Failed to jail user", error: error.message });
+    }
+  });
+  
+  // Release a user from jail
+  app.post("/api/admin/users/:id/release", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (!user.isJailed) {
+        return res.status(400).json({ message: "User is not jailed" });
+      }
+      
+      await storage.updateUser(userId, {
+        isJailed: false,
+        jailTimeEnd: null,
+        jailReason: null
+      });
+      
+      res.json({
+        message: `User ${user.username} has been released from jail`,
+      });
+    } catch (error) {
+      console.error("Error releasing user from jail:", error);
+      res.status(400).json({ message: "Failed to release user from jail", error: error.message });
     }
   });
   

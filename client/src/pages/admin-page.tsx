@@ -49,7 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle, Code, WrenchIcon } from "lucide-react";
+import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle, Code, WrenchIcon, Prison, Unlock } from "lucide-react";
 import PageHeader from "../components/layout/page-header";
 import { PageSection } from "../components/layout/page-section";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -89,6 +89,14 @@ const banUserSchema = z.object({
     }),
 });
 
+const jailUserSchema = z.object({
+  reason: z.string().min(3, { message: "Reason must be at least 3 characters" }),
+  duration: z.string().transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val > 0, {
+      message: "Duration must be a positive number",
+    }),
+});
+
 const editStatsSchema = z.object({
   strength: z.string().transform((val) => Number(val))
     .refine((val) => !isNaN(val) && val >= 1 && val <= 100, {
@@ -119,6 +127,7 @@ type UserSearchValues = z.infer<typeof userSearchSchema>;
 type GiveCashValues = z.infer<typeof giveCashSchema>;
 type GiveXpValues = z.infer<typeof giveXpSchema>;
 type BanUserValues = z.infer<typeof banUserSchema>;
+type JailUserValues = z.infer<typeof jailUserSchema>;
 type EditStatsValues = z.infer<typeof editStatsSchema>;
 type GrantAchievementValues = z.infer<typeof grantAchievementSchema>;
 
@@ -130,6 +139,7 @@ export default function AdminPage() {
   const [cashDialogOpen, setCashDialogOpen] = useState(false);
   const [xpDialogOpen, setXpDialogOpen] = useState(false);
   const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const [jailDialogOpen, setJailDialogOpen] = useState(false);
   const [statsDialogOpen, setStatsDialogOpen] = useState(false);
   const [achievementDialogOpen, setAchievementDialogOpen] = useState(false);
   const [clearLabProductionsDialogOpen, setClearLabProductionsDialogOpen] = useState(false);
@@ -161,6 +171,14 @@ export default function AdminPage() {
 
   const banForm = useForm<BanUserValues>({
     resolver: zodResolver(banUserSchema),
+    defaultValues: {
+      reason: "",
+      duration: "24", // Default 24 hours
+    },
+  });
+  
+  const jailForm = useForm<JailUserValues>({
+    resolver: zodResolver(jailUserSchema),
     defaultValues: {
       reason: "",
       duration: "24", // Default 24 hours
@@ -398,6 +416,88 @@ export default function AdminPage() {
       });
     },
   });
+  
+  const jailUserMutation = useMutation({
+    mutationFn: async ({ userId, reason, duration }: { userId: number; reason: string; duration: number }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/jail`, { reason, duration: duration * 60 * 60 * 1000 }); // Convert hours to ms
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "User Jailed",
+        description: data.message,
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: User Jailed",
+        message: data.message,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      setJailDialogOpen(false);
+      jailForm.reset();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", selectedUserId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Jail User",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to jail user: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
+  
+  const releaseFromJailMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/release`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "User Released From Jail",
+        description: data.message,
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: User Released From Jail",
+        message: data.message,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", selectedUserId] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Release User From Jail",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to release user from jail: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
 
   const editStatsMutation = useMutation({
     mutationFn: async ({ userId, stats }: { userId: number; stats: EditStatsValues }) => {
@@ -566,6 +666,22 @@ export default function AdminPage() {
   const onUnbanUser = () => {
     if (selectedUserId) {
       unbanUserMutation.mutate(selectedUserId);
+    }
+  };
+  
+  const onJailUserSubmit = (data: JailUserValues) => {
+    if (selectedUserId) {
+      jailUserMutation.mutate({
+        userId: selectedUserId,
+        reason: data.reason,
+        duration: data.duration,
+      });
+    }
+  };
+  
+  const onReleaseFromJail = () => {
+    if (selectedUserId) {
+      releaseFromJailMutation.mutate(selectedUserId);
     }
   };
 
@@ -931,10 +1047,21 @@ export default function AdminPage() {
                                 size="sm"
                                 onClick={() => {
                                   setSelectedUserId(user.id);
-                                  onUnbanUser();
+                                  onReleaseFromJail();
                                 }}
+                                disabled={releaseFromJailMutation.isPending && selectedUserId === user.id}
                               >
-                                Release
+                                {releaseFromJailMutation.isPending && selectedUserId === user.id ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    Releasing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Unlock className="h-4 w-4 mr-2" />
+                                    Release
+                                  </>
+                                )}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -1200,20 +1327,30 @@ export default function AdminPage() {
                   <Button
                     variant="destructive"
                     className="flex items-center"
-                    onClick={onUnbanUser}
+                    onClick={onReleaseFromJail}
                   >
                     <UserCheck className="h-4 w-4 mr-2" />
                     Release from Jail
                   </Button>
                 ) : (
-                  <Button
-                    variant="destructive"
-                    className="flex items-center"
-                    onClick={() => setBanDialogOpen(true)}
-                  >
-                    <Ban className="h-4 w-4 mr-2" />
-                    Ban User
-                  </Button>
+                  <>
+                    <Button
+                      variant="destructive"
+                      className="flex items-center"
+                      onClick={() => setBanDialogOpen(true)}
+                    >
+                      <Ban className="h-4 w-4 mr-2" />
+                      Ban User
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex items-center"
+                      onClick={() => setJailDialogOpen(true)}
+                    >
+                      <Prison className="h-4 w-4 mr-2" />
+                      Send to Jail
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -1544,6 +1681,95 @@ export default function AdminPage() {
                     </>
                   ) : (
                     "Save Changes"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Jail User Dialog */}
+      <Dialog open={jailDialogOpen} onOpenChange={setJailDialogOpen}>
+        <DialogContent className="bg-dark-surface border-gray-700">
+          <DialogHeader>
+            <DialogTitle>Send to Jail</DialogTitle>
+            <DialogDescription>
+              Send the user to jail for violating rules
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...jailForm}>
+            <form onSubmit={jailForm.handleSubmit(onJailUserSubmit)} className="space-y-4">
+              <FormField
+                control={jailForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Reason for jailing"
+                        className="bg-dark-lighter border-gray-700"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={jailForm.control}
+                name="duration"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duration (hours)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-dark-lighter border-gray-700">
+                          <SelectValue placeholder="Select duration" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-dark-surface border-gray-700">
+                        <SelectItem value="1">1 hour</SelectItem>
+                        <SelectItem value="3">3 hours</SelectItem>
+                        <SelectItem value="6">6 hours</SelectItem>
+                        <SelectItem value="12">12 hours</SelectItem>
+                        <SelectItem value="24">24 hours</SelectItem>
+                        <SelectItem value="48">2 days</SelectItem>
+                        <SelectItem value="72">3 days</SelectItem>
+                        <SelectItem value="168">1 week</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setJailDialogOpen(false)}
+                  className="bg-dark-lighter"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="destructive"
+                  disabled={jailUserMutation.isPending}
+                >
+                  {jailUserMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                    </>
+                  ) : (
+                    "Send to Jail"
                   )}
                 </Button>
               </DialogFooter>
