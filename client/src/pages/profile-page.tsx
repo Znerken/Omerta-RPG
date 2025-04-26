@@ -745,18 +745,30 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
           <div className="absolute left-1/2 top-1/3 transform -translate-x-1/2 z-20">
             <div className="relative">
               <div className="relative perspective-1000">
-                {/* Decorative circular frame around avatar with enhanced glow */}
-                <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-secondary/30 to-primary/30 animate-pulse blur-md"></div>
+                {/* Position the customization button in top-right corner, only when logged in and viewing own profile */}
+                {isViewingOwnProfile && !isEditing && (
+                  <div className="absolute -top-2 -right-2 z-30">
+                    <ProfileCustomizationButton 
+                      onOpenCustomization={() => setIsCustomizationOpen(true)}
+                    />
+                  </div>
+                )}
+                
+                {/* Standard glow only when no custom frame is selected */}
+                {(!selectedFrame || !selectedFrame.glow) && (
+                  <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-secondary/30 to-primary/30 animate-pulse blur-md"></div>
+                )}
                 
                 <UserAvatar 
                   username={username} 
                   avatarUrl={avatarPreview || userProfile.avatar} 
                   size="xl" 
                   linkToProfile={false}
-                  withBorder={true}
-                  withRing={true}
+                  withBorder={!selectedFrame} // Only use default border if no frame is selected
+                  withRing={!selectedFrame} // Only use default ring if no frame is selected
                   borderColor="border-background"
                   ringColor="ring-primary/50"
+                  frame={selectedFrame}
                   className="shadow-lg relative z-10 transform hover:scale-105 transition-transform duration-300"
                 />
                 

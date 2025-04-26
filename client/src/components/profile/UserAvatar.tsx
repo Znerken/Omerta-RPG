@@ -1,6 +1,8 @@
 import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link } from "wouter";
+import { AvatarFrame } from "@/components/profile/ProfileCustomization";
+import { cn } from "@/lib/utils";
 
 interface UserAvatarProps {
   username: string;
@@ -12,6 +14,7 @@ interface UserAvatarProps {
   borderColor?: string;
   ringColor?: string;
   className?: string;
+  frame?: AvatarFrame;
 }
 
 // Get user initials for the avatar fallback
@@ -34,6 +37,7 @@ export function UserAvatar({
   borderColor = "border-background",
   ringColor = "ring-primary/20",
   className = "",
+  frame
 }: UserAvatarProps) {
   // Define size classes
   const sizeClasses = {
@@ -43,28 +47,63 @@ export function UserAvatar({
     xl: "h-32 w-32 text-4xl",
   };
 
-  // Compose class names
-  const avatarClasses = [
+  // Compose class names based on if we have a frame or default styling
+  const avatarClasses = cn(
     sizeClasses[size],
-    withBorder ? `border-2 ${borderColor}` : "",
-    withRing ? `ring-2 ${ringColor}` : "",
-    "omerta-profile-avatar", // Add our new 3D effect class
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+    frame 
+      ? "" // When using a frame, let the frame control the border
+      : cn(
+          withBorder ? `border-2 ${borderColor}` : "",
+          withRing ? `ring-2 ${ringColor}` : "",
+        ),
+    "omerta-profile-avatar", // Add our 3D effect class
+    className
+  );
 
-  const avatar = (
+  // Create the avatar content (either image or fallback)
+  const avatarContent = (
+    <Avatar className={avatarClasses}>
+      {avatarUrl ? (
+        <AvatarImage src={avatarUrl} alt={username} />
+      ) : (
+        <AvatarFallback className="font-heading bg-primary/20">
+          {getInitials(username)}
+        </AvatarFallback>
+      )}
+    </Avatar>
+  );
+
+  // If we have a frame, wrap the avatar with the frame styling
+  const avatarWithEffects = frame ? (
     <div className="relative group perspective-1000">
-      <Avatar className={avatarClasses}>
-        {avatarUrl ? (
-          <AvatarImage src={avatarUrl} alt={username} />
-        ) : (
-          <AvatarFallback className="font-heading bg-primary/20">
-            {getInitials(username)}
-          </AvatarFallback>
-        )}
-      </Avatar>
+      {/* Apply frame borders and effects */}
+      <div className={cn(
+        "absolute -inset-1 rounded-full z-0",
+        frame.border,
+        frame.glow,
+        frame.animation
+      )}></div>
+      
+      {/* Avatar content */}
+      <div className="relative z-10">
+        {avatarContent}
+      </div>
+      
+      {/* Add any special frame effects */}
+      {frame.effects?.includes('flame-effect') && (
+        <div className="absolute -inset-2 rounded-full flame-effect z-0 opacity-70"></div>
+      )}
+      
+      {frame.effects?.includes('electric-effect') && (
+        <div className="absolute -inset-2 rounded-full electric-effect z-0 opacity-70"></div>
+      )}
+      
+      {/* Spotlight effect on hover */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-secondary/0 to-secondary/20 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 z-20 pointer-events-none"></div>
+    </div>
+  ) : (
+    <div className="relative group perspective-1000">
+      {avatarContent}
       
       {/* Animated ring effect */}
       {withRing && (
@@ -75,6 +114,8 @@ export function UserAvatar({
       <div className="absolute inset-0 bg-gradient-to-tr from-secondary/0 to-secondary/20 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 z-10 pointer-events-none"></div>
     </div>
   );
+
+  const avatar = avatarWithEffects;
 
   // Wrap in a link if linkToProfile is true
   if (linkToProfile) {

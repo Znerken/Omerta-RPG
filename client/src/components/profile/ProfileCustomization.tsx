@@ -14,7 +14,8 @@ import {
   Cloud,
   PaintBucket,
   Shapes,
-  Sparkle
+  Sparkle,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
@@ -957,7 +958,7 @@ export function AnimatedProfileFrame({
 // Helper function to get CSS for animated name effects
 export function getNameEffectStyles() {
   return (
-    <style jsx global>{`
+    <style>{`
       @keyframes rainbow {
         0% { color: #ff0000; }
         14% { color: #ff7f00; }
