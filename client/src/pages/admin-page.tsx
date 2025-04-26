@@ -1568,6 +1568,95 @@ export default function AdminPage() {
           </Form>
         </DialogContent>
       </Dialog>
+      
+      {/* Jail User Dialog */}
+      <Dialog open={jailDialogOpen} onOpenChange={setJailDialogOpen}>
+        <DialogContent className="bg-dark-surface border-gray-700">
+          <DialogHeader>
+            <DialogTitle>Send User to Jail</DialogTitle>
+            <DialogDescription>
+              Temporarily jail a user within the game
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Form {...jailForm}>
+            <form onSubmit={jailForm.handleSubmit(onJailUserSubmit)} className="space-y-4">
+              <FormField
+                control={jailForm.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reason</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Reason for jail"
+                        className="bg-dark-lighter border-gray-700"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={jailForm.control}
+                name="duration"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duration (hours)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-dark-lighter border-gray-700">
+                          <SelectValue placeholder="Select duration" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-dark-surface border-gray-700">
+                        <SelectItem value="1">1 hour</SelectItem>
+                        <SelectItem value="3">3 hours</SelectItem>
+                        <SelectItem value="6">6 hours</SelectItem>
+                        <SelectItem value="12">12 hours</SelectItem>
+                        <SelectItem value="24">24 hours</SelectItem>
+                        <SelectItem value="48">2 days</SelectItem>
+                        <SelectItem value="72">3 days</SelectItem>
+                        <SelectItem value="168">1 week</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setJailDialogOpen(false)}
+                  className="bg-dark-lighter"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  variant="destructive"
+                  disabled={jailUserMutation.isPending}
+                >
+                  {jailUserMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                    </>
+                  ) : (
+                    "Send to Jail"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Stats Dialog */}
       <Dialog open={statsDialogOpen} onOpenChange={setStatsDialogOpen}>
@@ -1689,18 +1778,18 @@ export default function AdminPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Jail User Dialog */}
-      <Dialog open={jailDialogOpen} onOpenChange={setJailDialogOpen}>
+      {/* Grant Achievement Dialog */}
+      <Dialog open={achievementDialogOpen} onOpenChange={setAchievementDialogOpen}>
         <DialogContent className="bg-dark-surface border-gray-700">
           <DialogHeader>
-            <DialogTitle>Send to Jail</DialogTitle>
+            <DialogTitle>Grant Achievement</DialogTitle>
             <DialogDescription>
-              Send the user to jail for violating rules
+              Award an achievement to the user
             </DialogDescription>
           </DialogHeader>
           
-          <Form {...jailForm}>
-            <form onSubmit={jailForm.handleSubmit(onJailUserSubmit)} className="space-y-4">
+          <Form {...achievementForm}>
+            <form onSubmit={achievementForm.handleSubmit(onGrantAchievementSubmit)} className="space-y-4">
               <FormField
                 control={jailForm.control}
                 name="reason"
