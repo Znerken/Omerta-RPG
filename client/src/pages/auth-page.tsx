@@ -11,7 +11,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
@@ -71,7 +71,11 @@ export default function AuthPage() {
         title: "Test User Created",
         description: `Created user: ${data.user.username} with $500,000 cash, level 5, and 20 of each stat`,
       });
-      // The backend automatically logs the user in, no need to call loginMutation
+      
+      // The backend automatically logs the user in, we need to refresh data
+      // This will trigger a redirect in the component once user is set
+      queryClient.setQueryData(["/api/user"], data.user);
+      queryClient.invalidateQueries({queryKey: ["/api/user"]});
     },
     onError: (error: Error) => {
       toast({
