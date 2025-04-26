@@ -1260,21 +1260,21 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         </div>
         
         {/* Main showcase area */}
-        <div className="xl:col-span-3 space-y-8">
+        <div className="xl:col-span-9 space-y-8">
         
-        {/* Right Widgets Area */}
-        {selectedWidgets.filter(w => w.position === 'right').length > 0 && (
-          <div className="xl:col-span-3">
-            <WidgetContainer
-              widgets={selectedWidgets.filter(widget => widget.position === 'right')}
-              userData={userProfile}
-              position="right"
-            />
-          </div>
-        )}
+          {/* Right Widgets Area */}
+          {selectedWidgets.filter(w => w.position === 'right').length > 0 && (
+            <div className="w-full mb-6">
+              <WidgetContainer
+                widgets={selectedWidgets.filter(widget => widget.position === 'right')}
+                userData={userProfile}
+                position="right"
+              />
+            </div>
+          )}
           
           {/* HTML Profile Showcase */}
-          <Card className="bg-dark-surface border-primary/20 overflow-hidden">
+          <Card className="bg-dark-surface border-primary/20 overflow-hidden w-full">
             <CardHeader className="pb-2 border-b border-border/30">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -1299,11 +1299,11 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
               ) : (
                 htmlProfile ? (
                   <div 
-                    className="profile-html-content p-6"
+                    className="profile-html-content p-6 min-h-[300px]"
                     dangerouslySetInnerHTML={{ __html: htmlProfile }}
                   />
                 ) : (
-                  <div className="p-8 text-center text-muted-foreground">
+                  <div className="p-8 text-center text-muted-foreground min-h-[300px] flex flex-col items-center justify-center">
                     <PenTool className="h-12 w-12 mx-auto mb-3 opacity-20" />
                     <h3 className="text-lg font-medium mb-2">Your Custom Showcase</h3>
                     <p>This is where you can display your custom showcase. Click "Edit Profile" to personalize it.</p>
