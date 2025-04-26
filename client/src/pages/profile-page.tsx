@@ -190,11 +190,216 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
     },
   });
 
+  // Special Billie Eilish themed profile for extortionist
+  const billieEilishProfile = `<div style="font-family: 'Inter', sans-serif; background-color: #0D0D0D; color: #e1e1e1; padding: 0; margin: 0; position: relative; overflow: hidden;">
+  <!-- Billie-inspired main container -->
+  <div style="position: relative; overflow: hidden; border-radius: 12px; background: linear-gradient(145deg, #111111, #050505); box-shadow: 0 8px 32px rgba(0, 255, 100, 0.1);">
+    
+    <!-- Animated neon accent -->
+    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #00ff6a, #003e19, #00ff6a); background-size: 200% 100%; animation: neonFlow 3s linear infinite;"></div>
+    
+    <!-- Header with Billie-style imagery -->
+    <div style="background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9)), url('https://i.imgur.com/8cNtGuL.jpg'); background-size: cover; background-position: center; height: 320px; position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 25px; border-bottom: 1px solid rgba(0, 255, 100, 0.3);">
+      
+      <!-- Overlay vignette -->
+      <div style="position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 30%, #000000 100%); z-index: 1;"></div>
+      
+      <!-- Glitchy title -->
+      <div style="position: relative; z-index: 2; margin-bottom: 70px; text-align: center;">
+        <h1 style="font-size: 4em; font-weight: 900; margin: 0; position: relative; display: inline-block; letter-spacing: -1px; text-transform: uppercase; color: transparent; background: linear-gradient(90deg, #00ff6a, #00ffa3, #00ffb7, #00a3ff, #00ff6a); background-size: 400% 100%; -webkit-background-clip: text; text-shadow: 0 0 10px rgba(0, 255, 100, 0.5); animation: titleFlow 10s linear infinite;">EXTORTIONIST</h1>
+        <h2 style="font-size: 1.2em; margin: 10px 0 0; opacity: 0.7; font-style: italic; font-weight: 400; letter-spacing: 3px;">&ldquo;Don't say I didn't warn ya&rdquo;</h2>
+      </div>
+      
+      <!-- Neon stats banner -->
+      <div style="position: relative; z-index: 2; display: flex; justify-content: space-around; background-color: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 8px; border: 1px solid rgba(0, 255, 100, 0.3); box-shadow: 0 0 20px rgba(0, 255, 100, 0.2); backdrop-filter: blur(5px);">
+        <div style="text-align: center;">
+          <div style="font-size: 1.5em; font-weight: 700; color: #00ff6a;">100%</div>
+          <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6;">Stealth</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 1.5em; font-weight: 700; color: #00ff6a;">$10M+</div>
+          <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6;">Assets</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 1.5em; font-weight: 700; color: #00ff6a;">Level 73</div>
+          <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6;">Reputation</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Profile content -->
+    <div style="padding: 30px 25px; position: relative;">
+      <!-- Lyrics Quote section with Billie Eilish "You Should See Me In A Crown" lyrics -->
+      <div style="margin-bottom: 30px; position: relative; padding: 25px; border-radius: 8px; background-color: rgba(0, 0, 0, 0.3); border-left: 3px solid #00ff6a;">
+        <p style="font-size: 1.1em; font-style: italic; margin: 0; line-height: 1.6;">
+          "You should see me in a crown, I'm gonna run this nothing town<br>
+          Watch me make 'em bow, one by one by one<br>
+          Count my cards, watch them fall<br>
+          Blood on a marble wall"
+        </p>
+        <div style="margin-top: 10px; text-align: right; opacity: 0.7; font-size: 0.9em;">— You Should See Me In A Crown</div>
+      </div>
+      
+      <!-- Two-column layout -->
+      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <!-- Left column -->
+        <div style="flex: 1; min-width: 300px;">
+          <h3 style="font-size: 1.3em; margin-top: 0; border-bottom: 1px solid rgba(0, 255, 100, 0.3); padding-bottom: 10px; color: #00ff6a;">THE EMPIRE</h3>
+          
+          <!-- Skills grid -->
+          <div style="margin-bottom: 25px;">
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Influence</span>
+                <span style="font-size: 0.9em;">92%</span>
+              </div>
+              <div style="height: 8px; background-color: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden;">
+                <div style="height: 100%; width: 92%; background: linear-gradient(90deg, #00ff6a, #00d9ff); border-radius: 4px;"></div>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Strategy</span>
+                <span style="font-size: 0.9em;">88%</span>
+              </div>
+              <div style="height: 8px; background-color: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden;">
+                <div style="height: 100%; width: 88%; background: linear-gradient(90deg, #00ff6a, #00d9ff); border-radius: 4px;"></div>
+              </div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                <span style="font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px;">Connections</span>
+                <span style="font-size: 0.9em;">95%</span>
+              </div>
+              <div style="height: 8px; background-color: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden;">
+                <div style="height: 100%; width: 95%; background: linear-gradient(90deg, #00ff6a, #00d9ff); border-radius: 4px;"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Territory -->
+          <div style="background-color: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <h4 style="margin-top: 0; color: #00ff6a; font-size: 1.1em;">CONTROLLED TERRITORIES</h4>
+            <ul style="list-style-type: none; padding: 0; margin: 0;">
+              <li style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between;">
+                <span>Downtown District</span>
+                <span style="color: #00ff6a;">100%</span>
+              </li>
+              <li style="padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between;">
+                <span>Harbor Area</span>
+                <span style="color: #00ff6a;">85%</span>
+              </li>
+              <li style="padding: 8px 0; display: flex; justify-content: space-between;">
+                <span>West Side</span>
+                <span style="color: #00ff6a;">73%</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- Right column -->
+        <div style="flex: 1; min-width: 300px;">
+          <h3 style="font-size: 1.3em; margin-top: 0; border-bottom: 1px solid rgba(0, 255, 100, 0.3); padding-bottom: 10px; color: #00ff6a;">OPERATIONS</h3>
+          
+          <!-- Business ventures -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-bottom: 25px;">
+            <div style="background-color: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 15px; text-align: center; border: 1px solid rgba(0, 255, 100, 0.1);">
+              <div style="font-size: 2em; margin-bottom: 10px; color: #00ff6a;">🏛️</div>
+              <div style="font-size: 0.9em; font-weight: 600;">Banking</div>
+              <div style="font-size: 0.8em; opacity: 0.6; margin-top: 5px;">Money laundering</div>
+            </div>
+            
+            <div style="background-color: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 15px; text-align: center; border: 1px solid rgba(0, 255, 100, 0.1);">
+              <div style="font-size: 2em; margin-bottom: 10px; color: #00ff6a;">🎲</div>
+              <div style="font-size: 0.9em; font-weight: 600;">Casino</div>
+              <div style="font-size: 0.8em; opacity: 0.6; margin-top: 5px;">Revenue stream</div>
+            </div>
+            
+            <div style="background-color: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 15px; text-align: center; border: 1px solid rgba(0, 255, 100, 0.1);">
+              <div style="font-size: 2em; margin-bottom: 10px; color: #00ff6a;">🏢</div>
+              <div style="font-size: 0.9em; font-weight: 600;">Real Estate</div>
+              <div style="font-size: 0.8em; opacity: 0.6; margin-top: 5px;">Asset control</div>
+            </div>
+            
+            <div style="background-color: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 15px; text-align: center; border: 1px solid rgba(0, 255, 100, 0.1);">
+              <div style="font-size: 2em; margin-bottom: 10px; color: #00ff6a;">🔒</div>
+              <div style="font-size: 0.9em; font-weight: 600;">Security</div>
+              <div style="font-size: 0.8em; opacity: 0.6; margin-top: 5px;">Protection</div>
+            </div>
+          </div>
+          
+          <!-- Recent exploits -->
+          <div style="background-color: rgba(0, 0, 0, 0.3); border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <h4 style="margin-top: 0; color: #00ff6a; font-size: 1.1em;">LATEST ACHIEVEMENTS</h4>
+            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="font-weight: 600;">Metropolitan Bank Heist</div>
+              <div style="font-size: 0.8em; opacity: 0.7; margin-top: 3px;">The perfect crime. No traces left behind.</div>
+            </div>
+            <div style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+              <div style="font-weight: 600;">Rival Territory Acquisition</div>
+              <div style="font-size: 0.8em; opacity: 0.7; margin-top: 3px;">Expanded influence to the east coast.</div>
+            </div>
+            <div>
+              <div style="font-weight: 600;">Information Network Expansion</div>
+              <div style="font-size: 0.8em; opacity: 0.7; margin-top: 3px;">Eyes and ears in every corner of the city.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Bottom quote with Billie-inspired design -->
+      <div style="margin-top: 20px; padding: 25px; border-radius: 8px; background: url('https://i.imgur.com/EfxovUc.jpg'); background-size: cover; background-position: center; position: relative; overflow: hidden;">
+        <!-- Overlay -->
+        <div style="position: absolute; inset: 0; background: rgba(0, 0, 0, 0.75);"></div>
+        
+        <div style="position: relative; z-index: 1;">
+          <p style="font-size: 1.2em; font-style: italic; margin: 0 0 10px; line-height: 1.6; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);">
+            "Bite my tongue, bide my time<br>
+            Wearing a warning sign<br>
+            Wait 'til the world is mine<br>
+            Visions I vandalize<br>
+            Cold in my kingdom size"
+          </p>
+          <div style="text-align: right; opacity: 0.7; font-size: 0.9em;">— Extortionist's Code</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer with Billie-inspired styling -->
+    <div style="padding: 20px; text-align: center; background-color: #000000; border-top: 1px solid rgba(0, 255, 100, 0.3);">
+      <div style="opacity: 0.5; font-size: 0.8em; letter-spacing: 1px;">"YOU SHOULD SEE ME IN A CROWN" • OMERTÀ • ESTABLISHED 2025</div>
+    </div>
+  </div>
+  
+  <!-- Animations -->
+  <style>
+    @keyframes neonFlow {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    
+    @keyframes titleFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+  </style>
+</div>`;
+
   // Update state values when profile data loads
   useEffect(() => {
     if (userProfile) {
       setBio(userProfile.bio || "");
-      setHtmlProfile(userProfile.htmlProfile || "");
+
+      // Set special HTML profile for extortionist
+      if (userProfile.username && userProfile.username.toLowerCase() === "extortionist" && !userProfile.htmlProfile) {
+        setHtmlProfile(billieEilishProfile);
+      } else {
+        setHtmlProfile(userProfile.htmlProfile || "");
+      }
+      
       setShowAchievements(userProfile.showAchievements !== false);
       setProfileTheme(userProfile.profileTheme || "dark");
       setAvatarPreview(userProfile.avatar || null);
