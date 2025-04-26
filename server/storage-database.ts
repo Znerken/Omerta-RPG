@@ -630,6 +630,317 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     }
   }
   
+  // Create a new achievement
+  async createAchievement(achievementData: InsertAchievement): Promise<Achievement> {
+    try {
+      const [achievement] = await db
+        .insert(achievements)
+        .values(achievementData)
+        .returning();
+      
+      return achievement;
+    } catch (error) {
+      console.error("Error in createAchievement:", error);
+      throw error;
+    }
+  }
+  
+  // Update an achievement
+  async updateAchievement(id: number, achievementData: Partial<Achievement>): Promise<Achievement | undefined> {
+    try {
+      const [updatedAchievement] = await db
+        .update(achievements)
+        .set(achievementData)
+        .where(eq(achievements.id, id))
+        .returning();
+      
+      return updatedAchievement;
+    } catch (error) {
+      console.error("Error in updateAchievement:", error);
+      return undefined;
+    }
+  }
+  
+  // Delete an achievement
+  async deleteAchievement(id: number): Promise<boolean> {
+    try {
+      // Delete achievement progress records
+      await db
+        .delete(achievementProgress)
+        .where(eq(achievementProgress.achievementId, id));
+      
+      // Delete user achievement records
+      await db
+        .delete(userAchievements)
+        .where(eq(userAchievements.achievementId, id));
+      
+      // Delete the achievement
+      const result = await db
+        .delete(achievements)
+        .where(eq(achievements.id, id));
+      
+      return result.count > 0;
+    } catch (error) {
+      console.error("Error in deleteAchievement:", error);
+      return false;
+    }
+  }
+  
+  // Get achievement progress for a user
+  async getAchievementProgress(userId: number, achievementId: number): Promise<AchievementProgress | undefined> {
+    try {
+      const [progress] = await db
+        .select()
+        .from(achievementProgress)
+        .where(
+          and(
+            eq(achievementProgress.userId, userId),
+            eq(achievementProgress.achievementId, achievementId)
+          )
+        );
+      
+      return progress;
+    } catch (error) {
+      console.error("Error in getAchievementProgress:", error);
+      return undefined;
+    }
+  }
+  
+  // Update achievement progress
+  async updateAchievementProgress(userId: number, achievementId: number, value: number): Promise<AchievementProgress> {
+    try {
+      // Check if a progress record already exists
+      const existingProgress = await this.getAchievementProgress(userId, achievementId);
+      
+      if (existingProgress) {
+        // If it exists, update it
+        const [updatedProgress] = await db
+          .update(achievementProgress)
+          .set({ 
+            currentValue: value,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(achievementProgress.userId, userId),
+              eq(achievementProgress.achievementId, achievementId)
+            )
+          )
+          .returning();
+        
+        return updatedProgress;
+      } else {
+        // If it doesn't exist, create a new record
+        const [newProgress] = await db
+          .insert(achievementProgress)
+          .values({
+            userId,
+            achievementId,
+            currentValue: value
+          })
+          .returning();
+        
+        return newProgress;
+      }
+    } catch (error) {
+      console.error("Error in updateAchievementProgress:", error);
+      throw error;
+    }
+  }
+  
+  // Claim rewards for an achievement
+  async claimAchievementRewards(userId: number, achievementId: number): Promise<boolean> {
+    try {
+      // Find the user achievement record
+      const [userAchievement] = await db
+        .select()
+        .from(userAchievements)
+        .where(
+          and(
+            eq(userAchievements.userId, userId),
+            eq(userAchievements.achievementId, achievementId)
+          )
+        );
+      
+      if (!userAchievement || userAchievement.rewardsClaimed) {
+        return false; // Achievement not found or rewards already claimed
+      }
+      
+      // Get the achievement details to determine rewards
+      const achievement = await this.getAchievement(achievementId);
+      if (!achievement) {
+        return false;
+      }
+      
+      // Start a transaction to handle all reward operations
+      await db.transaction(async (tx) => {
+        // Mark rewards as claimed
+        await tx
+          .update(userAchievements)
+          .set({ rewardsClaimed: true })
+          .where(eq(userAchievements.id, userAchievement.id));
+        
+        // Get user's current stats
+        const user = await this.getUser(userId);
+        if (!user) {
+          throw new Error("User not found");
+        }
+        
+        // Update cash if there's a cash reward
+        if (achievement.cashReward > 0) {
+          await tx
+            .update(users)
+            .set({ cash: user.cash + achievement.cashReward })
+            .where(eq(users.id, userId));
+        }
+        
+        // Update respect if there's a respect reward
+        if (achievement.respectReward > 0) {
+          await tx
+            .update(users)
+            .set({ respect: user.respect + achievement.respectReward })
+            .where(eq(users.id, userId));
+        }
+        
+        // Update user XP
+        if (achievement.xpReward > 0) {
+          await tx
+            .update(users)
+            .set({ xp: user.xp + achievement.xpReward })
+            .where(eq(users.id, userId));
+          
+          // Check if user should level up (simplified logic)
+          const newXp = user.xp + achievement.xpReward;
+          const newLevel = Math.floor(Math.sqrt(newXp) / 10) + 1;
+          
+          if (newLevel > user.level) {
+            await tx
+              .update(users)
+              .set({ level: newLevel })
+              .where(eq(users.id, userId));
+          }
+        }
+        
+        // If there's an item reward, add it to the user's inventory
+        if (achievement.itemRewardId) {
+          // Check if user already has this item
+          const [existingItem] = await tx
+            .select()
+            .from(userInventory)
+            .where(
+              and(
+                eq(userInventory.userId, userId),
+                eq(userInventory.itemId, achievement.itemRewardId)
+              )
+            );
+          
+          if (existingItem) {
+            // Increment quantity
+            await tx
+              .update(userInventory)
+              .set({ quantity: existingItem.quantity + 1 })
+              .where(eq(userInventory.id, existingItem.id));
+          } else {
+            // Add new item to inventory
+            await tx
+              .insert(userInventory)
+              .values({
+                userId: userId,
+                itemId: achievement.itemRewardId,
+                quantity: 1,
+                equipped: false
+              });
+          }
+        }
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error in claimAchievementRewards:", error);
+      return false;
+    }
+  }
+  
+  // Check and update achievement progress for an action
+  async checkAndUpdateAchievementProgress(
+    userId: number, 
+    type: string, 
+    target?: string, 
+    value: number = 1
+  ): Promise<Achievement[]> {
+    try {
+      // Find relevant achievements for this action type
+      const relevantAchievements = await db
+        .select()
+        .from(achievements)
+        .where(eq(achievements.requirementType, type));
+      
+      if (relevantAchievements.length === 0) {
+        return []; // No achievements found for this action type
+      }
+      
+      // Filter achievements by target if provided
+      const filteredAchievements = target 
+        ? relevantAchievements.filter(a => a.requirementTarget === target)
+        : relevantAchievements;
+      
+      if (filteredAchievements.length === 0) {
+        return []; // No achievements match the target
+      }
+      
+      // Get currently unlocked achievements for this user
+      const unlockedAchievementIds = (await db
+        .select({ id: userAchievements.achievementId })
+        .from(userAchievements)
+        .where(eq(userAchievements.userId, userId)))
+        .map(a => a.id);
+      
+      // Filter out already unlocked achievements
+      const availableAchievements = filteredAchievements.filter(
+        a => !unlockedAchievementIds.includes(a.id)
+      );
+      
+      if (availableAchievements.length === 0) {
+        return []; // All relevant achievements are already unlocked
+      }
+      
+      const newlyUnlockedAchievements: Achievement[] = [];
+      
+      // Check each achievement and update progress
+      for (const achievement of availableAchievements) {
+        // Check prerequisites if there are any
+        if (achievement.dependsOn && !unlockedAchievementIds.includes(achievement.dependsOn)) {
+          continue; // Skip if prerequisite not met
+        }
+        
+        // Get current progress or create if not exists
+        let progress = await this.getAchievementProgress(userId, achievement.id);
+        
+        if (!progress) {
+          // Initialize progress
+          progress = await this.updateAchievementProgress(userId, achievement.id, value);
+        } else {
+          // Update progress
+          const newValue = progress.currentValue + value;
+          progress = await this.updateAchievementProgress(userId, achievement.id, newValue);
+        }
+        
+        // Check if achievement should be unlocked
+        if (progress.currentValue >= achievement.requirementValue) {
+          const userAchievement = await this.unlockAchievement(userId, achievement.id);
+          if (userAchievement) {
+            newlyUnlockedAchievements.push(achievement);
+          }
+        }
+      }
+      
+      return newlyUnlockedAchievements;
+    } catch (error) {
+      console.error("Error in checkAndUpdateAchievementProgress:", error);
+      return [];
+    }
+  }
+
   // Challenge methods
   async getAllChallenges(): Promise<Challenge[]> {
     try {

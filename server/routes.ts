@@ -423,13 +423,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
           nextAvailableAt: cooldownEnd
         });
         
-        return res.json({
-          success: true,
-          cashReward,
-          xpReward,
-          cooldownEnd,
-          message: "Crime successful!",
-          levelUp
+        // Check for achievements
+        let unlockedAchievements = [];
+        try {
+          // 1. Check for "crime_committed" achievement (any crime)
+          const crimeAchievements = await storage.checkAndUpdateAchievementProgress(userId, "crime_committed");
+          
+          // 2. Check for specific crime achievements using the crime name as target
+          const specificCrimeAchievements = await storage.checkAndUpdateAchievementProgress(
+            userId,
+            "crime_specific",
+            crime.name
+          );
+          
+          // 3. Check for cash earned from crimes achievement
+          const cashAchievements = await storage.checkAndUpdateAchievementProgress(
+            userId,
+            "crime_cash_earned", 
+            undefined,
+            cashReward
+          );
+          
+          // Combine all unlocked achievements
+          unlockedAchievements = [
+            ...crimeAchievements,
+            ...specificCrimeAchievements,
+            ...cashAchievements
+          ];
+        } catch (err) {
+          console.error("Error checking achievements:", err);
+          // Continue execution, don't let achievement errors affect the main flow
+        }
+          
+          // Include achievement notification in response if any were unlocked
+          return res.json({
+            success: true,
+            cashReward,
+            xpReward,
+            unlockedAchievements: unlockedAchievements.length > 0 ? unlockedAchievements : undefined,
+            cooldownEnd,
+            message: "Crime successful!",
+            levelUp
         });
       } else {
         // Check if user got caught

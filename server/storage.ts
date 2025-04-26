@@ -86,9 +86,17 @@ export interface IStorage {
   
   // User Profile methods
   getUserProfile(userId: number): Promise<User | undefined>;
+  
+  // Achievement methods
   getAchievementsWithUnlocked(userId: number): Promise<AchievementWithUnlocked[]>;
   markAchievementAsViewed(userId: number, achievementId: number): Promise<boolean>;
   getUnviewedAchievements(userId: number): Promise<AchievementWithUnlocked[]>;
+  getAchievement(id: number): Promise<Achievement | undefined>;
+  unlockAchievement(userId: number, achievementId: number): Promise<UserAchievement | undefined>;
+  checkAndUpdateAchievementProgress(userId: number, type: string, target?: string, value?: number): Promise<Achievement[]>;
+  getAchievementProgress(userId: number, achievementId: number): Promise<AchievementProgress | undefined>;
+  updateAchievementProgress(userId: number, achievementId: number, value: number): Promise<AchievementProgress>;
+  claimAchievementRewards(userId: number, achievementId: number): Promise<boolean>;
   
   // Stats methods
   getStatsByUserId(userId: number): Promise<Stat | undefined>;
