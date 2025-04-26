@@ -24,7 +24,8 @@ import {
   Award,
   Pill,
   DollarSign,
-  UserPlus
+  UserPlus,
+  Bell
 } from "lucide-react";
 import { 
   TommyGunIcon, 
@@ -90,19 +91,23 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {/* Left Sidebar - Main Navigation */}
       <aside className="hidden md:flex md:w-64 flex-col border-r border-border h-screen sticky top-0 bg-gradient-to-b from-background to-background/95">
         <div className="flex-1 px-4 py-6 overflow-y-auto">
-          <div className="mb-6">
-            <h1 className="text-2xl text-gold-gradient font-heading mb-2">
-              Mafia Empire
-            </h1>
-            <div className="flex items-center">
-              <TommyGunIcon className="h-4.5 w-4.5 mr-2 text-primary" />
-              <p className="text-xs text-muted-foreground/70">Rise to power. Rule the streets.</p>
+          <div className="mb-6 flex flex-col items-center">
+            <div className="p-3 bg-black/30 rounded-lg border border-gold/20 shadow-lg mb-4 w-full relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://cdn.glitch.global/bbff0cf5-8266-486e-ad7e-2f94bce3e386/leather-texture.jpg?v=1704455693446')] opacity-20 mix-blend-overlay"></div>
+              <h1 className="text-3xl font-serif tracking-widest text-center font-bold text-gold-gradient mb-1">
+                OMERTÀ
+              </h1>
+              <div className="h-px bg-gradient-to-r from-gold/10 via-gold/50 to-gold/10 my-2"></div>
+              <div className="flex items-center justify-center">
+                <TommyGunIcon className="h-5 w-5 mr-2 text-gold/70" />
+                <p className="text-xs text-muted-foreground/90 italic">The code of silence</p>
+              </div>
             </div>
           </div>
           
           {user && (
-            <div className="mb-5 mt-4">
-              <div className="flex items-center mb-4 w-full">
+            <div className="mb-5">
+              <div className="flex items-center w-full">
                 <MiniProfile variant="sidebar" className="w-full" />
                 <div className="ml-1">
                   <NotificationList />
@@ -243,10 +248,21 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile menu toggle */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-card border-b border-border">
         <div className="flex items-center justify-between px-3 py-2">
-          <h1 className="text-xl text-gold-gradient">Mafia Empire</h1>
-          <div className="flex items-center space-x-3">
+          <h1 className="text-xl text-gold-gradient font-serif tracking-widest">OMERTÀ</h1>
+          <div className="flex items-center space-x-2">
             {user && <MiniProfile variant="navbar" className="max-w-[60%]" />}
-            {user && <NotificationList />}
+            {user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-gold/70 hover:text-gold hover:bg-black/30"
+                asChild
+              >
+                <div>
+                  <NotificationList />
+                </div>
+              </Button>
+            )}
             <Button 
               variant="ghost" 
               size="icon"
