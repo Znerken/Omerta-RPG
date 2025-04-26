@@ -191,6 +191,48 @@ export function registerAdminRoutes(app: Express) {
     }
   });
   
+  // Reset user stats to a specific value
+  app.post("/api/admin/users/:id/reset-stats", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { value = 10, force = false } = req.body;
+      
+      // Validate value is between 1 and 100
+      if (value < 1 || value > 100) {
+        return res.status(400).json({ message: "Value must be between 1 and 100" });
+      }
+      
+      // For user ID 1 (extortionist), we normally want to maintain special 100 values
+      // unless force is true
+      let updateValue = value;
+      if (userId === 1 && !force) {
+        updateValue = 100;
+        console.log(`[ADMIN] Enforcing 100 stats for extortionist user (userId: ${userId})`);
+      }
+      
+      const updatedStats = await storage.updateStats(userId, {
+        strength: updateValue,
+        stealth: updateValue,
+        charisma: updateValue,
+        intelligence: updateValue
+      });
+      
+      if (!updatedStats) {
+        return res.status(404).json({ message: "Stats not found for user" });
+      }
+      
+      console.log(`[ADMIN] Stats reset to ${updateValue} for user ${userId}`);
+      
+      res.json({ 
+        message: `Stats reset to ${updateValue} for user ${userId}`, 
+        stats: updatedStats 
+      });
+    } catch (error) {
+      console.error("Error resetting user stats:", error);
+      res.status(400).json({ message: "Failed to reset user stats", error: error.message });
+    }
+  });
+  
   // Give cash to user
   app.post("/api/admin/users/:id/give-cash", isAdmin, async (req: Request, res: Response) => {
     try {

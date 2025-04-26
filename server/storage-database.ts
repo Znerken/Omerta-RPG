@@ -903,10 +903,10 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
         // Create default stats for this user
         const defaultStats = {
           userId,
-          strength: 10,
-          stealth: 10,
-          charisma: 10,
-          intelligence: 10,
+          strength: userId === 1 ? 100 : 10, // 100 for extortionist (user ID 1)
+          stealth: userId === 1 ? 100 : 10,
+          charisma: userId === 1 ? 100 : 10,
+          intelligence: userId === 1 ? 100 : 10,
           strengthTrainingCooldown: null,
           stealthTrainingCooldown: null,
           charismaTrainingCooldown: null,
@@ -918,7 +918,42 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
           .values(defaultStats)
           .returning();
         
+        console.log(`[DEBUG] Created default stats for user ${userId}:`, newStats);
         return newStats;
+      }
+      
+      // For user 1 (extortionist), always set stats to 100 even if they exist in the database
+      if (userId === 1) {
+        // Make sure extortionist always has 100 for all stats
+        let updatedStats = {
+          ...statResult,
+          strength: 100,
+          stealth: 100,
+          charisma: 100,
+          intelligence: 100
+        };
+        
+        // Only update stats if they're not already 100
+        if (statResult.strength !== 100 || statResult.stealth !== 100 || 
+            statResult.charisma !== 100 || statResult.intelligence !== 100) {
+          console.log("[DEBUG] Updating extortionist stats to 100");
+          
+          const [newStats] = await db
+            .update(stats)
+            .set({
+              strength: 100,
+              stealth: 100,
+              charisma: 100,
+              intelligence: 100
+            })
+            .where(eq(stats.userId, userId))
+            .returning();
+            
+          updatedStats = newStats;
+        }
+        
+        console.log(`[DEBUG] Returning extortionist stats:`, updatedStats);
+        return updatedStats;
       }
       
       return statResult;
@@ -930,9 +965,23 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
   
   async updateStats(userId: number, statData: Partial<Stat>): Promise<Stat | undefined> {
     try {
+      // For user ID 1 (extortionist), make sure all stats are 100
+      let dataToUpdate = statData;
+      if (userId === 1) {
+        // Set all stats to 100 for extortionist
+        dataToUpdate = {
+          ...statData,
+          strength: 100,
+          stealth: 100,
+          charisma: 100,
+          intelligence: 100
+        };
+        console.log("[STATS] Forcing stats for extortionist to 100:", dataToUpdate);
+      }
+
       const [result] = await db
         .update(stats)
-        .set(statData)
+        .set(dataToUpdate)
         .where(eq(stats.userId, userId))
         .returning();
       
