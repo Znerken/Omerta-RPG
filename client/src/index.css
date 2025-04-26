@@ -205,6 +205,26 @@ div::-webkit-scrollbar,
   }
 }
 
+/* Rainbow text animation for profile name effects */
+@keyframes rainbow-text {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.rainbow-text-effect {
+  background: linear-gradient(
+    to right, 
+    #ff0000, #ff9a00, #d0de21, #4fdc4a, #3fdad8, #2fc9e2, #1c7fee, #5f15f2, #ba0cf8, #fb07d9, #ff0000
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbow-text 6s linear infinite;
+  font-weight: bold;
+}
+
 .bg-dark {
   @apply bg-background;
 }

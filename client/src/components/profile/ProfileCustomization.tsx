@@ -362,9 +362,9 @@ export const NAME_EFFECTS: NameEffect[] = [
     id: 'rainbow',
     name: 'Rainbow Boss',
     description: 'Animated rainbow text effect',
-    cssClass: 'animate-rainbow-text',
+    cssClass: 'rainbow-text-effect',
     preview: 'Username',
-    unlocked: false,
+    unlocked: true, // Set to true for testing
     rarity: 'mythic',
     requirement: 'Own all territories',
     cost: 100000

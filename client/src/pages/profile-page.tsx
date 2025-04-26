@@ -800,17 +800,8 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
 
   return (
     <div className={getProfileThemeClasses()}>
-      {/* Add CSS for name effects */}
-      {selectedNameEffect && selectedNameEffect.id !== 'none' && (
-        <style>
-          {`.omerta-profile-name {
-            ${selectedNameEffect.id === 'gradient-red' ? 'background: linear-gradient(to right, #ff6b6b, #ff2d2d); -webkit-background-clip: text; -webkit-text-fill-color: transparent;' : ''}
-            ${selectedNameEffect.id === 'gradient-gold' ? 'background: linear-gradient(to right, #ffd700, #ff9500); -webkit-background-clip: text; -webkit-text-fill-color: transparent;' : ''}
-            ${selectedNameEffect.id === 'neon' ? 'text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6, 0 0 25px #0073e6;' : ''}
-            ${selectedNameEffect.id === 'rainbow' ? 'animation: rainbow-text 6s linear infinite;' : ''}
-          }`}
-        </style>
-      )}
+      {/* Add CSS for name effects - removed manual styles in favor of reusing the classes */}
+      {/* The rainbow and other effects are now handled by the CSS classes directly */}
       {/* Floating action buttons for save/cancel during edit mode only */}
       {isViewingOwnProfile && isEditing && (
         <div className="fixed top-20 right-6 z-50">
