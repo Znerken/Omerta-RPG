@@ -107,11 +107,8 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
           
           {user && (
             <div className="mb-5">
-              <div className="flex items-center w-full">
+              <div className="w-full">
                 <MiniProfile variant="sidebar" className="w-full" />
-                <div className="ml-1">
-                  <NotificationList />
-                </div>
               </div>
             </div>
           )}
@@ -251,18 +248,6 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
           <h1 className="text-xl text-gold-gradient font-serif tracking-widest">OMERTÀ</h1>
           <div className="flex items-center space-x-2">
             {user && <MiniProfile variant="navbar" className="max-w-[60%]" />}
-            {user && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-gold/70 hover:text-gold hover:bg-black/30"
-                asChild
-              >
-                <div>
-                  <NotificationList />
-                </div>
-              </Button>
-            )}
             <Button 
               variant="ghost" 
               size="icon"
@@ -453,6 +438,36 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
         <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
+          {/* Notification bell in top-left of content area */}
+          {user && (
+            <>
+              {/* Desktop version */}
+              <div className="hidden md:block absolute top-6 left-6">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full"
+                >
+                  <NotificationList>
+                    <Bell className="h-5 w-5" />
+                  </NotificationList>
+                </Button>
+              </div>
+              
+              {/* Mobile version */}
+              <div className="md:hidden fixed top-20 left-4 z-30">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full bg-black/20 shadow-md border border-gold/10"
+                >
+                  <NotificationList>
+                    <Bell className="h-4 w-4" />
+                  </NotificationList>
+                </Button>
+              </div>
+            </>
+          )}
           {children}
         </div>
       </main>
