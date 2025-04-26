@@ -16,14 +16,24 @@ interface Achievement {
   name: string;
   description: string;
   category: string;
+  difficulty: string;
   requirementType: string;
   requirementValue: number;
   cashReward: number;
   xpReward: number;
   respectReward: number;
+  icon: string | null;
+  iconColor: string | null;
+  bgColor: string | null;
+  borderColor: string | null;
+  series: string | null;
+  seriesOrder: number | null;
+  prerequisiteId: number | null;
   unlocked: boolean;
   unlockedAt?: Date;
   viewed: boolean;
+  progress?: number;
+  rewardsClaimed?: boolean;
 }
 
 // CategoryIcon component to render appropriate icon based on category
@@ -83,6 +93,32 @@ export default function AchievementsPage() {
       }
     } catch (error) {
       console.error('Error marking achievement as viewed:', error);
+    }
+  };
+  
+  // Claim achievement rewards
+  const handleClaimRewards = async (id: number) => {
+    try {
+      const result = await apiRequest('POST', `/api/achievements/${id}/claim`);
+      if (result.ok) {
+        const data = await result.json();
+        toast({
+          title: "Rewards Claimed",
+          description: "You've successfully claimed your achievement rewards!",
+          variant: "success",
+        });
+        
+        // Refresh achievements and user data
+        refetch();
+        refreshAchievements();
+      }
+    } catch (error) {
+      console.error('Error claiming achievement rewards:', error);
+      toast({
+        title: "Failed to Claim Rewards",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -178,64 +214,144 @@ export default function AchievementsPage() {
                   </div>
                 ) : filteredAchievements.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filteredAchievements.map(achievement => (
-                      <Card 
-                        key={achievement.id} 
-                        className={`transition-all border-2 ${
-                          achievement.unlocked 
-                            ? 'bg-black/70 border-yellow-500/70' 
-                            : 'bg-black/80 border-gray-700 opacity-70'
-                        }`}
-                      >
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-xl font-semibold">
-                              {achievement.name}
-                            </CardTitle>
-                            <div className="flex items-center space-x-2">
-                              <CategoryIcon category={achievement.category} />
-                              {achievement.unlocked && (
-                                <CheckCircle className="h-5 w-5 text-green-500" />
+                    {filteredAchievements.map(achievement => {
+                      // Default colors if not provided in achievement data
+                      const iconColor = achievement.iconColor || '#ffbb55';
+                      const bgColor = achievement.bgColor || '#1e1e1e';
+                      const borderColor = achievement.borderColor || (achievement.unlocked ? '#ffbb55' : '#333333');
+                      
+                      // Get icon component based on icon name
+                      const AchievementIcon = ({ iconName }: { iconName: string | null }) => {
+                        switch(iconName) {
+                          case 'Skull': return <Skull className="h-6 w-6" style={{ color: iconColor }} />;
+                          case 'Trophy': return <Trophy className="h-6 w-6" style={{ color: iconColor }} />;
+                          case 'Star': return <Star className="h-6 w-6" style={{ color: iconColor }} />;
+                          case 'Target': return <Target className="h-6 w-6" style={{ color: iconColor }} />;
+                          case 'Heart': return <Heart className="h-6 w-6" style={{ color: iconColor }} />;
+                          case 'Briefcase': return <Briefcase className="h-6 w-6" style={{ color: iconColor }} />;
+                          case 'Shield': return <Shield className="h-6 w-6" style={{ color: iconColor }} />;
+                          case 'Hand': return <div className="h-6 w-6" style={{ color: iconColor }}>👋</div>;
+                          case 'DollarSign': return <div className="h-6 w-6" style={{ color: iconColor }}>💰</div>;
+                          default: return <Shield className="h-6 w-6" style={{ color: iconColor }} />;
+                        }
+                      };
+                      
+                      // Get badge variant based on difficulty
+                      const getDifficultyBadge = (difficulty: string) => {
+                        switch(difficulty.toLowerCase()) {
+                          case 'easy': return <Badge className="bg-green-600">Easy</Badge>;
+                          case 'medium': return <Badge className="bg-yellow-600">Medium</Badge>;
+                          case 'hard': return <Badge className="bg-orange-600">Hard</Badge>;
+                          case 'expert': return <Badge className="bg-red-600">Expert</Badge>;
+                          default: return <Badge>Normal</Badge>;
+                        }
+                      };
+                      
+                      // Progress percentage for incomplete achievements
+                      const progressPercentage = achievement.unlocked ? 100 : 
+                        (achievement.progress && achievement.requirementValue)
+                          ? Math.min(100, Math.floor((achievement.progress / achievement.requirementValue) * 100))
+                          : 0;
+                      
+                      return (
+                        <Card 
+                          key={achievement.id} 
+                          className="transition-all border-2 bg-black/80 overflow-hidden relative"
+                          style={{ 
+                            borderColor: borderColor,
+                            opacity: achievement.unlocked ? 1 : 0.8,
+                          }}
+                        >
+                          {/* Achievement icon */}
+                          <div 
+                            className="absolute -top-6 -right-6 h-20 w-20 rounded-full flex items-center justify-center opacity-20"
+                            style={{ backgroundColor: iconColor }}
+                          >
+                          </div>
+                          
+                          <CardHeader className="pb-2 relative">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-xl font-semibold">
+                                  {achievement.name}
+                                </CardTitle>
+                                <CardDescription className="text-sm">
+                                  {achievement.category} achievement
+                                </CardDescription>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <AchievementIcon iconName={achievement.icon} />
+                                {achievement.unlocked && (
+                                  <CheckCircle className="h-5 w-5 text-green-500" />
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex justify-between items-center mt-1">
+                              {getDifficultyBadge(achievement.difficulty)}
+                              {achievement.series && (
+                                <Badge variant="outline" className="text-xs">
+                                  Series: {achievement.series}
+                                </Badge>
                               )}
                             </div>
-                          </div>
-                          <CardDescription className="text-sm italic">
-                            {achievement.category} achievement
-                          </CardDescription>
-                        </CardHeader>
-                        
-                        <CardContent>
-                          <p className="text-sm mb-3">{achievement.description}</p>
-                          {achievement.unlocked ? (
-                            <div className="text-xs text-gray-400">
-                              Unlocked: {new Date(achievement.unlockedAt!).toLocaleDateString()}
+                          </CardHeader>
+                          
+                          <CardContent>
+                            <p className="text-sm mb-3">{achievement.description}</p>
+                            
+                            {/* Progress bar */}
+                            <div className="h-2 w-full bg-gray-800 rounded-full mb-2">
+                              <div 
+                                className={`h-full rounded-full ${achievement.unlocked ? 'bg-green-500' : 'bg-yellow-600'}`}
+                                style={{ width: `${progressPercentage}%` }}
+                              ></div>
                             </div>
-                          ) : (
-                            <div className="text-xs text-gray-400">
-                              Requirement: {achievement.requirementType} reaches {achievement.requirementValue}
-                            </div>
-                          )}
-                        </CardContent>
-                        
-                        <CardFooter className="flex flex-wrap gap-2 pt-0">
-                          {achievement.cashReward > 0 && (
-                            <Badge variant="outline" className="text-green-400 border-green-400">
-                              ${achievement.cashReward.toLocaleString()}
-                            </Badge>
-                          )}
-                          {achievement.xpReward > 0 && (
-                            <Badge variant="outline" className="text-blue-400 border-blue-400">
-                              {achievement.xpReward} XP
-                            </Badge>
-                          )}
-                          {achievement.respectReward > 0 && (
-                            <Badge variant="outline" className="text-purple-400 border-purple-400">
-                              {achievement.respectReward} Respect
-                            </Badge>
-                          )}
-                        </CardFooter>
-                      </Card>
-                    ))}
+                            
+                            {achievement.unlocked ? (
+                              <div className="text-xs text-gray-400 flex justify-between">
+                                <span>Completed</span>
+                                <span>Unlocked: {new Date(achievement.unlockedAt!).toLocaleDateString()}</span>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-400 flex justify-between">
+                                <span>Progress: {progressPercentage}%</span>
+                                <span>
+                                  {achievement.progress || 0} / {achievement.requirementValue}
+                                </span>
+                              </div>
+                            )}
+                          </CardContent>
+                          
+                          <CardFooter className="flex flex-wrap gap-2 pt-0">
+                            {achievement.cashReward > 0 && (
+                              <Badge variant="outline" className="text-green-400 border-green-400">
+                                ${achievement.cashReward.toLocaleString()}
+                              </Badge>
+                            )}
+                            {achievement.xpReward > 0 && (
+                              <Badge variant="outline" className="text-blue-400 border-blue-400">
+                                {achievement.xpReward} XP
+                              </Badge>
+                            )}
+                            {achievement.respectReward > 0 && (
+                              <Badge variant="outline" className="text-purple-400 border-purple-400">
+                                {achievement.respectReward} Respect
+                              </Badge>
+                            )}
+                            {achievement.unlocked && !achievement.rewardsClaimed && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="ml-auto text-xs bg-green-950/50 hover:bg-green-900/70 border-green-600"
+                                onClick={() => handleClaimRewards(achievement.id)}
+                              >
+                                Claim Rewards
+                              </Button>
+                            )}
+                          </CardFooter>
+                        </Card>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-8">

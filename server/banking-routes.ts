@@ -2,6 +2,7 @@ import { Express, Request, Response } from "express";
 import { storage } from "./storage";
 import * as z from "zod";
 import { insertBankAccountSchema } from "../shared/schema-economy";
+import { isAuthenticated } from "./middleware/auth";
 
 // Validate send money schema
 const sendMoneySchema = z.object({
@@ -129,11 +130,41 @@ export function registerBankingRoutes(app: Express) {
         description: "Cash deposit",
       });
       
+      // Check for deposit achievements
+      let unlockedAchievements = [];
+      try {
+        // 1. Check for "bank_deposit" achievement (tracks total deposits)
+        const depositAchievements = await storage.checkAndUpdateAchievementProgress(
+          userId, 
+          "bank_deposit", 
+          undefined,
+          amount
+        );
+        
+        // 2. Check for "bank_balance" achievement (tracks total balance)
+        const balanceAchievements = await storage.checkAndUpdateAchievementProgress(
+          userId,
+          "bank_balance",
+          undefined,
+          updatedAccount!.balance
+        );
+        
+        // Combine all unlocked achievements
+        unlockedAchievements = [
+          ...depositAchievements,
+          ...balanceAchievements
+        ];
+      } catch (err) {
+        console.error("Error checking banking achievements:", err);
+        // Continue execution, don't let achievement errors affect the main flow
+      }
+      
       res.json({
         success: true,
         account: updatedAccount,
         transaction,
-        newCashBalance: user.cash - amount
+        newCashBalance: user.cash - amount,
+        unlockedAchievements: unlockedAchievements.length > 0 ? unlockedAchievements : undefined
       });
     } catch (error) {
       console.error("Error making deposit:", error);
@@ -198,11 +229,32 @@ export function registerBankingRoutes(app: Express) {
         description: "Cash withdrawal",
       });
       
+      // Check for withdrawal achievements
+      let unlockedAchievements = [];
+      try {
+        // 1. Check for "bank_withdrawal" achievement (tracks total withdrawals)
+        const withdrawalAchievements = await storage.checkAndUpdateAchievementProgress(
+          userId, 
+          "bank_withdrawal", 
+          undefined,
+          amount
+        );
+        
+        // Combine all unlocked achievements
+        unlockedAchievements = [
+          ...withdrawalAchievements
+        ];
+      } catch (err) {
+        console.error("Error checking banking achievements:", err);
+        // Continue execution, don't let achievement errors affect the main flow
+      }
+      
       res.json({
         success: true,
         account: updatedAccount,
         transaction,
-        newCashBalance: user.cash + amount
+        newCashBalance: user.cash + amount,
+        unlockedAchievements: unlockedAchievements.length > 0 ? unlockedAchievements : undefined
       });
     } catch (error) {
       console.error("Error making withdrawal:", error);
@@ -278,12 +330,32 @@ export function registerBankingRoutes(app: Express) {
         targetUserId: fromAccount.userId,
       });
       
+      // Check for transfer achievements
+      let unlockedAchievements = [];
+      try {
+        // Check for "bank_transfer" achievement (tracks total transfers)
+        const transferAchievements = await storage.checkAndUpdateAchievementProgress(
+          userId, 
+          "bank_transfer", 
+          undefined,
+          amount
+        );
+        
+        unlockedAchievements = [
+          ...transferAchievements
+        ];
+      } catch (err) {
+        console.error("Error checking banking transfer achievements:", err);
+        // Continue execution, don't let achievement errors affect the main flow
+      }
+      
       res.json({
         success: true,
         fromAccount: updatedFromAccount,
         toAccount: updatedToAccount,
         fromTransaction,
-        toTransaction
+        toTransaction,
+        unlockedAchievements: unlockedAchievements.length > 0 ? unlockedAchievements : undefined
       });
     } catch (error) {
       console.error("Error making transfer:", error);
@@ -387,12 +459,42 @@ export function registerBankingRoutes(app: Express) {
         targetAccountId: accountId,
       });
       
+      // Check for payment achievements
+      let unlockedAchievements = [];
+      try {
+        // 1. Check for "sent_money" achievement (tracks total money sent to other players)
+        const sentMoneyAchievements = await storage.checkAndUpdateAchievementProgress(
+          senderId, 
+          "sent_money", 
+          undefined,
+          amount
+        );
+        
+        // 2. Check for "bank_transactions" achievement (counts number of transactions)
+        const transactionAchievements = await storage.checkAndUpdateAchievementProgress(
+          senderId,
+          "bank_transactions",
+          undefined,
+          1 // Increment by 1 transaction
+        );
+        
+        // Combine all unlocked achievements
+        unlockedAchievements = [
+          ...sentMoneyAchievements,
+          ...transactionAchievements
+        ];
+      } catch (err) {
+        console.error("Error checking payment achievements:", err);
+        // Continue execution, don't let achievement errors affect the main flow
+      }
+      
       res.json({
         success: true,
         senderAccount: updatedSenderAccount,
         recipientAccount: updatedRecipientAccount,
         senderTransaction,
-        recipientTransaction
+        recipientTransaction,
+        unlockedAchievements: unlockedAchievements.length > 0 ? unlockedAchievements : undefined
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
