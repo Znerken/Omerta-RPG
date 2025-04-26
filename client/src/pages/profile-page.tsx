@@ -47,6 +47,19 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/use-auth";
+import { 
+  ProfileCustomizationDialog, 
+  AVATAR_FRAMES, 
+  PROFILE_THEMES, 
+  NAME_EFFECTS,
+  BACKGROUND_EFFECTS,
+  AvatarFrame,
+  ProfileTheme,
+  NameEffect,
+  BackgroundEffect,
+  getNameEffectStyles,
+  ProfileCustomizationButton
+} from "@/components/profile/ProfileCustomization";
 
 interface ProfilePageProps {
   userId?: number;
@@ -110,6 +123,13 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  
+  // Profile customization state
+  const [selectedFrame, setSelectedFrame] = useState<AvatarFrame>(AVATAR_FRAMES[0]);
+  const [selectedProfileTheme, setSelectedProfileTheme] = useState<ProfileTheme>(PROFILE_THEMES[0]);
+  const [selectedNameEffect, setSelectedNameEffect] = useState<NameEffect>(NAME_EFFECTS[0]);
+  const [selectedBgEffect, setSelectedBgEffect] = useState<BackgroundEffect>(BACKGROUND_EFFECTS[0]);
+  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
   
   // Function to apply Billie Eilish theme
   const applyBillieEilishTheme = () => {
