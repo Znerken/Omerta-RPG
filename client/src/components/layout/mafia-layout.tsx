@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/mafia-icons";
 import { NotificationList } from "@/components/notification/notification-list";
 import { ConnectionStatus } from "@/components/social/ConnectionStatus";
+import { SocialSidebar } from "@/components/social/SocialSidebar";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: <Home className="h-5 w-5 mr-3" /> },
@@ -274,21 +275,17 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
           </div>
           
           {/* Connection Status */}
-          <div className="mt-8">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Connection Status</h3>
-            <div className="flex justify-center mb-4">
+          <div className="mt-4 mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Connection Status</h3>
               <ConnectionStatus />
             </div>
+            <div className="h-px bg-border/30 w-full"></div>
           </div>
           
-          {/* Online Friends Section */}
-          <div className="mt-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">Online Friends</h3>
-            <div className="p-4 border border-border rounded-md bg-card/50">
-              <p className="text-sm text-center text-muted-foreground py-6">
-                Visit the Friends page to add friends
-              </p>
-            </div>
+          {/* Friends Section */}
+          <div className="mt-6">
+            <SocialSidebar />
           </div>
         </div>
       </aside>
