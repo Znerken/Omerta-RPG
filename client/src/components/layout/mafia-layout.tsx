@@ -65,7 +65,13 @@ const socialNavItems = [
   { name: "Messages", path: "/messages", icon: <MailIcon className="h-4.5 w-4.5 mr-2.5" /> },
 ];
 
-export function MafiaLayout({ children }: { children: React.ReactNode }) {
+export interface MafiaLayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  description?: string;
+}
+
+export function MafiaLayout({ children, title, description }: MafiaLayoutProps) {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
   const { unviewedCount, hasNewAchievements } = useAchievements();
@@ -452,6 +458,15 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
               </Button>
             </div>
           )}
+          {/* Page title and description */}
+          {(title || description) && (
+            <div className="mb-6">
+              {title && <h1 className="text-3xl font-bold mb-2">{title}</h1>}
+              {description && <p className="text-muted-foreground">{description}</p>}
+              <div className="h-px bg-gradient-to-r from-border/5 via-border to-border/5 mt-4"></div>
+            </div>
+          )}
+          
           {children}
         </div>
       </main>

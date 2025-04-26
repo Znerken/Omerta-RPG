@@ -73,14 +73,8 @@ export default function LocationsPage() {
   };
   
   return (
-    <MafiaLayout title="Territory Map" description="Control territory in the city to earn rewards">
+    <MafiaLayout title="Territory Map" description="Take control of territories across the city to earn rewards. Visit locations in the real world, complete challenges, and build your criminal empire.">
       <div className="container mx-auto p-4">
-        <div className="mb-6 bg-black/30 p-6 rounded-lg">
-          <h1 className="text-3xl font-bold mb-2">Territory Control</h1>
-          <p className="text-muted-foreground opacity-80">
-            Take control of territories across the city to earn rewards. Visit locations in the real world, complete challenges, and build your criminal empire.
-          </p>
-        </div>
         
         <Tabs defaultValue="map" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex justify-between items-center mb-4">

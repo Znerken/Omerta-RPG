@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDistance } from "date-fns";
+import { formatDistance, formatDistanceToNow } from "date-fns";
 
 // Types
 interface LocationChallenge {
@@ -147,7 +147,7 @@ export default function ChallengeMap({ locations, onRefresh }: ChallengeMapProps
     if (timeElapsed >= cooldownMs) return "Available now";
     
     const remainingTime = cooldownMs - timeElapsed;
-    return formatDistance(now, new Date(now.getTime() + remainingTime), { addSuffix: true });
+    return formatDistance(now, new Date(now.getTime() + remainingTime));
   };
   
   // Calculate distance between two coordinates
@@ -259,7 +259,7 @@ export default function ChallengeMap({ locations, onRefresh }: ChallengeMapProps
       toast({
         title: "Challenge Completed!",
         description: `Earned: $${result.rewards.cash}, ${result.rewards.xp} XP, ${result.rewards.respect} Respect`,
-        variant: "success"
+        variant: "default"
       });
       
       // Refresh data
