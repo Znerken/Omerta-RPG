@@ -20,7 +20,9 @@ import {
   ShieldAlert,
   Skull,
   BarChart,
-  Sparkles
+  Sparkles,
+  Briefcase,
+  Timer
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -125,22 +127,33 @@ export function CrimeCard({
   return (
     <Card
       className={cn(
-        "game-card paper-texture overflow-hidden border-0",
+        "game-card paper-texture overflow-hidden border-0 relative shadow-md dark-card text-shadow-sm",
         isOnCooldown && "opacity-80",
         disabled && "opacity-60 cursor-not-allowed",
         className
       )}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20 pointer-events-none"></div>
+      {/* Stylized mafia-themed background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/20 to-black/40 pointer-events-none"></div>
+      <div className="absolute inset-0 bg-[url('/patterns/dark-leather.png')] opacity-20 mix-blend-overlay pointer-events-none"></div>
+      
+      {/* Crime ID Tag - adds a nice mafia file style */}
+      <div className="absolute top-0 right-0 transform translate-x-1/3 -translate-y-1/3 -rotate-12 bg-red-800/80 text-xs text-white px-3 py-1 font-mono shadow-md z-10">
+        CASE #{id.toString().padStart(3, '0')}
+      </div>
+      
       <CardContent className="p-5 relative">
-        <div className="flex justify-between items-start mb-3">
+        {/* Stylized Title Section with Mafia-themed accents */}
+        <div className="flex justify-between items-start mb-4 border-b border-primary/20 pb-3">
           <div>
-            <h3 className="text-lg font-heading bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">{name}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{description}</p>
+            <h3 className="text-lg font-heading bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/90 to-primary/70 drop-shadow-glow text-shadow-title">
+              {name}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 italic">{description}</p>
           </div>
           <Badge 
             className={cn(
-              "border text-xs flex items-center whitespace-nowrap", 
+              "border text-xs flex items-center whitespace-nowrap shadow-glow", 
               difficulty.color
             )}
           >
@@ -149,12 +162,12 @@ export function CrimeCard({
           </Badge>
         </div>
         
-        {/* Success Chance Meter */}
-        <div className="mt-4">
+        {/* Success Chance Meter - with enhanced styling */}
+        <div className="mt-4 bg-black/30 p-3 rounded-md border border-primary/10">
           <div className="flex justify-between items-center mb-1">
-            <div className="text-xs flex items-center">
-              <BarChart className="h-3.5 w-3.5 mr-1.5 text-primary/80" />
-              <span>Success Chance</span>
+            <div className="text-xs flex items-center font-heading tracking-wide">
+              <BarChart className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              <span>SUCCESS PROBABILITY</span>
             </div>
             <div className={cn(
               "text-xs font-mono font-medium",
@@ -165,79 +178,106 @@ export function CrimeCard({
           </div>
           <Progress 
             value={successChance} 
-            className="h-2 bg-muted/30 progress-bar-animated"
-            indicatorClassName={getProgressGradient()}
+            className="h-2.5 bg-muted/30 progress-bar-animated rounded-none"
+            indicatorClassName={`${getProgressGradient()} shadow-glow`}
           />
+          
+          <div className="mt-2 grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
+            <div className="flex items-center">
+              <Timer className="h-3 w-3 mr-1 text-primary/70" />
+              <span>PLANNING: {Math.floor(Math.random() * 24) + 2}hrs</span>
+            </div>
+            <div className="flex items-center justify-end">
+              <Briefcase className="h-3 w-3 mr-1 text-primary/70" />
+              <span>COMPLEXITY: {['LOW', 'MODERATE', 'HIGH'][Math.min(2, Math.floor((100 - successChance) / 33))]}</span>
+            </div>
+          </div>
         </div>
         
-        {/* Rewards & Risks */}
-        <div className="grid grid-cols-2 gap-3 mt-4">
-          <div className="flex items-center p-2 rounded-sm bg-green-500/10 border border-green-500/20">
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center mr-2">
-              <DollarSign className="h-4 w-4 text-green-400" />
-            </div>
-            <div>
-              <div className="text-xs text-green-400 font-medium">Cash Reward</div>
-              <div className="text-xs font-mono">{cashRange}</div>
+        {/* Rewards & Risks - with file folder styling */}
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <div className="bg-black/40 rounded-sm border-l-4 border-green-500 p-3 shadow-md transform transition-transform hover:translate-x-1">
+            <div className="flex items-start">
+              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center mr-2 border border-green-500/40">
+                <DollarSign className="h-4 w-4 text-green-400" />
+              </div>
+              <div>
+                <div className="text-xs text-green-400 font-medium uppercase tracking-wider">Cash Reward</div>
+                <div className="text-xs font-mono mt-0.5">{cashRange}</div>
+              </div>
             </div>
           </div>
           
-          <div className="flex items-center p-2 rounded-sm bg-blue-500/10 border border-blue-500/20">
-            <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center mr-2">
-              <Zap className="h-4 w-4 text-blue-400" />
-            </div>
-            <div>
-              <div className="text-xs text-blue-400 font-medium">XP Reward</div>
-              <div className="text-xs font-mono">{xpRange}</div>
+          <div className="bg-black/40 rounded-sm border-l-4 border-blue-500 p-3 shadow-md transform transition-transform hover:translate-x-1">
+            <div className="flex items-start">
+              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center mr-2 border border-blue-500/40">
+                <Zap className="h-4 w-4 text-blue-400" />
+              </div>
+              <div>
+                <div className="text-xs text-blue-400 font-medium uppercase tracking-wider">XP Reward</div>
+                <div className="text-xs font-mono mt-0.5">{xpRange}</div>
+              </div>
             </div>
           </div>
         </div>
         
-        {/* Jail Risk */}
-        <div className="mt-3 flex items-center p-2 rounded-sm bg-red-500/10 border border-red-500/20">
-          <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center mr-2">
-            <ShieldAlert className="h-4 w-4 text-red-400" />
-          </div>
-          <div className="flex-1">
-            <div className="text-xs text-red-400 font-medium">Jail Risk</div>
-            <div className="text-xs font-mono">{jailRisk}%</div>
-          </div>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <AlertTriangle className="h-4 w-4 text-red-400/60" />
+        {/* Jail Risk - with police file styling */}
+        <div className="mt-3 bg-black/40 rounded-sm border-l-4 border-red-500 p-3 shadow-md">
+          <div className="flex items-start">
+            <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center mr-2 border border-red-500/40">
+              <ShieldAlert className="h-4 w-4 text-red-400" />
+            </div>
+            <div className="flex-1">
+              <div className="text-xs text-red-400 font-medium uppercase tracking-wider flex items-center">
+                Law Enforcement Risk
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="h-3.5 w-3.5 ml-1 text-red-400/60" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-black/80 border border-red-500/30 shadow-glow-red">
+                      <p className="text-xs">
+                        If caught, you'll be sent to jail and unable to perform most actions
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <div className="flex items-center space-x-4 mt-0.5">
+                <div className="text-xs font-mono">{jailRisk}%</div>
+                <div className="flex-1 h-1.5 bg-red-900/20 rounded-sm overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-red-900 to-red-500" 
+                    style={{ width: `${jailRisk}%` }}
+                  ></div>
                 </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p className="text-xs">
-                  If caught, you'll be sent to jail and unable to perform most actions
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </div>
+            </div>
+          </div>
         </div>
         
         {/* Required Skills */}
-        <div className="mt-4">
-          <div className="text-xs flex items-center mb-2">
-            <Sparkles className="h-3.5 w-3.5 mr-1.5 text-primary/80" />
-            <span>Required Skills</span>
+        <div className="mt-5 bg-black/30 p-3 rounded-md border border-primary/10">
+          <div className="text-xs flex items-center mb-3 uppercase tracking-wider font-heading text-primary/90">
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            <span>Required Expertise</span>
           </div>
           <div className="grid grid-cols-4 gap-2">
             {strengthWeight > 0 && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex flex-col items-center">
-                      <div className="p-2 rounded-full bg-red-500/10 border border-red-500/20 mb-1">
-                        <Dumbbell className="h-4 w-4 text-red-400" />
-                      </div>
-                      <span className="text-xs font-mono">{getStatContribution(strengthWeight)}%</span>
+                    <div className="flex flex-col items-center bg-black/30 py-2 px-1 rounded-sm border border-red-500/20 transition-colors hover:bg-black/50">
+                      <Dumbbell className="h-5 w-5 text-red-400 mb-1" />
+                      <span className="text-xs font-mono text-red-300">{getStatContribution(strengthWeight)}%</span>
+                      <span className="text-[10px] mt-1 uppercase tracking-wide text-red-300/70">Force</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="text-xs">Strength: {userStats?.strength || 0}/100</p>
+                  <TooltipContent side="top" className="bg-black/80 border border-red-500/30">
+                    <p className="text-xs flex justify-between w-full">
+                      <span>Your Strength:</span> 
+                      <span className="font-mono ml-2">{userStats?.strength || 0}/100</span>
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -247,15 +287,17 @@ export function CrimeCard({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex flex-col items-center">
-                      <div className="p-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-1">
-                        <Ghost className="h-4 w-4 text-purple-400" />
-                      </div>
-                      <span className="text-xs font-mono">{getStatContribution(stealthWeight)}%</span>
+                    <div className="flex flex-col items-center bg-black/30 py-2 px-1 rounded-sm border border-purple-500/20 transition-colors hover:bg-black/50">
+                      <Ghost className="h-5 w-5 text-purple-400 mb-1" />
+                      <span className="text-xs font-mono text-purple-300">{getStatContribution(stealthWeight)}%</span>
+                      <span className="text-[10px] mt-1 uppercase tracking-wide text-purple-300/70">Shadow</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="text-xs">Stealth: {userStats?.stealth || 0}/100</p>
+                  <TooltipContent side="top" className="bg-black/80 border border-purple-500/30">
+                    <p className="text-xs flex justify-between w-full">
+                      <span>Your Stealth:</span> 
+                      <span className="font-mono ml-2">{userStats?.stealth || 0}/100</span>
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -265,15 +307,17 @@ export function CrimeCard({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex flex-col items-center">
-                      <div className="p-2 rounded-full bg-yellow-500/10 border border-yellow-500/20 mb-1">
-                        <Speech className="h-4 w-4 text-yellow-400" />
-                      </div>
-                      <span className="text-xs font-mono">{getStatContribution(charismaWeight)}%</span>
+                    <div className="flex flex-col items-center bg-black/30 py-2 px-1 rounded-sm border border-yellow-500/20 transition-colors hover:bg-black/50">
+                      <Speech className="h-5 w-5 text-yellow-400 mb-1" />
+                      <span className="text-xs font-mono text-yellow-300">{getStatContribution(charismaWeight)}%</span>
+                      <span className="text-[10px] mt-1 uppercase tracking-wide text-yellow-300/70">Talk</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="text-xs">Charisma: {userStats?.charisma || 0}/100</p>
+                  <TooltipContent side="top" className="bg-black/80 border border-yellow-500/30">
+                    <p className="text-xs flex justify-between w-full">
+                      <span>Your Charisma:</span> 
+                      <span className="font-mono ml-2">{userStats?.charisma || 0}/100</span>
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -283,15 +327,17 @@ export function CrimeCard({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex flex-col items-center">
-                      <div className="p-2 rounded-full bg-blue-500/10 border border-blue-500/20 mb-1">
-                        <Brain className="h-4 w-4 text-blue-400" />
-                      </div>
-                      <span className="text-xs font-mono">{getStatContribution(intelligenceWeight)}%</span>
+                    <div className="flex flex-col items-center bg-black/30 py-2 px-1 rounded-sm border border-blue-500/20 transition-colors hover:bg-black/50">
+                      <Brain className="h-5 w-5 text-blue-400 mb-1" />
+                      <span className="text-xs font-mono text-blue-300">{getStatContribution(intelligenceWeight)}%</span>
+                      <span className="text-[10px] mt-1 uppercase tracking-wide text-blue-300/70">Mind</span>
                     </div>
                   </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="text-xs">Intelligence: {userStats?.intelligence || 0}/100</p>
+                  <TooltipContent side="top" className="bg-black/80 border border-blue-500/30">
+                    <p className="text-xs flex justify-between w-full">
+                      <span>Your Intelligence:</span> 
+                      <span className="font-mono ml-2">{userStats?.intelligence || 0}/100</span>
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -300,15 +346,17 @@ export function CrimeCard({
         </div>
       </CardContent>
       
-      {/* Action Button */}
+      {/* Action Button - enhanced styling */}
       <CardFooter className="px-5 pb-5 pt-0">
         <Button
           variant={isOnCooldown ? "outline" : "default"}
           className={cn(
-            "w-full flex items-center justify-center gap-2 h-10",
-            isOnCooldown ? "bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border-yellow-500/20" :
-            disabled ? "bg-muted/20 hover:bg-muted/30" :
-            "bg-primary/80 hover:bg-primary"
+            "w-full flex items-center justify-center gap-2 h-11 relative shadow-glow font-medium text-sm uppercase tracking-wide",
+            isOnCooldown 
+              ? "bg-yellow-950/50 hover:bg-yellow-900/50 text-yellow-400 border-yellow-700/30" 
+              : disabled 
+                ? "bg-muted/20 hover:bg-muted/30" 
+                : "bg-primary/80 hover:bg-primary"
           )}
           disabled={disabled || isOnCooldown}
           onClick={() => onExecute && onExecute(id)}
@@ -326,7 +374,7 @@ export function CrimeCard({
           ) : (
             <>
               <CheckCircle2 className="h-4 w-4" />
-              <span>Execute Operation</span>
+              <span>EXECUTE OPERATION</span>
             </>
           )}
         </Button>
