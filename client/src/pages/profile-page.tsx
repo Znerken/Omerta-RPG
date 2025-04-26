@@ -593,93 +593,42 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         )}
       </div>
       
-      {/* Full-width Banner with Avatar */}
-      <div className="relative w-full mb-20">
-        {/* Banner Image - Full width with enhanced styling */}
-        <div 
-          className="omerta-profile-banner w-full bg-gradient-to-r from-primary/30 to-accent/30 rounded-sm"
-          style={{
-            backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          {/* Animated glowing edge effect */}
-          <div className="omerta-profile-banner-glow"></div>
-          {/* Animated overlay pattern */}
-          <div className="absolute inset-0 bg-black/10 film-grain"></div>
-          
-          {/* Decorative frame for banner */}
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
-          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
-          <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
-          <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
-          
-          {/* Banner corner decorations */}
-          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-secondary/40"></div>
-          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-secondary/40"></div>
-          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-secondary/40"></div>
-          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-secondary/40"></div>
-          
-          {isEditing && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 z-10"
-              onClick={() => bannerInputRef.current?.click()}
-            >
-              <Image className="h-5 w-5" />
-              <input
-                type="file"
-                ref={bannerInputRef}
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                onChange={handleBannerChange}
-              />
-            </Button>
-          )}
-          
-          {/* Enhanced overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
-        </div>
-        
-        {/* Avatar - Positioned to overlap banner and content with enhanced styling */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
-          <div className="relative">
-            <div className="relative perspective-1000">
-              {/* Decorative circular frame around avatar */}
-              <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-secondary/30 to-primary/30 blur-md"></div>
-              
-              <UserAvatar 
-                username={username} 
-                avatarUrl={avatarPreview || userProfile.avatar} 
-                size="xl" 
-                linkToProfile={false}
-                withBorder={true}
-                withRing={true}
-                borderColor="border-background"
-                ringColor="ring-primary/30"
-                className="shadow-lg relative z-10"
-              />
-              
-              {isEditing && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8 z-20"
-                  onClick={() => avatarInputRef.current?.click()}
-                >
-                  <Camera className="h-4 w-4" />
-                  <input
-                    type="file"
-                    ref={avatarInputRef}
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="hidden"
-                    onChange={handleAvatarChange}
-                  />
-                </Button>
-              )}
-            </div>
+      {/* Avatar centered without banner - Banner moved to showcase section */}
+      <div className="relative w-full mb-10 flex justify-center">
+        <div className="relative">
+          <div className="relative perspective-1000">
+            {/* Decorative circular frame around avatar */}
+            <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-secondary/30 to-primary/30 blur-md"></div>
+            
+            <UserAvatar 
+              username={username} 
+              avatarUrl={avatarPreview || userProfile.avatar} 
+              size="xl" 
+              linkToProfile={false}
+              withBorder={true}
+              withRing={true}
+              borderColor="border-background"
+              ringColor="ring-primary/30"
+              className="shadow-lg relative z-10"
+            />
+            
+            {isEditing && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8 z-20"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                <Camera className="h-4 w-4" />
+                <input
+                  type="file"
+                  ref={avatarInputRef}
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -891,6 +840,54 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         
         {/* Main showcase area */}
         <div className="xl:col-span-3 space-y-8">
+          {/* Banner moved to here - Above showcase */}
+          <div className="relative w-full mb-6">
+            {/* Banner Image - Full width with enhanced styling */}
+            <div 
+              className="omerta-profile-banner w-full bg-gradient-to-r from-primary/30 to-accent/30 rounded-sm"
+              style={{
+                backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
+              {/* Animated glowing edge effect */}
+              <div className="omerta-profile-banner-glow"></div>
+              {/* Animated overlay pattern */}
+              <div className="absolute inset-0 bg-black/10 film-grain"></div>
+              
+              {/* Decorative frame for banner */}
+              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
+              <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
+              <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
+              <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
+              
+              {/* Banner corner decorations */}
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-secondary/40"></div>
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-secondary/40"></div>
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-secondary/40"></div>
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-secondary/40"></div>
+              
+              {isEditing && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 z-10"
+                  onClick={() => bannerInputRef.current?.click()}
+                >
+                  <Image className="h-5 w-5" />
+                  <input
+                    type="file"
+                    ref={bannerInputRef}
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleBannerChange}
+                  />
+                </Button>
+              )}
+            </div>
+          </div>
+          
           {/* HTML Profile Showcase */}
           <Card className="bg-dark-surface border-primary/20 overflow-hidden">
             <CardHeader className="pb-2 border-b border-border/30">
