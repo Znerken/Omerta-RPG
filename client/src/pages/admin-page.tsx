@@ -1027,7 +1027,7 @@ export default function AdminPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        dashboardData?.jailedUsers?.map((user: any) => (
+                        dashboardData?.jailedUsersList?.map((user: any) => (
                           <TableRow key={user.id} className="hover:bg-dark-surface">
                             <TableCell className="font-medium">{user.username}</TableCell>
                             <TableCell>
