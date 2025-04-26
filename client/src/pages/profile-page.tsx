@@ -125,27 +125,100 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
-  // Profile customization state
-  const [selectedFrame, setSelectedFrame] = useState<AvatarFrame>(AVATAR_FRAMES[0]);
-  const [selectedProfileTheme, setSelectedProfileTheme] = useState<ProfileTheme>(PROFILE_THEMES[0]);
-  const [selectedNameEffect, setSelectedNameEffect] = useState<NameEffect>(NAME_EFFECTS[0]);
-  const [selectedBgEffect, setSelectedBgEffect] = useState<BackgroundEffect>(BACKGROUND_EFFECTS[0]);
+  // Profile customization state - use default "none" effects
+  const [selectedFrame, setSelectedFrame] = useState<AvatarFrame>(
+    AVATAR_FRAMES.find(frame => frame.id === 'none') || AVATAR_FRAMES[0]
+  );
+  const [selectedProfileTheme, setSelectedProfileTheme] = useState<ProfileTheme>(
+    PROFILE_THEMES.find(theme => theme.id === 'dark') || PROFILE_THEMES[0]
+  );
+  const [selectedNameEffect, setSelectedNameEffect] = useState<NameEffect>(
+    NAME_EFFECTS.find(effect => effect.id === 'none') || NAME_EFFECTS[0]
+  );
+  const [selectedBgEffect, setSelectedBgEffect] = useState<BackgroundEffect>(
+    BACKGROUND_EFFECTS.find(effect => effect.id === 'none') || BACKGROUND_EFFECTS[0]
+  );
   const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
+  
+  // Mutation for saving customization settings
+  const saveCustomizationMutation = useMutation({
+    mutationFn: async (customizationData: any) => {
+      const res = await apiRequest("PATCH", "/api/user/customization", customizationData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      toast({
+        title: "Customization saved",
+        description: "Your profile customization settings have been saved.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to save customization",
+        description: error.message || "There was an error saving your customization settings.",
+        variant: "destructive",
+      });
+    },
+  });
   
   // Save profile customization settings
   const saveCustomization = () => {
-    // In a real implementation, this would send the customization data to the server
-    // For now, we just log the selections and show a toast
-    console.log("Avatar Frame:", selectedFrame);
-    console.log("Profile Theme:", selectedProfileTheme);
-    console.log("Name Effect:", selectedNameEffect);
-    console.log("Background Effect:", selectedBgEffect);
+    if (!isViewingOwnProfile) return;
+    
+    const customizationData = {
+      frameId: selectedFrame.id,
+      themeId: selectedProfileTheme.id,
+      nameEffectId: selectedNameEffect.id,
+      backgroundEffectId: selectedBgEffect.id
+    };
+    
+    // In a real implementation with server support, we would persist this:
+    // saveCustomizationMutation.mutate(customizationData);
+    
+    // Until we set up the API endpoints, we'll use localStorage for persistence
+    localStorage.setItem('userCustomization', JSON.stringify(customizationData));
     
     toast({
       title: "Profile customization saved",
       description: "Your profile customization settings have been updated.",
     });
   };
+  
+  // Load saved customization from localStorage on initial render
+  useEffect(() => {
+    if (isViewingOwnProfile) {
+      const savedCustomization = localStorage.getItem('userCustomization');
+      if (savedCustomization) {
+        try {
+          const customization = JSON.parse(savedCustomization);
+          
+          // Apply saved customization
+          if (customization.frameId) {
+            const frame = AVATAR_FRAMES.find(f => f.id === customization.frameId);
+            if (frame) setSelectedFrame(frame);
+          }
+          
+          if (customization.themeId) {
+            const theme = PROFILE_THEMES.find(t => t.id === customization.themeId);
+            if (theme) setSelectedProfileTheme(theme);
+          }
+          
+          if (customization.nameEffectId) {
+            const effect = NAME_EFFECTS.find(e => e.id === customization.nameEffectId);
+            if (effect) setSelectedNameEffect(effect);
+          }
+          
+          if (customization.backgroundEffectId) {
+            const bgEffect = BACKGROUND_EFFECTS.find(e => e.id === customization.backgroundEffectId);
+            if (bgEffect) setSelectedBgEffect(bgEffect);
+          }
+        } catch (e) {
+          console.error("Error loading saved customization", e);
+        }
+      }
+    }
+  }, [isViewingOwnProfile]);
   
   // Function to apply Billie Eilish theme
   const applyBillieEilishTheme = () => {
@@ -811,20 +884,16 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
           
           {/* User Identity - Positioned below the avatar within the banner */}
           <div className="absolute bottom-0 inset-x-0 pb-6 pt-10 text-center">
-            {/* Apply rank-based styling to username with special effects for Extortionist */}
+            {/* Apply name effect from customization, falling back to rank-based styling */}
             <h1 className={`text-4xl font-bold mb-2 omerta-profile-name relative z-10 ${
-              username.toLowerCase() === "extortionist" ? "extortionist-name text-shadow-lg" :
-              userProfile.rank === "Boss" || (userProfile.gangRank === "Boss") ? "rank-boss-name" : 
-              userProfile.rank === "Capo" || (userProfile.gangRank === "Capo") ? "rank-capo-name" : 
-              userProfile.rank === "Soldier" || (userProfile.gangRank === "Soldier") ? "rank-soldier-name" : 
-              "rank-associate-name"
+              selectedNameEffect?.cssClass || "text-foreground"
             }`}>
               {username}
               
-              {/* Flame particles for extortionist only - enhanced intensity */}
-              {username.toLowerCase() === "extortionist" && (
-                <div className="absolute left-0 right-0 bottom-0 top-[-10px] pointer-events-none overflow-hidden">
-                  {Array.from({ length: 20 }).map((_, i) => (
+              {/* Apply background effect if selected */}
+              {selectedBgEffect?.id !== 'none' && selectedBgEffect?.cssClass && (
+                <div className={`absolute left-0 right-0 bottom-0 top-[-10px] pointer-events-none overflow-hidden ${selectedBgEffect.cssClass}`}>
+                  {selectedBgEffect.id === 'flames' && Array.from({ length: 20 }).map((_, i) => (
                     <div 
                       key={i} 
                       className="flame-particle"
@@ -865,17 +934,32 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
             Crew: 6 Members
           </Badge>
           
-          {/* Edit Profile Button - positioned with badges for visual consistency */}
-          {isViewingOwnProfile && !isEditing && (
-            <Button
-              size="sm"
-              onClick={() => setIsEditing(true)}
-              variant="outline"
-              className="flex items-center gap-1 bg-dark-lighter backdrop-blur-sm shadow-md hover:bg-black/70"
-            >
-              <FileEdit className="h-4 w-4" /> Edit Profile
-            </Button>
-          )}
+          {/* Profile Action Buttons */}
+          <div className="flex gap-2">
+            {/* Customization Button */}
+            {isViewingOwnProfile && (
+              <Button
+                size="sm"
+                onClick={() => setIsCustomizationOpen(true)}
+                variant="outline"
+                className="flex items-center gap-1 bg-dark-lighter backdrop-blur-sm shadow-md hover:bg-black/70"
+              >
+                <Palette className="h-4 w-4 text-primary" /> Customize
+              </Button>
+            )}
+            
+            {/* Edit Profile Button */}
+            {isViewingOwnProfile && !isEditing && (
+              <Button
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                variant="outline"
+                className="flex items-center gap-1 bg-dark-lighter backdrop-blur-sm shadow-md hover:bg-black/70"
+              >
+                <FileEdit className="h-4 w-4" /> Edit Profile
+              </Button>
+            )}
+          </div>
         </div>
       </div>
       
