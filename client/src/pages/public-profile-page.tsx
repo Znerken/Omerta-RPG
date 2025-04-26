@@ -37,8 +37,13 @@ interface UserProfile {
 }
 
 export default function PublicProfilePage() {
-  const { id } = useParams();
-  const userId = parseInt(id || "0");
+  const params = useParams();
+  const id = params?.id;
+  const userId = id ? parseInt(id) : 0;
+  
+  console.log("PublicProfilePage - params:", params);
+  console.log("PublicProfilePage - id:", id);
+  console.log("PublicProfilePage - userId:", userId);
 
   // Fetch public profile data
   const { 
