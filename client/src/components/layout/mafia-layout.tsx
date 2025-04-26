@@ -438,35 +438,19 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
         <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
-          {/* Notification bell in top-right of content area (above Activities) */}
+          {/* Mobile only notification bell (top-right of screen) */}
           {user && (
-            <>
-              {/* Desktop version */}
-              <div className="hidden md:flex absolute top-6 right-6 justify-end">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full"
-                >
-                  <NotificationList>
-                    <Bell className="h-5 w-5" />
-                  </NotificationList>
-                </Button>
-              </div>
-              
-              {/* Mobile version */}
-              <div className="md:hidden fixed top-20 right-4 z-30">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full bg-black/20 shadow-md border border-gold/10"
-                >
-                  <NotificationList>
-                    <Bell className="h-4 w-4" />
-                  </NotificationList>
-                </Button>
-              </div>
-            </>
+            <div className="md:hidden fixed top-20 right-4 z-30">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full bg-black/20 shadow-md border border-gold/10"
+              >
+                <NotificationList>
+                  <Bell className="h-4 w-4" />
+                </NotificationList>
+              </Button>
+            </div>
           )}
           {children}
         </div>
@@ -476,9 +460,24 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       <aside className="hidden md:flex md:w-64 flex-col border-l border-border h-screen sticky top-0 bg-gradient-to-b from-background to-background/95">
         <div className="flex-1 px-4 py-6 overflow-y-auto">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center">
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">Social Network</span>
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">Social Network</span>
+              </h2>
+              
+              {/* Desktop notification bell */}
+              {user && (
+                <NotificationList>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full"
+                  >
+                    <Bell className="h-4 w-4" />
+                  </Button>
+                </NotificationList>
+              )}
+            </div>
             
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
