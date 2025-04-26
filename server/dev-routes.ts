@@ -233,4 +233,82 @@ export function registerDevRoutes(app: Express) {
       res.status(500).json({ message: "Error creating test relationships" });
     }
   });
+  
+  // Create a random test user with predefined parameters
+  app.post("/api/dev/create-test-user", async (req, res) => {
+    try {
+      // Generate random username and email
+      const randomStr = generateRandomString(8);
+      const username = `tester_${randomStr}`;
+      const email = `test_${randomStr}@example.com`;
+      const password = "password123"; // Simple password for test users
+      
+      // Check if username or email already exists
+      const existingUser = await storage.getUserByUsername(username) || await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username or email already exists, try again" });
+      }
+      
+      // Create the user with hashed password
+      const user = await storage.createUser({
+        username,
+        email,
+        password: await hashPassword(password),
+        level: 5,
+        xp: 0,
+        cash: 500000, // 500,000 cash
+        respect: 100,
+        isAdmin: false, // Not an admin by default
+      });
+      
+      console.log(`Created test user: ${username} (ID: ${user.id})`);
+      
+      // Create stats with 20 of every stat
+      await db.insert(stats).values({
+        userId: user.id,
+        strength: 20,
+        stealth: 20,
+        charisma: 20,
+        intelligence: 20,
+      });
+      
+      console.log(`Created stats for user ${username}`);
+      
+      // Add drugs to inventory (get first 5 drugs from database)
+      const availableDrugs = await db.select().from(drugs).limit(5);
+      
+      // Add each drug to user inventory (20 of each)
+      for (const drug of availableDrugs) {
+        await db.insert(userDrugs).values({
+          userId: user.id,
+          drugId: drug.id,
+          quantity: 20,
+          acquiredAt: new Date()
+        });
+        console.log(`Added ${drug.name} (x20) to user ${username}'s inventory`);
+      }
+      
+      // Log the user in
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Error logging in test user:", err);
+          return res.status(500).json({ message: "User created but failed to log in automatically" });
+        }
+        
+        // Return success with user info
+        const { password, ...userWithoutPassword } = user;
+        res.status(201).json({ 
+          message: "Test user created and logged in successfully", 
+          user: userWithoutPassword,
+          credentials: {
+            username,
+            password: "password123"
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Error creating test user:", error);
+      res.status(500).json({ message: "Failed to create test user" });
+    }
+  });
 }

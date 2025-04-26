@@ -10,6 +10,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -32,6 +36,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
+  const { toast } = useToast();
   
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -51,6 +56,32 @@ export default function AuthPage() {
     },
   });
   
+  // Create test user mutation
+  const createTestUserMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/dev/create-test-user");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to create test user");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Test User Created",
+        description: `Created user: ${data.user.username} with $500,000 cash, level 5, and 20 of each stat`,
+      });
+      // The backend automatically logs the user in, no need to call loginMutation
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create test user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   const onLoginSubmit = (data: LoginFormData) => {
     loginMutation.mutate(data);
   };
@@ -58,6 +89,10 @@ export default function AuthPage() {
   const onRegisterSubmit = (data: RegisterFormData) => {
     const { username, email, password } = data;
     registerMutation.mutate({ username, email, password });
+  };
+  
+  const handleCreateTestUser = () => {
+    createTestUserMutation.mutate();
   };
   
   // Redirect to home if logged in
@@ -130,6 +165,28 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 </Form>
+                
+                <div className="mt-8 pt-6 border-t border-border/30">
+                  <div className="text-center mb-3">
+                    <p className="text-xs text-muted-foreground">Development Testing</p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    className="w-full bg-black/30 border-gold/30 text-gold hover:bg-black/50"
+                    onClick={handleCreateTestUser}
+                    disabled={createTestUserMutation.isPending}
+                  >
+                    {createTestUserMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Test User...
+                      </>
+                    ) : "Create Test User"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Creates a random user with $500,000 cash, level 5, and 20 of all stats
+                  </p>
+                </div>
               </TabsContent>
               
               <TabsContent value="register">
@@ -200,6 +257,28 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 </Form>
+                
+                <div className="mt-8 pt-6 border-t border-border/30">
+                  <div className="text-center mb-3">
+                    <p className="text-xs text-muted-foreground">Development Testing</p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    className="w-full bg-black/30 border-gold/30 text-gold hover:bg-black/50"
+                    onClick={handleCreateTestUser}
+                    disabled={createTestUserMutation.isPending}
+                  >
+                    {createTestUserMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating Test User...
+                      </>
+                    ) : "Create Test User"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Creates a random user with $500,000 cash, level 5, and 20 of all stats
+                  </p>
+                </div>
               </TabsContent>
             </Tabs>
           </Card>
