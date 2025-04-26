@@ -110,6 +110,17 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
+  // Function to apply Billie Eilish theme
+  const applyBillieEilishTheme = () => {
+    setHtmlProfile(billieEilishProfile);
+    setProfileTheme("mafia");
+    toast({
+      title: "Billie Eilish theme applied",
+      description: "You should see me in a crown...",
+      variant: "default"
+    });
+  };
+  
   // All mutations must be defined before any conditional returns
   // Mutation for updating profile
   const updateProfileMutation = useMutation({
@@ -868,6 +879,20 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
                         </Button>
                       ))}
                     </div>
+                  </div>
+                  
+                  {/* Billie Eilish Theme Button */}
+                  <div className="mt-4">
+                    <Button
+                      onClick={applyBillieEilishTheme}
+                      className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold"
+                    >
+                      <MusicIcon className="h-4 w-4 mr-2" />
+                      Apply Billie Eilish Theme
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Applies a special theme inspired by Billie Eilish's "You Should See Me In A Crown"
+                    </p>
                   </div>
                   
                   {/* Show Achievements Toggle */}
