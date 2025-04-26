@@ -9,6 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { 
   Activity, 
@@ -30,7 +38,14 @@ import {
   Brain,
   Sparkles,
   Mail,
-  Plus
+  Plus,
+  Settings,
+  Palette,
+  Frame,
+  Camera,
+  Sparkle,
+  Crown,
+  BadgeDollarSign
 } from "lucide-react";
 import { 
   TommyGunIcon, 
@@ -54,6 +69,107 @@ const NoiseSVG = () => (
   </svg>
 );
 
+// Avatar frames that can be unlocked or purchased in-game
+const AVATAR_FRAMES = [
+  { 
+    id: 'classic', 
+    name: 'Classic',
+    description: 'Standard frame',
+    border: 'border-white/10',
+    unlocked: true,
+    rarity: 'common'
+  },
+  { 
+    id: 'gold', 
+    name: 'Gold Trim',
+    description: 'A luxurious gold border',
+    border: 'border-yellow-500/70',
+    glow: 'shadow-[0_0_15px_rgba(234,179,8,0.5)]',
+    unlocked: true,
+    rarity: 'rare' 
+  },
+  { 
+    id: 'diamond', 
+    name: 'Diamond Edge',
+    description: 'Prestigious diamond-encrusted frame',
+    border: 'border-cyan-300/70',
+    glow: 'shadow-[0_0_20px_rgba(103,232,249,0.6)]',
+    unlocked: true,
+    rarity: 'legendary' 
+  },
+  { 
+    id: 'blood', 
+    name: 'Blood Pact',
+    description: 'Frame bound by blood oath',
+    border: 'border-red-800/90',
+    glow: 'shadow-[0_0_15px_rgba(220,38,38,0.6)]',
+    unlocked: true,
+    rarity: 'epic' 
+  },
+  { 
+    id: 'boss', 
+    name: 'Boss Status',
+    description: 'Reserved for family bosses',
+    border: 'border-[3px] border-gradient-to-r from-red-600 to-orange-400',
+    glow: 'shadow-[0_0_25px_rgba(239,68,68,0.6)]',
+    unlocked: false,
+    rarity: 'mythic',
+    requirement: 'Reach Boss rank in a family'
+  },
+];
+
+// Profile card themes that can be unlocked or purchased
+const PROFILE_THEMES = [
+  {
+    id: 'dark',
+    name: 'Classic Noir',
+    description: 'Standard dark theme',
+    background: 'bg-black/40',
+    border: 'border-white/5',
+    unlocked: true,
+    rarity: 'common'
+  },
+  {
+    id: 'blood',
+    name: 'Blood Money',
+    description: 'For those who aren\'t afraid to get their hands dirty',
+    background: 'bg-gradient-to-br from-black/60 to-red-950/30',
+    border: 'border-red-900/30',
+    unlocked: true, 
+    rarity: 'rare'
+  },
+  {
+    id: 'gold',
+    name: 'High Roller',
+    description: 'For those with expensive taste',
+    background: 'bg-gradient-to-br from-black/60 to-amber-950/30',
+    border: 'border-amber-700/30',
+    unlocked: true,
+    rarity: 'epic'
+  },
+  {
+    id: 'royal',
+    name: 'Cosa Nostra',
+    description: 'For the untouchable crime lords',
+    background: 'bg-gradient-to-br from-black/70 to-purple-950/40',
+    border: 'border-purple-800/30 border-[1.5px]',
+    unlocked: false,
+    rarity: 'legendary',
+    requirement: 'Reach level 30'
+  },
+  {
+    id: 'godfather',
+    name: 'The Godfather',
+    description: 'Reserved for the most feared and respected',
+    background: 'bg-gradient-to-br from-black/80 to-zinc-900/50',
+    border: 'border-orange-800/50 border-[2px]',
+    glow: 'shadow-[0_0_30px_rgba(0,0,0,0.5)]',
+    unlocked: false,
+    rarity: 'mythic',
+    requirement: 'Become the top player on the leaderboard'
+  },
+];
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
@@ -64,10 +180,13 @@ export default function DashboardPage() {
     queryKey: ["/api/crimes"],
   });
 
-  // State for animations
+  // State for animations and customization
   const [selectedTab, setSelectedTab] = useState("overview");
   const [animatePulse, setAnimatePulse] = useState(false);
   const [animate3DEffect, setAnimate3DEffect] = useState(false);
+  const [selectedFrame, setSelectedFrame] = useState(AVATAR_FRAMES[0]);
+  const [selectedTheme, setSelectedTheme] = useState(PROFILE_THEMES[0]);
+  const [showCustomizeMenu, setShowCustomizeMenu] = useState(false);
   const [activityLog, setActivityLog] = useState([
     { id: 1, type: 'crime', name: 'Bank Robbery', time: '10 min ago', success: true, reward: '$5,200' },
     { id: 2, type: 'training', name: 'Strength Training', time: '2 hours ago', success: true, reward: '+3 Strength' },
@@ -167,7 +286,9 @@ export default function DashboardPage() {
         }}
       >
         <motion.div 
-          className="bg-black/40 backdrop-blur-sm border border-white/5 rounded-xl p-6 shadow-xl"
+          className={cn(`backdrop-blur-sm rounded-xl p-6 shadow-xl ${selectedTheme.background} ${selectedTheme.border}`, 
+            selectedTheme.glow && selectedTheme.glow
+          )}
           animate={animate3DEffect ? {
             rotateX: [-0.5, 0.5],
             rotateY: [-0.5, 0.5],
@@ -183,11 +304,69 @@ export default function DashboardPage() {
             transformStyle: "preserve-3d",
           }}
         >
+          {/* Customize card button */}
+          <div className="absolute top-2 right-2 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 rounded-full bg-black/30 border border-white/10 hover:bg-black/50"
+                >
+                  <Settings className="h-4 w-4 text-zinc-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-black/90 border-white/10 text-zinc-200">
+                <DropdownMenuLabel className="flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-zinc-400" />
+                  <span>Customize Profile</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/10" />
+                
+                <DropdownMenuItem 
+                  className="justify-between cursor-pointer focus:bg-black/50"
+                  onClick={() => setShowCustomizeMenu(true)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Frame className="h-4 w-4 text-amber-400" />
+                    <span>Change Avatar Frame</span>
+                  </div>
+                  <Badge variant="outline" className="bg-black/30 text-xs font-normal">
+                    {AVATAR_FRAMES.filter(f => f.unlocked).length} Owned
+                  </Badge>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem 
+                  className="justify-between cursor-pointer focus:bg-black/50"
+                  onClick={() => setShowCustomizeMenu(true)}
+                >
+                  <div className="flex items-center gap-2">
+                    <Palette className="h-4 w-4 text-purple-400" />
+                    <span>Change Card Theme</span>
+                  </div>
+                  <Badge variant="outline" className="bg-black/30 text-xs font-normal">
+                    {PROFILE_THEMES.filter(t => t.unlocked).length} Owned
+                  </Badge>
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem className="justify-between cursor-pointer focus:bg-black/50">
+                  <div className="flex items-center gap-2">
+                    <BadgeDollarSign className="h-4 w-4 text-green-400" />
+                    <span>Shop Premium Items</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <div className="flex flex-col md:flex-row gap-6 items-center">
-            {/* Avatar with rank */}
+            {/* Avatar with customizable frame */}
             <div className="relative">
               <motion.div 
-                className="h-24 w-24 md:h-32 md:w-32 rounded-full overflow-hidden border-2 border-white/10"
+                className={cn(`h-24 w-24 md:h-32 md:w-32 rounded-full overflow-hidden border-2 ${selectedFrame.border}`,
+                  selectedFrame.glow && selectedFrame.glow
+                )}
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.2 }}
               >
@@ -290,6 +469,171 @@ export default function DashboardPage() {
           </div>
         </motion.div>
       </motion.div>
+      
+      {/* Customization dialog */}
+      {showCustomizeMenu && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <motion.div 
+            className="bg-zinc-900/90 border border-white/10 rounded-lg shadow-xl max-w-3xl w-full mx-4 p-6 relative"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300"
+              onClick={() => setShowCustomizeMenu(false)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+                className="lucide lucide-x"
+              >
+                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+              </svg>
+            </Button>
+            
+            <h2 className="text-xl font-bold mb-6 flex items-center">
+              <Sparkle className="mr-2 h-5 w-5 text-amber-400" /> 
+              Customize Your Profile
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Avatar frames section */}
+              <div>
+                <h3 className="text-lg font-medium mb-4 flex items-center">
+                  <Frame className="mr-2 h-4 w-4 text-zinc-400" /> 
+                  Avatar Frames
+                </h3>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {AVATAR_FRAMES.map(frame => (
+                    <div 
+                      key={frame.id}
+                      onClick={() => frame.unlocked && setSelectedFrame(frame)}
+                      className={cn(
+                        "relative rounded-lg border p-3 flex flex-col items-center cursor-pointer transition-all duration-200",
+                        frame.unlocked ? "border-white/10 hover:border-white/30" : "border-white/5 opacity-40 cursor-not-allowed",
+                        selectedFrame.id === frame.id && "border-white/40 bg-white/5"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-16 h-16 rounded-full flex items-center justify-center overflow-hidden border-2",
+                        frame.border,
+                        frame.glow && frame.glow
+                      )}>
+                        {user.avatar ? (
+                          <div 
+                            className="h-full w-full bg-cover bg-center"
+                            style={{ backgroundImage: `url(${user.avatar})` }}
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-black flex items-center justify-center">
+                            <FedoraIcon className="text-red-400" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="mt-2 text-center">
+                        <div className="text-sm font-medium">{frame.name}</div>
+                        <div className="text-xs text-zinc-500">{frame.description}</div>
+                      </div>
+                      
+                      {/* Rarity badge */}
+                      <div className="absolute top-2 right-2">
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-[10px] uppercase font-semibold",
+                            frame.rarity === 'common' && "bg-zinc-900/50 border-zinc-700/50 text-zinc-400",
+                            frame.rarity === 'rare' && "bg-blue-900/30 border-blue-700/50 text-blue-400",
+                            frame.rarity === 'epic' && "bg-purple-900/30 border-purple-700/50 text-purple-400",
+                            frame.rarity === 'legendary' && "bg-amber-900/30 border-amber-700/50 text-amber-400",
+                            frame.rarity === 'mythic' && "bg-red-900/30 border-red-700/50 text-red-400"
+                          )}
+                        >
+                          {frame.rarity}
+                        </Badge>
+                      </div>
+                      
+                      {!frame.unlocked && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                          <Badge variant="outline" className="bg-red-900/30 border-red-900/50">
+                            {frame.requirement || "Locked"}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Profile themes section */}
+              <div>
+                <h3 className="text-lg font-medium mb-4 flex items-center">
+                  <Palette className="mr-2 h-4 w-4 text-zinc-400" /> 
+                  Card Themes
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {PROFILE_THEMES.map(theme => (
+                    <div 
+                      key={theme.id}
+                      onClick={() => theme.unlocked && setSelectedTheme(theme)}
+                      className={cn(
+                        "relative rounded-lg overflow-hidden border cursor-pointer transition-all duration-200 h-24",
+                        theme.unlocked ? "border-white/10 hover:border-white/30" : "border-white/5 opacity-40 cursor-not-allowed",
+                        selectedTheme.id === theme.id && "border-white/40"
+                      )}
+                    >
+                      <div className={cn("w-full h-full flex items-center justify-center", theme.background, theme.border)}>
+                        <div className="text-center p-4">
+                          <div className="text-sm font-medium">{theme.name}</div>
+                          <div className="text-xs text-zinc-500 line-clamp-2">{theme.description}</div>
+                        </div>
+                      </div>
+                      
+                      {/* Rarity badge */}
+                      <div className="absolute top-2 right-2">
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "text-[10px] uppercase font-semibold",
+                            theme.rarity === 'common' && "bg-zinc-900/50 border-zinc-700/50 text-zinc-400",
+                            theme.rarity === 'rare' && "bg-blue-900/30 border-blue-700/50 text-blue-400",
+                            theme.rarity === 'epic' && "bg-purple-900/30 border-purple-700/50 text-purple-400",
+                            theme.rarity === 'legendary' && "bg-amber-900/30 border-amber-700/50 text-amber-400",
+                            theme.rarity === 'mythic' && "bg-red-900/30 border-red-700/50 text-red-400"
+                          )}
+                        >
+                          {theme.rarity}
+                        </Badge>
+                      </div>
+                      
+                      {!theme.unlocked && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Badge variant="outline" className="bg-red-900/30 border-red-900/50">
+                            {theme.requirement || "Locked"}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 flex justify-end space-x-4">
+              <Button variant="outline" onClick={() => setShowCustomizeMenu(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => setShowCustomizeMenu(false)}>
+                Apply Changes
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Main content with tabs */}
       <Tabs 
