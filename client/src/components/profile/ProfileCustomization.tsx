@@ -21,7 +21,8 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
-  X
+  X,
+  Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { 
