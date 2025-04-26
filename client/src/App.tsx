@@ -183,11 +183,14 @@ function AppRouter() {
       
       {/* Public profile route - not protected, only wrapped in layout */}
       <Route path="/player/:id">
-        {({ params }) => (
-          <MafiaLayout>
-            <PublicProfilePage userId={parseInt(params.id)} />
-          </MafiaLayout>
-        )}
+        {(params) => {
+          const id = params?.id || '';
+          return (
+            <MafiaLayout>
+              <PublicProfilePage userId={parseInt(id)} />
+            </MafiaLayout>
+          );
+        }}
       </Route>
       
       <Route component={NotFound} />

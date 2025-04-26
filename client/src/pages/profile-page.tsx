@@ -207,34 +207,108 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   <!-- Billie-inspired main container -->
   <div style="position: relative; overflow: hidden; border-radius: 12px; background: linear-gradient(145deg, #111111, #050505); box-shadow: 0 8px 32px rgba(0, 255, 100, 0.1);">
     
-    <!-- Animated neon accent -->
-    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, #00ff6a, #003e19, #00ff6a); background-size: 200% 100%; animation: neonFlow 3s linear infinite;"></div>
-    
-    <!-- Header with Billie-style imagery -->
-    <div style="background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9)), url('https://i.imgur.com/8cNtGuL.jpg'); background-size: cover; background-position: center; height: 320px; position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 25px; border-bottom: 1px solid rgba(0, 255, 100, 0.3);">
+    <!-- Main banner with all profile info -->
+    <div style="position: relative; width: 100%; height: 400px; overflow: hidden; border-bottom: 1px solid rgba(0, 255, 100, 0.3);">
+      <!-- Dark gradient overlay for better text readability -->
+      <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.8)); z-index: 2;"></div>
       
-      <!-- Overlay vignette -->
-      <div style="position: absolute; inset: 0; background: radial-gradient(circle at center, transparent 30%, #000000 100%); z-index: 1;"></div>
+      <!-- Banner image with Billie Eilish - stretched and positioned for dramatic effect -->
+      <div style="position: absolute; inset: 0; background: url('https://i.pinimg.com/736x/d4/73/6b/d4736bb3b71fa79e6b8aae7e5182787a.jpg') center/cover; z-index: 1; filter: brightness(0.7);"></div>
       
-      <!-- Glitchy title -->
-      <div style="position: relative; z-index: 2; margin-bottom: 70px; text-align: center;">
-        <h1 style="font-size: 4em; font-weight: 900; margin: 0; position: relative; display: inline-block; letter-spacing: -1px; text-transform: uppercase; color: transparent; background: linear-gradient(90deg, #00ff6a, #00ffa3, #00ffb7, #00a3ff, #00ff6a); background-size: 400% 100%; -webkit-background-clip: text; text-shadow: 0 0 10px rgba(0, 255, 100, 0.5); animation: titleFlow 10s linear infinite;">EXTORTIONIST</h1>
-        <h2 style="font-size: 1.2em; margin: 10px 0 0; opacity: 0.7; font-style: italic; font-weight: 400; letter-spacing: 3px;">&ldquo;Don't say I didn't warn ya&rdquo;</h2>
-      </div>
-      
-      <!-- Neon stats banner -->
-      <div style="position: relative; z-index: 2; display: flex; justify-content: space-around; background-color: rgba(0, 0, 0, 0.7); padding: 15px; border-radius: 8px; border: 1px solid rgba(0, 255, 100, 0.3); box-shadow: 0 0 20px rgba(0, 255, 100, 0.2); backdrop-filter: blur(5px);">
-        <div style="text-align: center;">
-          <div style="font-size: 1.5em; font-weight: 700; color: #00ff6a;">100%</div>
-          <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6;">Stealth</div>
+      <!-- User profile content -->
+      <div style="position: relative; z-index: 3; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 30px;">
+        <!-- Avatar circle within the banner -->
+        <div style="position: absolute; right: 50px; top: 60px; width: 120px; height: 120px; border-radius: 50%; overflow: hidden; border: 3px solid #ff2d55; outline: 1px solid rgba(255, 45, 85, 0.4); outline-offset: 2px;">
+          <img src="https://i.pinimg.com/736x/29/1d/70/291d7007c84a0ae18c950f3d1621e4af.jpg" style="width: 100%; height: 100%; object-fit: cover;">
         </div>
-        <div style="text-align: center;">
-          <div style="font-size: 1.5em; font-weight: 700; color: #00ff6a;">$10M+</div>
-          <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6;">Assets</div>
+        
+        <!-- Username with dramatic effect -->
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="font-size: 4rem; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: 5px; color: #ff2d55; outline: 1px solid #ff2d55; outline-offset: 5px; padding: 10px; display: inline-block;">
+            EXTORTIONIST
+          </h2>
+          
+          <!-- Level indicator -->
+          <div style="display: flex; align-items: center; justify-content: center; margin-top: 10px;">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 5px;">
+              <path d="M10 0L12.2451 6.90983H19.5106L13.6327 11.1803L15.8779 18.0902L10 13.8197L4.12215 18.0902L6.36729 11.1803L0.489435 6.90983H7.75486L10 0Z" fill="#ff9500"/>
+            </svg>
+            <span style="color: #ff9500; font-weight: bold; font-size: 1.2rem;">Level 12</span>
+          </div>
         </div>
-        <div style="text-align: center;">
-          <div style="font-size: 1.5em; font-weight: 700; color: #00ff6a;">Level 73</div>
-          <div style="font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6;">Reputation</div>
+        
+        <!-- Status indicators row -->
+        <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
+          <!-- Money counter -->
+          <div style="background: rgba(0, 0, 0, 0.6); padding: 10px 15px; border-radius: 50px; display: flex; align-items: center; border: 1px solid rgba(0, 255, 0, 0.3);">
+            <span style="color: #00cc00; margin-right: 5px; font-size: 1.2rem;">$</span>
+            <span style="color: #fff; font-weight: bold;">9,043,354</span>
+          </div>
+          
+          <!-- Respect counter -->
+          <div style="background: rgba(0, 0, 0, 0.6); padding: 10px 15px; border-radius: 50px; display: flex; align-items: center; border: 1px solid rgba(255, 45, 85, 0.3);">
+            <span style="color: #ff2d55; margin-right: 5px; font-size: 1.2rem;">⚔️</span>
+            <span style="color: #fff; font-weight: bold;">125 Respect</span>
+          </div>
+          
+          <!-- Mafia rank -->
+          <div style="background: rgba(0, 0, 0, 0.6); padding: 10px 15px; border-radius: 50px; display: flex; align-items: center; border: 1px solid rgba(255, 165, 0, 0.3);">
+            <span style="color: #ff9500; margin-right: 5px; font-size: 1.2rem;">👑</span>
+            <span style="color: #fff; font-weight: bold;">Mafia Boss</span>
+          </div>
+          
+          <!-- Crew counter -->
+          <div style="background: rgba(0, 0, 0, 0.6); padding: 10px 15px; border-radius: 50px; display: flex; align-items: center; border: 1px solid rgba(100, 100, 255, 0.3);">
+            <span style="color: #6464ff; margin-right: 5px; font-size: 1.2rem;">👥</span>
+            <span style="color: #fff; font-weight: bold;">Crew: 6 Members</span>
+          </div>
+        </div>
+        
+        <!-- Stat bars -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 10px;">
+          <!-- Strength stat -->
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span style="font-size: 0.9rem; color: #ff9500; text-transform: uppercase; font-weight: bold;">Strength</span>
+              <span style="font-size: 0.9rem; color: #fff;">100/100</span>
+            </div>
+            <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
+              <div style="height: 100%; width: 100%; background: linear-gradient(90deg, #ff2d55, #ff9500);"></div>
+            </div>
+          </div>
+          
+          <!-- Stealth stat -->
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span style="font-size: 0.9rem; color: #ff9500; text-transform: uppercase; font-weight: bold;">Stealth</span>
+              <span style="font-size: 0.9rem; color: #fff;">100/100</span>
+            </div>
+            <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
+              <div style="height: 100%; width: 100%; background: linear-gradient(90deg, #ff2d55, #ff9500);"></div>
+            </div>
+          </div>
+          
+          <!-- Intelligence stat -->
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span style="font-size: 0.9rem; color: #ff9500; text-transform: uppercase; font-weight: bold;">Intelligence</span>
+              <span style="font-size: 0.9rem; color: #fff;">100/100</span>
+            </div>
+            <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
+              <div style="height: 100%; width: 100%; background: linear-gradient(90deg, #ff2d55, #ff9500);"></div>
+            </div>
+          </div>
+          
+          <!-- Charisma stat -->
+          <div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+              <span style="font-size: 0.9rem; color: #ff9500; text-transform: uppercase; font-weight: bold;">Charisma</span>
+              <span style="font-size: 0.9rem; color: #fff;">100/100</span>
+            </div>
+            <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
+              <div style="height: 100%; width: 100%; background: linear-gradient(90deg, #ff2d55, #ff9500);"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
