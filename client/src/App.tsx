@@ -69,11 +69,12 @@ function AppRouter() {
         )}
       </Route>
       
+      {/* Deprecated route - keeping for backwards compatibility but redirecting to /player/:id */}
       <Route path="/profile/:userId">
         {({ params }) => (
           <ProtectedRoute 
             path={`/profile/${params.userId}`} 
-            component={() => <ProtectedPage component={() => <ProfilePage userId={parseInt(params.userId)} />} />} 
+            component={() => <ProtectedPage component={() => <PublicProfilePage userId={parseInt(params.userId)} />} />} 
           />
         )}
       </Route>
@@ -184,7 +185,7 @@ function AppRouter() {
       <Route path="/player/:id">
         {({ params }) => (
           <MafiaLayout>
-            <PublicProfilePage />
+            <PublicProfilePage userId={parseInt(params.id)} />
           </MafiaLayout>
         )}
       </Route>

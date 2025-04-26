@@ -36,14 +36,24 @@ interface UserProfile {
   gang?: UserGang;
 }
 
-export default function PublicProfilePage() {
+interface PublicProfilePageProps {
+  userId?: number;
+}
+
+export default function PublicProfilePage({ userId: propUserId }: PublicProfilePageProps) {
+  // Get userId from prop or URL parameter
   const params = useParams();
   const id = params?.id;
-  const userId = id ? parseInt(id) : 0;
+  const urlUserId = id ? parseInt(id) : 0;
+  
+  // Use the prop userId if provided, otherwise use the URL parameter
+  const userId = propUserId || urlUserId;
   
   console.log("PublicProfilePage - params:", params);
   console.log("PublicProfilePage - id:", id);
-  console.log("PublicProfilePage - userId:", userId);
+  console.log("PublicProfilePage - propUserId:", propUserId);
+  console.log("PublicProfilePage - urlUserId:", urlUserId);
+  console.log("PublicProfilePage - final userId:", userId);
 
   // Fetch public profile data
   const { 
