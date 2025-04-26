@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbars but keep scroll functionality */
+html, body {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar,
+div::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+}
+
+/* Apply to any element that needs scrolling with hidden scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);

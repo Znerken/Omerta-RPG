@@ -267,7 +267,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile menu */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-30 bg-background/95 pt-16">
-          <div className="px-4 py-4 overflow-y-auto h-[calc(100%-4rem)]">
+          <div className="px-4 py-4 overflow-y-auto scrollbar-hide h-[calc(100%-4rem)]">
             {/* Personal Category */}
             <div className="mb-5">
               <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">
@@ -436,7 +436,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto pt-16 md:pt-0">
+      <main className="flex-1 overflow-y-auto scrollbar-hide pt-16 md:pt-0">
         <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
           {/* Mobile only notification bell (top-right of screen) */}
           {user && (
@@ -458,7 +458,7 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
 
       {/* Right Sidebar - Social */}
       <aside className="hidden md:flex md:w-64 flex-col border-l border-border h-screen sticky top-0 bg-gradient-to-b from-background to-background/95">
-        <div className="flex-1 px-4 py-6 overflow-y-auto">
+        <div className="flex-1 px-4 py-6 overflow-y-auto scrollbar-hide">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold flex items-center">
