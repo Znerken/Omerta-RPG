@@ -355,20 +355,26 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       const user = await this.getUser(userId);
       if (!user) return undefined;
       
-      // Since we don't have a complete stats implementation yet,
-      // we'll create a basic stats object
-      const stats = {
+      // Get the actual stats for this user from the database
+      const userStats = await this.getStatsByUserId(userId);
+      
+      // If for some reason stats don't exist (should be handled by getStatsByUserId),
+      // we'll create default stats with 100 for the extortionist user (per requirement)
+      const stats = userStats || {
         id: userId,
         userId: userId,
-        strength: 10,
-        stealth: 10,
-        charisma: 10,
-        intelligence: 10,
+        strength: userId === 1 ? 100 : 10, // 100 for extortionist (user ID 1)
+        stealth: userId === 1 ? 100 : 10,
+        charisma: userId === 1 ? 100 : 10,
+        intelligence: userId === 1 ? 100 : 10,
         strengthTrainingCooldown: null,
         stealthTrainingCooldown: null, 
         charismaTrainingCooldown: null,
         intelligenceTrainingCooldown: null,
       };
+      
+      // Log for debugging
+      console.log(`[DEBUG] getUserWithStats for userId ${userId}:`, stats);
       
       return {
         ...user,
