@@ -1,42 +1,52 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { supabase, signInWithEmail, signUpWithEmail, signOut, UserProfile } from '@/lib/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
-import {
-  supabase,
-  signInWithEmail,
-  signUpWithEmail,
-  signOut as supabaseSignOut,
-  UserProfile
-} from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
-// Define the auth context type
+// Create a context for authentication
 interface SupabaseAuthContextType {
   session: Session | null;
   user: User | null;
   gameUser: UserProfile | null;
   isLoading: boolean;
-  error: Error | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username: string, confirmPassword: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  refreshGameUser: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
-// Create the auth context
 const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
 
-// Auth provider component
+// Provider component
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [gameUser, setGameUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
 
-  // Initialize auth state
+  // Get game user data from our database
+  const { data: gameUser } = useQuery<UserProfile>({
+    queryKey: ['/api/user'],
+    queryFn: async () => {
+      if (!user) return null;
+      try {
+        const res = await apiRequest('GET', '/api/user');
+        if (!res.ok) {
+          throw new Error('Failed to fetch user profile');
+        }
+        return await res.json();
+      } catch (error) {
+        return null;
+      }
+    },
+    enabled: !!user,
+  });
+
+  // Check for session on initial load
   useEffect(() => {
+    setIsLoading(true);
+    
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -45,172 +55,133 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
-      
-      // Fetch game user profile when auth state changes
-      if (session) {
-        refreshGameUser();
-      } else {
-        setGameUser(null);
-      }
     });
 
-    // Cleanup subscription
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch game user profile from API
-  const refreshGameUser = async () => {
-    if (!user) {
-      setGameUser(null);
-      return;
-    }
-
-    try {
-      const response = await apiRequest('GET', '/api/user');
-      
-      if (response.ok) {
-        const data = await response.json();
-        setGameUser(data);
-      } else {
-        // If 401, user needs to link account
-        if (response.status === 401) {
-          setGameUser(null);
-        } else {
-          console.error(`API error: ${response.status}`);
-          setError(new Error(`Failed to fetch user profile: ${response.statusText}`));
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching game user profile:', err);
-      setError(err instanceof Error ? err : new Error('Failed to fetch user profile'));
-    }
-  };
-
-  // Sign in handler
+  // Sign in with email and password
   const signIn = async (email: string, password: string) => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
+      const { user } = await signInWithEmail(email, password);
+      setUser(user);
       
-      await signInWithEmail(email, password);
+      // Invalidate user query to refetch
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
       toast({
-        title: 'Success',
-        description: 'You have been signed in.',
+        title: 'Welcome back',
+        description: 'You have successfully signed in.',
       });
-    } catch (err) {
-      console.error('Sign in error:', err);
-      setError(err instanceof Error ? err : new Error('Failed to sign in'));
-      
+    } catch (error: any) {
       toast({
         title: 'Sign in failed',
-        description: err instanceof Error ? err.message : 'Failed to sign in',
+        description: error.message || 'Please check your credentials and try again.',
         variant: 'destructive',
       });
-      
-      throw err;
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign up handler
+  // Sign up with email, password and username
   const signUp = async (email: string, password: string, username: string, confirmPassword: string) => {
+    // Validate password match
+    if (password !== confirmPassword) {
+      toast({
+        title: 'Passwords do not match',
+        description: 'Please make sure your passwords match.',
+        variant: 'destructive',
+      });
+      throw new Error('Passwords do not match');
+    }
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Validate password match
-      if (password !== confirmPassword) {
-        throw new Error('Passwords do not match');
-      }
-      
-      // Sign up with Supabase Auth
+      // Register with Supabase
       const { user } = await signUpWithEmail(email, password, username);
       
-      if (!user || !user.id) {
-        throw new Error('Failed to create account');
+      if (user) {
+        // Create user in our database
+        const res = await apiRequest('POST', '/api/register', {
+          supabaseId: user.id,
+          username,
+          email,
+          password,
+          confirmPassword,
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.message || 'Failed to complete registration');
+        }
+        
+        setUser(user);
+        
+        // Invalidate user query to fetch game user data
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+        
+        toast({
+          title: 'Account created',
+          description: 'Your account has been created successfully. Welcome to OMERTÀ!',
+        });
       }
-      
-      // Register in our game database
-      const response = await apiRequest('POST', '/api/register', {
-        username,
-        email,
-        password,
-        confirmPassword,
-        supabaseId: user.id,
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to register game account');
-      }
-      
+    } catch (error: any) {
       toast({
-        title: 'Account created',
-        description: 'Your account has been created successfully.',
-      });
-    } catch (err) {
-      console.error('Sign up error:', err);
-      setError(err instanceof Error ? err : new Error('Failed to sign up'));
-      
-      toast({
-        title: 'Sign up failed',
-        description: err instanceof Error ? err.message : 'Failed to sign up',
+        title: 'Registration failed',
+        description: error.message || 'Please try again with different credentials.',
         variant: 'destructive',
       });
-      
-      throw err;
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign out handler
-  const signOut = async () => {
+  // Sign out
+  const logout = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      setError(null);
+      await signOut();
+      setUser(null);
+      setSession(null);
       
-      await supabaseSignOut();
-      
-      setGameUser(null);
+      // Clear user data from query cache
+      queryClient.setQueryData(['/api/user'], null);
       
       toast({
         title: 'Signed out',
-        description: 'You have been signed out.',
+        description: 'You have been signed out successfully.',
       });
-    } catch (err) {
-      console.error('Sign out error:', err);
-      setError(err instanceof Error ? err : new Error('Failed to sign out'));
-      
+    } catch (error: any) {
       toast({
         title: 'Sign out failed',
-        description: err instanceof Error ? err.message : 'Failed to sign out',
+        description: error.message || 'There was an error signing out.',
         variant: 'destructive',
       });
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Provide auth context
+  // Context value
   const value = {
     session,
     user,
     gameUser,
     isLoading,
-    error,
     signIn,
     signUp,
-    signOut,
-    refreshGameUser,
+    logout,
   };
 
   return (
@@ -220,7 +191,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Auth hook
+// Custom hook to use the auth context
 export function useSupabaseAuth() {
   const context = useContext(SupabaseAuthContext);
   

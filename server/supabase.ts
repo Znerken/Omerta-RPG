@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -6,13 +6,11 @@ dotenv.config();
 
 // Validate Supabase credentials
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error(
-    'Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
-  );
+  console.error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
+  process.exit(1);
 }
 
-// Initialize Supabase Admin client with service role key
-// This client has admin privileges and should only be used on the server
+// Create a Supabase client with the service role key for admin access
 export const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -26,71 +24,47 @@ export const supabaseAdmin = createClient(
 
 /**
  * Verify a JWT token from Supabase
- * @param token JWT token to verify
- * @returns The user if token is valid, null otherwise
+ * @param token JWT token from Authorization header
+ * @returns User data if token is valid, null otherwise
  */
-export async function verifyToken(token: string) {
+export async function verifyToken(token: string): Promise<any> {
   try {
-    // Extract the actual token if it's in the Authorization header format
-    const actualToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+    // Extract the token from Authorization header if needed
+    const jwt = token.startsWith('Bearer ') ? token.slice(7) : token;
     
-    // Get user data from token
-    const { data, error } = await supabaseAdmin.auth.getUser(actualToken);
+    // Call Supabase API to get user by JWT token
+    const { data, error } = await supabaseAdmin.auth.getUser(jwt);
     
     if (error) {
-      console.error('Token verification error:', error);
+      console.error('Error verifying token:', error);
       return null;
     }
     
     return data.user;
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.error('Error verifying token:', error);
     return null;
   }
 }
 
 /**
- * Get a user by ID from Supabase Auth
- * @param id User ID
- * @returns The user data if found, null otherwise
+ * Get all users from Supabase Auth
+ * @returns Array of users
  */
-export async function getUserById(id: string) {
+export async function listUsers(): Promise<any[]> {
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+    // Get all users from Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
-      console.error('Get user error:', error);
-      return null;
+      console.error('Error listing users:', error);
+      return [];
     }
     
-    return data.user;
+    return data.users;
   } catch (error) {
-    console.error('Get user error:', error);
-    return null;
-  }
-}
-
-/**
- * Update a user's metadata in Supabase Auth
- * @param id User ID
- * @param metadata Metadata to update
- * @returns Whether the update was successful
- */
-export async function updateUserMetadata(id: string, metadata: Record<string, any>) {
-  try {
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(id, {
-      user_metadata: metadata,
-    });
-    
-    if (error) {
-      console.error('Update user metadata error:', error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Update user metadata error:', error);
-    return false;
+    console.error('Error listing users:', error);
+    return [];
   }
 }
 
@@ -99,10 +73,11 @@ export async function updateUserMetadata(id: string, metadata: Record<string, an
  * @param email User email
  * @param password User password
  * @param metadata User metadata
- * @returns The created user data if successful, null otherwise
+ * @returns Created user data
  */
-export async function createUser(email: string, password: string, metadata: Record<string, any> = {}) {
+export async function createUser(email: string, password: string, metadata: any): Promise<any> {
   try {
+    // Create user in Supabase Auth
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -111,54 +86,80 @@ export async function createUser(email: string, password: string, metadata: Reco
     });
     
     if (error) {
-      console.error('Create user error:', error);
-      return null;
+      console.error('Error creating user:', error);
+      throw error;
     }
     
     return data.user;
   } catch (error) {
-    console.error('Create user error:', error);
-    return null;
+    console.error('Error creating user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update a user in Supabase Auth
+ * @param id User ID
+ * @param userData User data to update
+ * @returns Updated user data
+ */
+export async function updateUser(id: string, userData: any): Promise<any> {
+  try {
+    // Update user in Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(id, userData);
+    
+    if (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+    
+    return data.user;
+  } catch (error) {
+    console.error('Error updating user:', error);
+    throw error;
   }
 }
 
 /**
  * Delete a user from Supabase Auth
  * @param id User ID
- * @returns Whether the deletion was successful
+ * @returns True if successful, throws error otherwise
  */
-export async function deleteUser(id: string) {
+export async function deleteUser(id: string): Promise<boolean> {
   try {
+    // Delete user from Supabase Auth
     const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
     
     if (error) {
-      console.error('Delete user error:', error);
-      return false;
+      console.error('Error deleting user:', error);
+      throw error;
     }
     
     return true;
   } catch (error) {
-    console.error('Delete user error:', error);
-    return false;
+    console.error('Error deleting user:', error);
+    throw error;
   }
 }
 
 /**
- * List all users in Supabase Auth
- * @returns Array of users if successful, empty array otherwise
+ * Get a user by ID from Supabase Auth
+ * @param id User ID
+ * @returns User data if found, null otherwise
  */
-export async function listUsers() {
+export async function getUserById(id: string): Promise<any> {
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    // Get user from Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
     
     if (error) {
-      console.error('List users error:', error);
-      return [];
+      console.error('Error getting user:', error);
+      return null;
     }
     
-    return data.users;
+    return data.user;
   } catch (error) {
-    console.error('List users error:', error);
-    return [];
+    console.error('Error getting user:', error);
+    return null;
   }
 }

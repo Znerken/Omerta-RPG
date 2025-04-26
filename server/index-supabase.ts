@@ -1,113 +1,107 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import session from 'express-session';
 import path from 'path';
-import cors from 'cors';
-import multer from 'multer';
-import fs from 'fs';
+import { initializeDatabase, closeDatabase, syncSupabaseUsers } from './db-supabase';
 import { registerRoutes } from './routes-supabase';
-import { initializeDatabase, syncSupabaseUsers } from './db-supabase';
-import { registerVite } from './vite';
+import { setupAuthRoutes } from './auth-supabase';
+import { storage } from './storage-supabase';
+import dotenv from 'dotenv';
 
-// Initialize Express
+// Load environment variables
+dotenv.config();
+
+// Create Express app
 const app = express();
 
-// Configure CORS
-app.use(cors());
-
-// Parse JSON and URL-encoded data
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+// Validate session secret
+if (!process.env.SESSION_SECRET) {
+  console.error('SESSION_SECRET environment variable is required');
+  process.exit(1);
 }
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Use user ID + timestamp + random number for unique filenames
-    const userId = req.user?.id || 'anonymous';
-    const timestamp = Date.now();
-    const randomNum = Math.floor(Math.random() * 1000000000);
-    const ext = path.extname(file.originalname);
-    cb(null, `${userId}-${timestamp}-${randomNum}${ext}`);
-  },
-});
+// Enable JSON body parsing
+app.use(express.json());
 
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB
-  },
-  fileFilter: (_req, file, cb) => {
-    // Allow only images
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WEBP are allowed.'));
-    }
-  },
-});
-
-// Make the uploads directory accessible
-app.use('/uploads', express.static(uploadsDir));
-
-// File upload endpoint
-app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-
-  // Return the file URL
-  const fileUrl = `/uploads/${req.file.filename}`;
-  return res.json({ url: fileUrl });
-});
-
-// Initialize database
-initializeDatabase()
-  .then(() => {
-    // Sync Supabase users with our database
-    return syncSupabaseUsers();
+// Configure session middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+    store: storage.sessionStore,
   })
-  .then(() => {
-    console.log('Supabase synchronization complete');
-  })
-  .catch((error) => {
-    console.error('Error initializing database:', error);
-    process.exit(1);
-  });
+);
 
-// Register API routes
+// Setup authentication routes
+setupAuthRoutes(app);
+
+// Set up API routes
 const httpServer = registerRoutes(app);
 
-// Configure Vite in development
-if (process.env.NODE_ENV !== 'production') {
-  registerVite(app);
+// Serve static files in production or development
+if (process.env.NODE_ENV === 'production') {
+  // In production, serve the built client files
+  app.use(express.static(path.join(__dirname, '../client')));
+} else {
+  // In development, use Vite server
+  import('./vite').then(({ createViteServer }) => {
+    createViteServer();
+  });
 }
 
-// Error handler
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Application error:', err);
-  
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
-  });
-});
-
-// Catch-all route for SPA
-app.get('*', (_req: Request, res: Response) => {
+// Default route that will be handled by client-side routing
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
   res.sendFile(path.join(__dirname, '../client/index.html'));
 });
 
-// Start the server
-const port = process.env.PORT || 5000;
+// Determine port
+const PORT = process.env.PORT || 5000;
 
-httpServer.listen(port, '0.0.0.0', () => {
-  console.log(`serving on port ${port}`);
-});
+// Initialize database and start server
+async function startServer() {
+  try {
+    // Initialize database connection
+    const dbInitialized = await initializeDatabase();
+    if (!dbInitialized) {
+      console.error('Failed to initialize database, exiting...');
+      process.exit(1);
+    }
+
+    // Sync Supabase users with database
+    await syncSupabaseUsers();
+
+    // Start HTTP server
+    httpServer.listen(PORT, () => {
+      console.log(`[express] serving on port ${PORT}`);
+    });
+
+    // Handle graceful shutdown
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
+  } catch (error) {
+    console.error('Error starting server:', error);
+    process.exit(1);
+  }
+}
+
+// Shutdown function
+async function shutdown() {
+  console.log('Shutting down server...');
+  
+  // Close database connection
+  await closeDatabase();
+  
+  // Exit process
+  process.exit(0);
+}
+
+// Start server
+startServer();
