@@ -1074,9 +1074,47 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       </div>
       
       {/* Main content grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+      {/* Top Widgets Area */}
+      {selectedWidgets.filter(w => w.position === 'top').length > 0 && (
+        <div className="mb-6">
+          <WidgetContainer position="top">
+            {selectedWidgets
+              .filter(widget => widget.position === 'top')
+              .map(widget => (
+                <ProfileWidget 
+                  key={widget.id} 
+                  widget={widget} 
+                  userData={userProfile}
+                  position="top"
+                />
+              ))
+            }
+          </WidgetContainer>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        {/* Left Widgets Area */}
+        {selectedWidgets.filter(w => w.position === 'left').length > 0 && (
+          <div className="xl:col-span-3">
+            <WidgetContainer position="left">
+              {selectedWidgets
+                .filter(widget => widget.position === 'left')
+                .map(widget => (
+                  <ProfileWidget 
+                    key={widget.id} 
+                    widget={widget} 
+                    userData={userProfile}
+                    position="left"
+                  />
+                ))
+              }
+            </WidgetContainer>
+          </div>
+        )}
+        
         {/* Left Column - User Bio and Stats */}
-        <div className="xl:col-span-1 space-y-6">
+        <div className="xl:col-span-3 space-y-6">
           {/* Bio Card */}
           <Card className="bg-dark-surface border-primary/20 overflow-hidden">
             <CardHeader className="pb-2 border-b border-border/30">
@@ -1239,6 +1277,25 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         
         {/* Main showcase area */}
         <div className="xl:col-span-3 space-y-8">
+        
+        {/* Right Widgets Area */}
+        {selectedWidgets.filter(w => w.position === 'right').length > 0 && (
+          <div className="xl:col-span-3">
+            <WidgetContainer position="right">
+              {selectedWidgets
+                .filter(widget => widget.position === 'right')
+                .map(widget => (
+                  <ProfileWidget 
+                    key={widget.id} 
+                    widget={widget} 
+                    userData={userProfile}
+                    position="right"
+                  />
+                ))
+              }
+            </WidgetContainer>
+          </div>
+        )}
           
           {/* HTML Profile Showcase */}
           <Card className="bg-dark-surface border-primary/20 overflow-hidden">
@@ -1396,6 +1453,25 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         </div>
       </div>
       
+      {/* Bottom Widgets Area */}
+      {selectedWidgets.filter(w => w.position === 'bottom').length > 0 && (
+        <div className="mt-6">
+          <WidgetContainer position="bottom">
+            {selectedWidgets
+              .filter(widget => widget.position === 'bottom')
+              .map(widget => (
+                <ProfileWidget 
+                  key={widget.id} 
+                  widget={widget} 
+                  userData={userProfile}
+                  position="bottom"
+                />
+              ))
+            }
+          </WidgetContainer>
+        </div>
+      )}
+      
       {/* Custom CSS for the HTML showcase */}
       <style>{`
         .profile-html-content {
@@ -1440,33 +1516,18 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
           selectedTheme={selectedProfileTheme}
           selectedNameEffect={selectedNameEffect}
           selectedBackgroundEffect={selectedBgEffect}
+          selectedWidgets={selectedWidgets}
           userAvatar={avatarPreview || userProfile?.avatar || undefined}
           userName={username}
           onFrameChange={setSelectedFrame}
           onThemeChange={setSelectedProfileTheme}
           onNameEffectChange={setSelectedNameEffect}
           onBgEffectChange={setSelectedBgEffect}
+          onWidgetsChange={setSelectedWidgets}
           onClose={() => {
             setIsCustomizationOpen(false);
-            // Save current selections to localStorage for persistence
-            localStorage.setItem('profile-frame', selectedFrame.id);
-            localStorage.setItem('profile-theme', selectedProfileTheme.id);
-            localStorage.setItem('profile-name-effect', selectedNameEffect.id);
-            localStorage.setItem('profile-bg-effect', selectedBgEffect.id);
-            
-            // Also save combined data for easier loading
-            const customizationData = {
-              frameId: selectedFrame.id,
-              themeId: selectedProfileTheme.id,
-              nameEffectId: selectedNameEffect.id,
-              backgroundEffectId: selectedBgEffect.id
-            };
-            localStorage.setItem('userCustomization', JSON.stringify(customizationData));
-            
-            toast({
-              title: "Profile customization saved",
-              description: "Your profile style has been updated",
-            });
+            // Save customization to localStorage and show toast
+            saveCustomization();
           }}
         />
       )}
