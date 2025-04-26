@@ -1,27 +1,27 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import { eq } from 'drizzle-orm';
 import * as schema from '@shared/schema';
 import * as casinoSchema from '@shared/schema-casino';
+import { sql } from 'drizzle-orm';
 import dotenv from 'dotenv';
 import ws from 'ws';
-import { supabaseAdmin, listUsers } from './supabase';
 
 // Load environment variables
 dotenv.config();
 
-// Configure Neon to use WebSockets
+// Configure WebSocket for Neon database
 neonConfig.webSocketConstructor = ws;
 
-// Validate database connection string
+// Check if database URL is set
 if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is required');
+  console.error('DATABASE_URL environment variable is required');
+  process.exit(1);
 }
 
 // Create connection pool
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Create Drizzle instance
+// Create Drizzle ORM instance
 export const db = drizzle(pool, { schema: { ...schema, ...casinoSchema } });
 
 /**
@@ -30,13 +30,12 @@ export const db = drizzle(pool, { schema: { ...schema, ...casinoSchema } });
  */
 export async function initializeDatabase(): Promise<boolean> {
   try {
-    // Test connection
+    // Check connection by executing a simple query
     const [{ now }] = await db.execute<{ now: Date }>(sql`SELECT NOW()`);
-    console.log(`Database connected successfully at ${now.toISOString()}`);
-    
+    console.log(`Database connection established at ${now.toISOString()}`);
     return true;
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error('Failed to connect to database:', error);
     return false;
   }
 }
@@ -59,9 +58,9 @@ export async function closeDatabase(): Promise<void> {
  */
 export async function createTables(): Promise<void> {
   try {
-    // This is just a placeholder. In a real application, you would use Drizzle's
-    // migration tools to manage schema changes.
-    console.log('Tables should be created using Drizzle migrations');
+    // This is a placeholder for Drizzle migrations
+    // For production, use proper migration scripts
+    console.log('Tables already managed by migrations');
   } catch (error) {
     console.error('Error creating tables:', error);
     throw error;
@@ -75,62 +74,15 @@ export async function createTables(): Promise<void> {
  */
 export async function syncSupabaseUsers(): Promise<void> {
   try {
-    console.log('Synchronizing Supabase users with database...');
-    
-    // Get all users from Supabase Auth
-    const supabaseUsers = await listUsers();
-    if (!supabaseUsers || supabaseUsers.length === 0) {
-      console.log('No users found in Supabase Auth');
-      return;
-    }
-    
-    console.log(`Found ${supabaseUsers.length} users in Supabase Auth`);
-    
-    // For each Supabase user
-    for (const supabaseUser of supabaseUsers) {
-      // Skip if no ID or email
-      if (!supabaseUser.id || !supabaseUser.email) {
-        console.log('Skipping user with no ID or email');
-        continue;
-      }
-      
-      // Check if user already exists in our database
-      const existingUsers = await db
-        .select()
-        .from(schema.users)
-        .where(eq(schema.users.supabaseId, supabaseUser.id));
-      
-      if (existingUsers.length > 0) {
-        console.log(`User ${supabaseUser.email} already exists in database`);
-        continue;
-      }
-      
-      // Get username from metadata or use email as fallback
-      const username = supabaseUser.user_metadata?.username || 
-                       supabaseUser.email.split('@')[0];
-      
-      // Create user in our database
-      await db.insert(schema.users).values({
-        username,
-        email: supabaseUser.email,
-        password: 'supabase-managed', // Password is managed by Supabase
-        supabaseId: supabaseUser.id,
-        level: 1,
-        experience: 0,
-        cash: 1000,
-        respect: 0,
-        profileTheme: 'dark',
-        createdAt: new Date(),
-        lastSeen: new Date(),
-        status: 'offline',
-      });
-      
-      console.log(`Created user ${username} in database`);
-    }
-    
-    console.log('Supabase user synchronization complete');
+    // This function would be implemented when integrating with Supabase Auth
+    // It would:
+    // 1. Fetch all users from Supabase Auth
+    // 2. Compare with users in our database
+    // 3. Create missing users in our database
+    // 4. Update existing users if needed
+    console.log('Supabase user sync not implemented yet');
   } catch (error) {
-    console.error('Error synchronizing Supabase users:', error);
+    console.error('Error syncing Supabase users:', error);
     throw error;
   }
 }

@@ -1,541 +1,601 @@
+import { IStorage } from './storage';
 import { db } from './db-supabase';
-import { users, gangs, gangMembers, messages } from '@shared/schema';
-import { eq, and, desc, asc, sql, gt, lt, isNull, isNotNull } from 'drizzle-orm';
-import session from 'express-session';
-import connectPg from 'connect-pg-simple';
-import { pool } from './db-supabase';
-
-// Create session store with PostgreSQL
-const PostgresSessionStore = connectPg(session);
+import { 
+  users, 
+  userStats, 
+  gangMembers, 
+  gangs, 
+  messages, 
+  friends,
+  friendRequests,
+  achievements,
+  achievementProgress
+} from '@shared/schema';
+import { eq, and, or, desc, sql, asc, not, inArray } from 'drizzle-orm';
+import { supabaseAdmin } from './supabase';
 
 /**
- * Storage interface for Supabase implementation
+ * Supabase Storage Implementation
+ * Implements IStorage interface for database operations
  */
-export class SupabaseStorage {
-  sessionStore: session.SessionStore;
-
-  constructor() {
-    this.sessionStore = new PostgresSessionStore({
-      pool,
-      tableName: 'sessions',
-      createTableIfMissing: true,
-    });
-  }
-
+export class SupabaseStorage implements IStorage {
   /**
-   * Get a user by ID
-   * @param id User ID
-   * @returns User data if found, undefined otherwise
+   * User Operations
    */
+  
+  // Get user by ID
   async getUser(id: number) {
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      
-      return user;
-    } catch (error) {
-      console.error('Error getting user:', error);
-      return undefined;
-    }
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
-  /**
-   * Get a user by username
-   * @param username Username to search for
-   * @returns User data if found, undefined otherwise
-   */
+  // Get user by username
   async getUserByUsername(username: string) {
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-      
-      return user;
-    } catch (error) {
-      console.error('Error getting user by username:', error);
-      return undefined;
-    }
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
-  /**
-   * Get a user by Supabase ID
-   * @param supabaseId Supabase ID to search for
-   * @returns User data if found, undefined otherwise
-   */
+  // Get user by Supabase ID
   async getUserBySupabaseId(supabaseId: string) {
-    try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.supabaseId, supabaseId))
-        .limit(1);
-      
-      return user;
-    } catch (error) {
-      console.error('Error getting user by Supabase ID:', error);
-      return undefined;
-    }
+    const [user] = await db.select().from(users).where(eq(users.supabaseId, supabaseId));
+    return user;
   }
 
-  /**
-   * Create a new user
-   * @param userData User data to create
-   * @returns Created user data
-   */
+  // Get user by email
+  async getUserByEmail(email: string) {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
+    return user;
+  }
+
+  // Create a new user
   async createUser(userData: any) {
-    try {
-      const [user] = await db
-        .insert(users)
-        .values(userData)
-        .returning();
-      
-      return user;
-    } catch (error) {
-      console.error('Error creating user:', error);
-      throw error;
-    }
+    const [user] = await db.insert(users).values(userData).returning();
+    
+    // Create default user stats
+    await db.insert(userStats).values({
+      userId: user.id,
+      strength: 10,
+      stealth: 10,
+      charisma: 10,
+      intelligence: 10,
+      strengthTrainingCooldown: new Date(),
+      stealthTrainingCooldown: new Date(),
+      charismaTrainingCooldown: new Date(),
+      intelligenceTrainingCooldown: new Date()
+    });
+    
+    return user;
   }
 
-  /**
-   * Update a user
-   * @param id User ID
-   * @param userData User data to update
-   * @returns Updated user data
-   */
+  // Update user data
   async updateUser(id: number, userData: any) {
-    try {
-      const [user] = await db
-        .update(users)
-        .set(userData)
-        .where(eq(users.id, id))
-        .returning();
-      
-      return user;
-    } catch (error) {
-      console.error('Error updating user:', error);
-      throw error;
-    }
+    const [updatedUser] = await db.update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    return updatedUser;
   }
 
-  /**
-   * Get all users
-   * @param limit Maximum number of users to return
-   * @param offset Number of users to skip
-   * @returns Array of users
-   */
-  async getAllUsers(limit = 50, offset = 0) {
-    try {
-      const result = await db
-        .select()
-        .from(users)
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(users.level));
-      
-      return result;
-    } catch (error) {
-      console.error('Error getting all users:', error);
-      return [];
-    }
+  // Get all users
+  async getAllUsers() {
+    return await db.select().from(users);
   }
 
-  /**
-   * Count all users
-   * @returns Total number of users
-   */
+  // Count users
   async countUsers() {
-    try {
-      const [result] = await db
-        .select({ count: sql`count(*)`.mapWith(Number) })
-        .from(users);
-      
-      return result.count;
-    } catch (error) {
-      console.error('Error counting users:', error);
-      return 0;
+    const [result] = await db.select({
+      count: sql<number>`count(*)`
+    }).from(users);
+    
+    return result.count;
+  }
+
+  // Delete user
+  async deleteUser(id: number) {
+    const [user] = await db.delete(users)
+      .where(eq(users.id, id))
+      .returning();
+    
+    // If user has a supabaseId, delete from Supabase Auth too
+    if (user?.supabaseId) {
+      await supabaseAdmin.auth.admin.deleteUser(user.supabaseId);
     }
+    
+    return user;
+  }
+  
+  /**
+   * User Stats Operations
+   */
+  
+  // Get user stats
+  async getUserStats(userId: number) {
+    const [stats] = await db.select().from(userStats).where(eq(userStats.userId, userId));
+    return stats;
+  }
+
+  // Update user stats
+  async updateUserStats(userId: number, statsData: any) {
+    const [updatedStats] = await db.update(userStats)
+      .set(statsData)
+      .where(eq(userStats.userId, userId))
+      .returning();
+    
+    return updatedStats;
   }
 
   /**
-   * Get a gang by ID
-   * @param id Gang ID
-   * @returns Gang data if found, undefined otherwise
+   * Gang Operations
    */
+  
+  // Get gang by ID
   async getGang(id: number) {
-    try {
-      const [gang] = await db
-        .select()
-        .from(gangs)
-        .where(eq(gangs.id, id))
-        .limit(1);
-      
-      return gang;
-    } catch (error) {
-      console.error('Error getting gang:', error);
-      return undefined;
-    }
+    const [gang] = await db.select().from(gangs).where(eq(gangs.id, id));
+    return gang;
   }
 
-  /**
-   * Get a gang by name
-   * @param name Gang name
-   * @returns Gang data if found, undefined otherwise
-   */
+  // Get gang by name
   async getGangByName(name: string) {
-    try {
-      const [gang] = await db
-        .select()
-        .from(gangs)
-        .where(eq(gangs.name, name))
-        .limit(1);
-      
-      return gang;
-    } catch (error) {
-      console.error('Error getting gang by name:', error);
-      return undefined;
-    }
+    const [gang] = await db.select().from(gangs).where(eq(gangs.name, name));
+    return gang;
   }
 
-  /**
-   * Create a new gang
-   * @param gangData Gang data to create
-   * @returns Created gang data
-   */
+  // Create a new gang
   async createGang(gangData: any) {
-    try {
-      const [gang] = await db
-        .insert(gangs)
-        .values(gangData)
-        .returning();
-      
-      return gang;
-    } catch (error) {
-      console.error('Error creating gang:', error);
-      throw error;
-    }
+    const [gang] = await db.insert(gangs).values(gangData).returning();
+    return gang;
   }
 
-  /**
-   * Update a gang
-   * @param id Gang ID
-   * @param gangData Gang data to update
-   * @returns Updated gang data
-   */
+  // Update gang data
   async updateGang(id: number, gangData: any) {
-    try {
-      const [gang] = await db
-        .update(gangs)
-        .set(gangData)
-        .where(eq(gangs.id, id))
-        .returning();
-      
-      return gang;
-    } catch (error) {
-      console.error('Error updating gang:', error);
-      throw error;
-    }
+    const [updatedGang] = await db.update(gangs)
+      .set(gangData)
+      .where(eq(gangs.id, id))
+      .returning();
+    
+    return updatedGang;
   }
 
-  /**
-   * Get all gangs
-   * @param limit Maximum number of gangs to return
-   * @param offset Number of gangs to skip
-   * @returns Array of gangs
-   */
-  async getAllGangs(limit = 50, offset = 0) {
-    try {
-      const result = await db
-        .select()
-        .from(gangs)
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(gangs.respect));
-      
-      return result;
-    } catch (error) {
-      console.error('Error getting all gangs:', error);
-      return [];
-    }
+  // Delete gang
+  async deleteGang(id: number) {
+    const [gang] = await db.delete(gangs)
+      .where(eq(gangs.id, id))
+      .returning();
+    
+    return gang;
   }
 
-  /**
-   * Add a member to a gang
-   * @param memberData Member data
-   * @returns Created member data
-   */
-  async addGangMember(memberData: any) {
-    try {
-      const [member] = await db
-        .insert(gangMembers)
-        .values(memberData)
-        .returning();
-      
-      return member;
-    } catch (error) {
-      console.error('Error adding gang member:', error);
-      throw error;
-    }
+  // Get all gangs
+  async getAllGangs() {
+    return await db.select().from(gangs);
   }
 
-  /**
-   * Get gang members
-   * @param gangId Gang ID
-   * @returns Array of gang members
-   */
+  // Get gang members
   async getGangMembers(gangId: number) {
-    try {
-      const result = await db
-        .select()
-        .from(gangMembers)
-        .where(eq(gangMembers.gangId, gangId))
-        .orderBy(asc(gangMembers.rank));
-      
-      return result;
-    } catch (error) {
-      console.error('Error getting gang members:', error);
-      return [];
-    }
+    return await db.select()
+      .from(gangMembers)
+      .where(eq(gangMembers.gangId, gangId));
+  }
+
+  // Add member to gang
+  async addGangMember(memberData: any) {
+    const [member] = await db.insert(gangMembers)
+      .values(memberData)
+      .returning();
+    
+    return member;
+  }
+
+  // Remove member from gang
+  async removeGangMember(userId: number, gangId: number) {
+    const [member] = await db.delete(gangMembers)
+      .where(
+        and(
+          eq(gangMembers.userId, userId),
+          eq(gangMembers.gangId, gangId)
+        )
+      )
+      .returning();
+    
+    return member;
+  }
+
+  // Update gang member
+  async updateGangMember(userId: number, gangId: number, data: any) {
+    const [updatedMember] = await db.update(gangMembers)
+      .set(data)
+      .where(
+        and(
+          eq(gangMembers.userId, userId),
+          eq(gangMembers.gangId, gangId)
+        )
+      )
+      .returning();
+    
+    return updatedMember;
+  }
+
+  // Get user's gang
+  async getUserGang(userId: number) {
+    const [member] = await db.select()
+      .from(gangMembers)
+      .where(eq(gangMembers.userId, userId));
+    
+    if (!member) return null;
+    
+    const [gang] = await db.select()
+      .from(gangs)
+      .where(eq(gangs.id, member.gangId));
+    
+    return gang;
   }
 
   /**
-   * Remove a member from a gang
-   * @param gangId Gang ID
-   * @param userId User ID
-   * @returns True if successful, false otherwise
+   * Messaging System
    */
-  async removeGangMember(gangId: number, userId: number) {
-    try {
-      await db
-        .delete(gangMembers)
-        .where(
+  
+  // Send a message
+  async sendMessage(messageData: any) {
+    const [message] = await db.insert(messages)
+      .values(messageData)
+      .returning();
+    
+    return message;
+  }
+
+  // Get messages for a user
+  async getUserMessages(userId: number) {
+    return await db.select()
+      .from(messages)
+      .where(
+        or(
+          eq(messages.senderId, userId),
+          eq(messages.receiverId, userId)
+        )
+      )
+      .orderBy(desc(messages.timestamp));
+  }
+
+  // Get messages between two users
+  async getMessagesBetweenUsers(user1Id: number, user2Id: number) {
+    return await db.select()
+      .from(messages)
+      .where(
+        and(
+          or(
+            eq(messages.senderId, user1Id),
+            eq(messages.senderId, user2Id)
+          ),
+          or(
+            eq(messages.receiverId, user1Id),
+            eq(messages.receiverId, user2Id)
+          ),
+          eq(messages.type, 'direct')
+        )
+      )
+      .orderBy(asc(messages.timestamp));
+  }
+
+  // Get gang messages
+  async getGangMessages(gangId: number) {
+    return await db.select()
+      .from(messages)
+      .where(
+        and(
+          eq(messages.gangId, gangId),
+          eq(messages.type, 'gang')
+        )
+      )
+      .orderBy(asc(messages.timestamp));
+  }
+
+  // Mark message as read
+  async markMessageAsRead(messageId: number) {
+    await db.update(messages)
+      .set({ read: true })
+      .where(eq(messages.id, messageId));
+    
+    return true;
+  }
+
+  // Get unread message count
+  async getUnreadMessageCount(userId: number) {
+    const [result] = await db.select({
+      count: sql<number>`count(*)`
+    })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.receiverId, userId),
+        eq(messages.read, false)
+      )
+    );
+    
+    return result.count;
+  }
+
+  /**
+   * Friend System
+   */
+  
+  // Get user's friends
+  async getUserFriends(userId: number) {
+    const friendships = await db.select({
+      friendId: friends.friendId
+    })
+    .from(friends)
+    .where(eq(friends.userId, userId));
+    
+    const friendIds = friendships.map(f => f.friendId);
+    
+    if (friendIds.length === 0) return [];
+    
+    return await db.select()
+      .from(users)
+      .where(inArray(users.id, friendIds));
+  }
+
+  // Check if users are friends
+  async areFriends(user1Id: number, user2Id: number) {
+    const [friendship] = await db.select()
+      .from(friends)
+      .where(
+        or(
           and(
-            eq(gangMembers.gangId, gangId),
-            eq(gangMembers.userId, userId)
+            eq(friends.userId, user1Id),
+            eq(friends.friendId, user2Id)
+          ),
+          and(
+            eq(friends.userId, user2Id),
+            eq(friends.friendId, user1Id)
           )
-        );
-      
-      return true;
-    } catch (error) {
-      console.error('Error removing gang member:', error);
-      return false;
-    }
+        )
+      );
+    
+    return !!friendship;
+  }
+
+  // Send friend request
+  async sendFriendRequest(senderId: number, receiverId: number) {
+    // Check if there's already a friend request
+    const [existingRequest] = await db.select()
+      .from(friendRequests)
+      .where(
+        and(
+          eq(friendRequests.senderId, senderId),
+          eq(friendRequests.receiverId, receiverId)
+        )
+      );
+    
+    if (existingRequest) return existingRequest;
+    
+    // Create new friend request
+    const [request] = await db.insert(friendRequests)
+      .values({
+        senderId,
+        receiverId,
+        status: 'pending',
+        createdAt: new Date()
+      })
+      .returning();
+    
+    return request;
+  }
+
+  // Get pending friend requests
+  async getPendingFriendRequests(userId: number) {
+    return await db.select()
+      .from(friendRequests)
+      .where(
+        and(
+          eq(friendRequests.receiverId, userId),
+          eq(friendRequests.status, 'pending')
+        )
+      );
+  }
+
+  // Accept friend request
+  async acceptFriendRequest(requestId: number) {
+    // Get the request
+    const [request] = await db.select()
+      .from(friendRequests)
+      .where(eq(friendRequests.id, requestId));
+    
+    if (!request) return null;
+    
+    // Update request status
+    await db.update(friendRequests)
+      .set({ status: 'accepted' })
+      .where(eq(friendRequests.id, requestId));
+    
+    // Create friend connections (both ways)
+    await db.insert(friends)
+      .values({
+        userId: request.senderId,
+        friendId: request.receiverId
+      });
+    
+    await db.insert(friends)
+      .values({
+        userId: request.receiverId,
+        friendId: request.senderId
+      });
+    
+    return request;
+  }
+
+  // Reject friend request
+  async rejectFriendRequest(requestId: number) {
+    await db.update(friendRequests)
+      .set({ status: 'rejected' })
+      .where(eq(friendRequests.id, requestId));
+    
+    return true;
+  }
+
+  // Remove friend
+  async removeFriend(userId: number, friendId: number) {
+    // Delete both friendship records
+    await db.delete(friends)
+      .where(
+        or(
+          and(
+            eq(friends.userId, userId),
+            eq(friends.friendId, friendId)
+          ),
+          and(
+            eq(friends.userId, friendId),
+            eq(friends.friendId, userId)
+          )
+        )
+      );
+    
+    return true;
   }
 
   /**
-   * Update a gang member
-   * @param gangId Gang ID
-   * @param userId User ID
-   * @param updateData Update data
-   * @returns Updated member data
+   * Achievement System
    */
-  async updateGangMember(gangId: number, userId: number, updateData: any) {
-    try {
-      const [member] = await db
-        .update(gangMembers)
-        .set(updateData)
+  
+  // Get all achievements
+  async getAchievements() {
+    return await db.select().from(achievements);
+  }
+
+  // Get achievement by ID
+  async getAchievement(id: number) {
+    const [achievement] = await db.select()
+      .from(achievements)
+      .where(eq(achievements.id, id));
+    
+    return achievement;
+  }
+
+  // Get user's achievement progress
+  async getUserAchievementProgress(userId: number) {
+    return await db.select()
+      .from(achievementProgress)
+      .where(eq(achievementProgress.userId, userId));
+  }
+
+  // Get user's achievement progress for specific achievement
+  async getUserAchievementProgressForAchievement(userId: number, achievementId: number) {
+    const [progress] = await db.select()
+      .from(achievementProgress)
+      .where(
+        and(
+          eq(achievementProgress.userId, userId),
+          eq(achievementProgress.achievementId, achievementId)
+        )
+      );
+    
+    return progress;
+  }
+
+  // Update achievement progress
+  async updateAchievementProgress(userId: number, achievementId: number, data: any) {
+    // Check if progress exists
+    const [existingProgress] = await db.select()
+      .from(achievementProgress)
+      .where(
+        and(
+          eq(achievementProgress.userId, userId),
+          eq(achievementProgress.achievementId, achievementId)
+        )
+      );
+    
+    if (existingProgress) {
+      // Update existing progress
+      const [updatedProgress] = await db.update(achievementProgress)
+        .set(data)
         .where(
           and(
-            eq(gangMembers.gangId, gangId),
-            eq(gangMembers.userId, userId)
+            eq(achievementProgress.userId, userId),
+            eq(achievementProgress.achievementId, achievementId)
           )
         )
         .returning();
       
-      return member;
-    } catch (error) {
-      console.error('Error updating gang member:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Send a message
-   * @param messageData Message data
-   * @returns Created message data
-   */
-  async sendMessage(messageData: any) {
-    try {
-      const [message] = await db
-        .insert(messages)
+      return updatedProgress;
+    } else {
+      // Create new progress
+      const [newProgress] = await db.insert(achievementProgress)
         .values({
-          ...messageData,
-          timestamp: new Date(),
-          read: false,
+          userId,
+          achievementId,
+          ...data
         })
         .returning();
       
-      return message;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      throw error;
+      return newProgress;
     }
   }
 
-  /**
-   * Get messages for a user
-   * @param userId User ID
-   * @param limit Maximum number of messages to return
-   * @param offset Number of messages to skip
-   * @returns Array of messages
-   */
-  async getUserMessages(userId: number, limit = 50, offset = 0) {
-    try {
-      const result = await db
-        .select()
-        .from(messages)
-        .where(
-          or(
-            eq(messages.receiverId, userId),
-            eq(messages.senderId, userId)
-          )
-        )
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(messages.timestamp));
+  // Create or update achievement
+  async createOrUpdateAchievement(achievementData: any) {
+    if (achievementData.id) {
+      // Update
+      const [achievement] = await db.update(achievements)
+        .set(achievementData)
+        .where(eq(achievements.id, achievementData.id))
+        .returning();
       
-      return result;
-    } catch (error) {
-      console.error('Error getting user messages:', error);
-      return [];
+      return achievement;
+    } else {
+      // Create
+      const [achievement] = await db.insert(achievements)
+        .values(achievementData)
+        .returning();
+      
+      return achievement;
     }
   }
 
-  /**
-   * Get direct messages between two users
-   * @param userId1 First user ID
-   * @param userId2 Second user ID
-   * @param limit Maximum number of messages to return
-   * @param offset Number of messages to skip
-   * @returns Array of messages
-   */
-  async getDirectMessages(userId1: number, userId2: number, limit = 50, offset = 0) {
-    try {
-      const result = await db
-        .select()
-        .from(messages)
-        .where(
-          and(
-            eq(messages.type, 'direct'),
-            or(
-              and(
-                eq(messages.senderId, userId1),
-                eq(messages.receiverId, userId2)
-              ),
-              and(
-                eq(messages.senderId, userId2),
-                eq(messages.receiverId, userId1)
-              )
-            )
-          )
-        )
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(messages.timestamp));
-      
-      return result;
-    } catch (error) {
-      console.error('Error getting direct messages:', error);
-      return [];
-    }
+  // Delete achievement
+  async deleteAchievement(id: number) {
+    const [achievement] = await db.delete(achievements)
+      .where(eq(achievements.id, id))
+      .returning();
+    
+    return achievement;
   }
 
   /**
-   * Get gang messages
-   * @param gangId Gang ID
-   * @param limit Maximum number of messages to return
-   * @param offset Number of messages to skip
-   * @returns Array of messages
+   * Crime System
    */
-  async getGangMessages(gangId: number, limit = 50, offset = 0) {
-    try {
-      const result = await db
-        .select()
-        .from(messages)
-        .where(
-          and(
-            eq(messages.type, 'gang'),
-            eq(messages.gangId, gangId)
-          )
-        )
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(messages.timestamp));
-      
-      return result;
-    } catch (error) {
-      console.error('Error getting gang messages:', error);
-      return [];
-    }
-  }
+  
+  // This would be implemented similarly to the above methods
+  // for the crime-related tables
 
   /**
-   * Get a message by ID
-   * @param id Message ID
-   * @returns Message data if found, undefined otherwise
+   * Banking System
    */
-  async getMessage(id: number) {
-    try {
-      const [message] = await db
-        .select()
-        .from(messages)
-        .where(eq(messages.id, id))
-        .limit(1);
-      
-      return message;
-    } catch (error) {
-      console.error('Error getting message:', error);
-      return undefined;
-    }
-  }
+  
+  // This would be implemented similarly to the above methods
+  // for the banking-related tables
 
   /**
-   * Mark a message as read
-   * @param id Message ID
-   * @returns True if successful, false otherwise
+   * Inventory System
    */
-  async markMessageAsRead(id: number) {
-    try {
-      await db
-        .update(messages)
-        .set({ read: true })
-        .where(eq(messages.id, id));
-      
-      return true;
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-      return false;
-    }
-  }
+  
+  // This would be implemented similarly to the above methods
+  // for the inventory-related tables
 
   /**
-   * Count unread messages for a user
-   * @param userId User ID
-   * @returns Number of unread messages
+   * Drug System
    */
-  async countUnreadMessages(userId: number) {
-    try {
-      const [result] = await db
-        .select({ count: sql`count(*)`.mapWith(Number) })
-        .from(messages)
-        .where(
-          and(
-            eq(messages.receiverId, userId),
-            eq(messages.read, false)
-          )
-        );
-      
-      return result.count;
-    } catch (error) {
-      console.error('Error counting unread messages:', error);
-      return 0;
-    }
-  }
+  
+  // This would be implemented similarly to the above methods
+  // for the drug-related tables
+
+  /**
+   * Casino System
+   */
+  
+  // This would be implemented similarly to the above methods
+  // for the casino-related tables
 }
 
-// Export instance
+// Create and export storage instance
 export const storage = new SupabaseStorage();

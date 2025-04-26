@@ -1,419 +1,364 @@
-import { Server as HTTPServer } from 'http';
+import { Server } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { verifyToken } from './supabase';
+import { storage } from './storage-supabase';
+import { eq } from 'drizzle-orm';
+import { users } from '@shared/schema';
 import { db } from './db-supabase';
-import { users, userStatuses } from '@shared/schema';
-import { eq, and, asc } from 'drizzle-orm';
 
-// Extend WebSocket to add custom properties
-declare module 'ws' {
-  interface WebSocket {
-    _isAlive: boolean;
-    _lastActivity: number;
-    _userId?: number;
-  }
+// Define interfaces for WebSocket with custom properties
+interface MafiaWebSocket extends WebSocket {
+  isAlive: boolean;
+  lastActivity: Date;
+  userId?: number;
 }
 
-// Store connected clients by user ID
-const clients = new Map<number, Set<WebSocket>>();
+// Store connections by user ID
+const connections = new Map<number, Set<MafiaWebSocket>>();
 
-// Create a WebSocket server
-export function setupWebSocketServer(httpServer: HTTPServer) {
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  // Heartbeat interval (30 seconds)
-  const HEARTBEAT_INTERVAL = 30000;
-  
-  // Heartbeat handler
-  const interval = setInterval(() => {
-    wss.clients.forEach((ws) => {
-      if (ws._isAlive === false) {
-        // Remove connection if it didn't respond to ping
-        return ws.terminate();
-      }
-      
-      // Mark as inactive for next ping
-      ws._isAlive = false;
-      
-      // Send ping
-      ws.ping();
-      
-      // Check for inactivity (5 minutes)
-      if (Date.now() - ws._lastActivity > 5 * 60 * 1000) {
-        return ws.terminate();
-      }
-    });
-  }, HEARTBEAT_INTERVAL);
-  
-  // Clean up interval on server close
-  wss.on('close', () => {
-    clearInterval(interval);
+/**
+ * Setup WebSocket server
+ * @param httpServer HTTP server
+ * @returns WebSocket server
+ */
+export function setupWebSocketServer(httpServer: Server): WebSocketServer {
+  // Create WebSocket server
+  const wss = new WebSocketServer({ 
+    server: httpServer, 
+    path: '/ws',
+    clientTracking: true
   });
-  
+
   // Handle new connections
-  wss.on('connection', async (ws, req) => {
-    // Set defaults
-    ws._isAlive = true;
-    ws._lastActivity = Date.now();
-    
-    // Extract token from URL query parameters
-    const url = new URL(req.url || '', `http://${req.headers.host}`);
-    const token = url.searchParams.get('token');
-    
-    if (!token) {
-      // No auth token, close connection
-      ws.close(4001, 'Authentication required');
-      return;
-    }
-    
-    // Verify the token with Supabase
-    const supabaseUser = await verifyToken(token);
-    if (!supabaseUser) {
-      // Invalid token, close connection
-      ws.close(4002, 'Invalid authentication token');
-      return;
-    }
-    
-    // Get our game user by Supabase ID
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.supabaseId, supabaseUser.id))
-      .limit(1);
-    
-    if (!user) {
-      // User not found in our database, close connection
-      ws.close(4003, 'User not found');
-      return;
-    }
-    
-    // Store user ID in WebSocket object
-    ws._userId = user.id;
-    
-    // Add to clients map
-    if (!clients.has(user.id)) {
-      clients.set(user.id, new Set());
-    }
-    clients.get(user.id)?.add(ws);
-    
-    // Update online status in database
-    await db
-      .update(users)
-      .set({ status: 'online', lastSeen: new Date() })
-      .where(eq(users.id, user.id));
-    
-    // Broadcast status change to friends
-    broadcastStatusChange(user.id, 'online');
-    
-    // Handle incoming messages
-    ws.on('message', async (message) => {
-      ws._isAlive = true;
-      ws._lastActivity = Date.now();
-      
-      try {
-        const data = JSON.parse(message.toString());
-        
-        if (!ws._userId) {
-          return;
-        }
-        
-        // Process message based on type
-        switch (data.type) {
-          case 'direct_message':
-            await handleDirectMessage(ws._userId, data);
-            break;
-          
-          case 'gang_message':
-            await handleGangMessage(ws._userId, data);
-            break;
-          
-          case 'heartbeat':
-            // Just update activity timestamp
-            break;
-          
-          default:
-            // Unknown message type
-            ws.send(JSON.stringify({ type: 'error', message: 'Unknown message type' }));
-        }
-      } catch (error) {
-        console.error('Error processing WebSocket message:', error);
-        ws.send(JSON.stringify({ type: 'error', message: 'Error processing message' }));
-      }
-    });
-    
-    // Handle pong response
-    ws.on('pong', () => {
-      ws._isAlive = true;
-    });
-    
-    // Handle disconnection
-    ws.on('close', async () => {
-      if (!ws._userId) {
+  wss.on('connection', async (ws: WebSocket, req) => {
+    const socket = ws as MafiaWebSocket;
+    socket.isAlive = true;
+    socket.lastActivity = new Date();
+
+    try {
+      // Get token from query parameters
+      const url = new URL(`http://localhost${req.url}`);
+      const token = url.searchParams.get('token');
+
+      if (!token) {
+        console.log('WebSocket connection rejected - no token provided');
+        socket.close(4001, 'Authentication required');
         return;
       }
-      
-      // Remove from clients map
-      clients.get(ws._userId)?.delete(ws);
-      if (clients.get(ws._userId)?.size === 0) {
-        clients.delete(ws._userId);
-        
-        // Update status to offline if no more connections for this user
-        await db
-          .update(users)
-          .set({ status: 'offline', lastSeen: new Date() })
-          .where(eq(users.id, ws._userId));
-        
-        // Broadcast status change to friends
-        broadcastStatusChange(ws._userId, 'offline');
+
+      // Verify token with Supabase
+      const supabaseUser = await verifyToken(token);
+      if (!supabaseUser) {
+        console.log('WebSocket connection rejected - invalid token');
+        socket.close(4002, 'Invalid authentication token');
+        return;
       }
-    });
-    
-    // Send initial data to client
-    await sendInitialData(ws, user.id);
+
+      // Get user from our database
+      const user = await storage.getUserBySupabaseId(supabaseUser.id);
+      if (!user) {
+        console.log('WebSocket connection rejected - user not found');
+        socket.close(4003, 'User not found');
+        return;
+      }
+
+      // Set user ID on socket
+      socket.userId = user.id;
+
+      // Add socket to connections map
+      if (!connections.has(user.id)) {
+        connections.set(user.id, new Set());
+      }
+      connections.get(user.id)?.add(socket);
+
+      // Update user status to online
+      await db.update(users)
+        .set({ 
+          status: 'online',
+          lastSeen: new Date()
+        })
+        .where(eq(users.id, user.id));
+
+      console.log(`WebSocket connection established for user ${user.id} (${user.username})`);
+
+      // Send welcome message
+      socket.send(JSON.stringify({
+        type: 'connection_established',
+        message: 'Connection established',
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      }));
+
+      // Broadcast user online status to friends
+      broadcastUserStatus(user.id, 'online');
+
+      // Handle messages
+      socket.on('message', async (message) => {
+        try {
+          const data = JSON.parse(message.toString());
+          socket.lastActivity = new Date();
+
+          // Handle different message types
+          switch (data.type) {
+            case 'heartbeat':
+              socket.isAlive = true;
+              break;
+            case 'chat_message':
+              handleChatMessage(socket, data);
+              break;
+            case 'status_update':
+              handleStatusUpdate(socket, data);
+              break;
+            default:
+              console.log(`Unknown message type: ${data.type}`);
+          }
+        } catch (error) {
+          console.error('Error processing message:', error);
+        }
+      });
+
+      // Handle close
+      socket.on('close', async () => {
+        handleDisconnect(socket);
+      });
+
+      // Handle errors
+      socket.on('error', (error) => {
+        console.error('WebSocket error:', error);
+        handleDisconnect(socket);
+      });
+    } catch (error) {
+      console.error('Error setting up WebSocket connection:', error);
+      socket.close(4000, 'Internal server error');
+    }
   });
-  
+
+  // Setup ping interval to keep connections alive
+  const pingInterval = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      const socket = ws as MafiaWebSocket;
+      
+      if (socket.isAlive === false) {
+        handleDisconnect(socket);
+        return;
+      }
+
+      // Check for inactivity timeout (15 minutes)
+      const inactivityTimeout = 15 * 60 * 1000; // 15 minutes
+      if (Date.now() - socket.lastActivity.getTime() > inactivityTimeout) {
+        console.log('Client inactive for too long, closing connection');
+        handleDisconnect(socket);
+        return;
+      }
+
+      socket.isAlive = false;
+      socket.ping();
+    });
+  }, 30000);
+
+  wss.on('close', () => {
+    clearInterval(pingInterval);
+  });
+
   return wss;
 }
 
 /**
- * Send initial data to client on connection
+ * Handle disconnection of a socket
+ * @param socket WebSocket to disconnect
  */
-async function sendInitialData(ws: WebSocket, userId: number) {
-  try {
-    // Get user data
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+async function handleDisconnect(socket: MafiaWebSocket): Promise<void> {
+  if (!socket.userId) return;
+
+  // Remove socket from connections map
+  const userSockets = connections.get(socket.userId);
+  if (userSockets) {
+    userSockets.delete(socket);
     
-    if (!user) {
-      return;
+    // If no more connections for this user, update status to offline
+    if (userSockets.size === 0) {
+      connections.delete(socket.userId);
+      
+      try {
+        // Update user status to offline
+        await db.update(users)
+          .set({ 
+            status: 'offline',
+            lastSeen: new Date()
+          })
+          .where(eq(users.id, socket.userId));
+        
+        // Broadcast user offline status to friends
+        broadcastUserStatus(socket.userId, 'offline');
+      } catch (error) {
+        console.error('Error updating user status:', error);
+      }
     }
-    
-    // Get friend statuses
-    const friendStatuses = await getFriendStatuses(userId);
-    
-    // Send welcome message
-    ws.send(JSON.stringify({
-      type: 'welcome',
-      data: {
-        user,
-        friends: friendStatuses,
-      },
-    }));
-  } catch (error) {
-    console.error('Error sending initial data:', error);
+  }
+
+  // Terminate socket if still open
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.terminate();
   }
 }
 
 /**
- * Get friend statuses for a user
+ * Handle chat message
+ * @param socket Socket that sent the message
+ * @param data Message data
  */
-async function getFriendStatuses(userId: number) {
+async function handleChatMessage(socket: MafiaWebSocket, data: any): Promise<void> {
+  if (!socket.userId) return;
+  
   try {
-    // This is a simplified version, you should adjust it based on your friendship model
-    const friendStatuses = await db.query.users.findMany({
-      where: eq(users.id, userId),
-      with: {
-        friends: {
-          where: eq(users.status, 'accepted'),
-          columns: {
-            id: true,
-            username: true,
-            avatar: true,
-            status: true,
-            lastSeen: true,
-          },
-        },
-      },
+    const { recipientId, content, type = 'direct' } = data;
+    
+    // Store message in database
+    const message = await storage.sendMessage({
+      senderId: socket.userId,
+      receiverId: type === 'direct' ? recipientId : null,
+      gangId: type === 'gang' ? recipientId : null,
+      content,
+      type,
+      timestamp: new Date(),
+      read: false
     });
     
-    return friendStatuses;
+    // Send message to recipient
+    if (type === 'direct' && recipientId) {
+      const recipientSockets = connections.get(recipientId);
+      if (recipientSockets && recipientSockets.size > 0) {
+        const messagePayload = JSON.stringify({
+          type: 'chat_message',
+          message
+        });
+        
+        for (const recipientSocket of recipientSockets) {
+          if (recipientSocket.readyState === WebSocket.OPEN) {
+            recipientSocket.send(messagePayload);
+          }
+        }
+      }
+    } else if (type === 'gang' && recipientId) {
+      // Send message to all gang members
+      const gangMembers = await storage.getGangMembers(recipientId);
+      
+      for (const member of gangMembers) {
+        if (member.userId === socket.userId) continue; // Skip sender
+        
+        const memberSockets = connections.get(member.userId);
+        if (memberSockets && memberSockets.size > 0) {
+          const messagePayload = JSON.stringify({
+            type: 'chat_message',
+            message
+          });
+          
+          for (const memberSocket of memberSockets) {
+            if (memberSocket.readyState === WebSocket.OPEN) {
+              memberSocket.send(messagePayload);
+            }
+          }
+        }
+      }
+    }
   } catch (error) {
-    console.error('Error getting friend statuses:', error);
-    return [];
+    console.error('Error handling chat message:', error);
   }
 }
 
 /**
- * Broadcast status change to friends
+ * Handle status update
+ * @param socket Socket that sent the update
+ * @param data Status data
  */
-async function broadcastStatusChange(userId: number, status: string) {
+async function handleStatusUpdate(socket: MafiaWebSocket, data: any): Promise<void> {
+  if (!socket.userId) return;
+  
   try {
-    // Get user data
-    const [user] = await db
-      .select({
-        id: users.id,
-        username: users.username,
-        avatar: users.avatar,
-      })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
+    const { status } = data;
     
-    if (!user) {
-      return;
-    }
+    // Update user status
+    await db.update(users)
+      .set({ status })
+      .where(eq(users.id, socket.userId));
     
-    // Get friends
-    const friends = await db.query.users.findMany({
-      where: eq(users.id, userId),
-      with: {
-        friends: {
-          where: eq(users.status, 'accepted'),
-          columns: {
-            id: true,
-          },
-        },
-      },
-    });
+    // Broadcast status to friends
+    broadcastUserStatus(socket.userId, status);
+  } catch (error) {
+    console.error('Error updating status:', error);
+  }
+}
+
+/**
+ * Broadcast user status to friends
+ * @param userId User ID
+ * @param status New status
+ */
+async function broadcastUserStatus(userId: number, status: string): Promise<void> {
+  try {
+    // Get user's friends
+    const friends = await storage.getUserFriends(userId);
     
-    // Broadcast to all friends
+    // Broadcast status to online friends
     for (const friend of friends) {
-      sendToUser(friend.id, {
-        type: 'friend_status',
-        data: {
-          userId: user.id,
-          username: user.username,
-          avatar: user.avatar,
+      const friendSockets = connections.get(friend.id);
+      if (friendSockets && friendSockets.size > 0) {
+        const statusPayload = JSON.stringify({
+          type: 'friend_status_update',
+          userId,
           status,
-        },
-      });
+          timestamp: new Date().toISOString()
+        });
+        
+        for (const friendSocket of friendSockets) {
+          if (friendSocket.readyState === WebSocket.OPEN) {
+            friendSocket.send(statusPayload);
+          }
+        }
+      }
     }
   } catch (error) {
-    console.error('Error broadcasting status change:', error);
+    console.error('Error broadcasting status:', error);
   }
 }
 
 /**
- * Handle direct message
+ * Send notification to a user
+ * @param userId User ID
+ * @param notification Notification data
  */
-async function handleDirectMessage(senderId: number, data: any) {
-  try {
-    const { receiverId, content } = data;
-    
-    if (!receiverId || !content) {
-      return;
-    }
-    
-    // Create message in database
-    const [message] = await db
-      .insert(messages)
-      .values({
-        senderId,
-        receiverId,
-        content,
-        type: 'direct',
-        timestamp: new Date(),
-        read: false,
-      })
-      .returning();
-    
-    // Send to sender (all connections)
-    sendToUser(senderId, {
-      type: 'direct_message',
-      data: message,
-    });
-    
-    // Send to receiver (all connections)
-    sendToUser(receiverId, {
-      type: 'direct_message',
-      data: message,
-    });
-  } catch (error) {
-    console.error('Error handling direct message:', error);
-  }
-}
-
-/**
- * Handle gang message
- */
-async function handleGangMessage(senderId: number, data: any) {
-  try {
-    const { gangId, content } = data;
-    
-    if (!gangId || !content) {
-      return;
-    }
-    
-    // Get user's gang information
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, senderId))
-      .limit(1);
-    
-    if (!user || user.gangId !== gangId) {
-      return;
-    }
-    
-    // Create message in database
-    const [message] = await db
-      .insert(messages)
-      .values({
-        senderId,
-        gangId,
-        content,
-        type: 'gang',
-        timestamp: new Date(),
-        read: false,
-      })
-      .returning();
-    
-    // Get gang members
-    const gangMembers = await db
-      .select({
-        userId: gangMembers.userId,
-      })
-      .from(gangMembers)
-      .where(eq(gangMembers.gangId, gangId));
-    
-    // Send to all gang members
-    for (const member of gangMembers) {
-      sendToUser(member.userId, {
-        type: 'gang_message',
-        data: {
-          ...message,
-          senderName: user.username,
-          senderAvatar: user.avatar,
-        },
-      });
-    }
-  } catch (error) {
-    console.error('Error handling gang message:', error);
-  }
-}
-
-/**
- * Send message to a specific user (all connections)
- */
-function sendToUser(userId: number, message: any) {
-  const userClients = clients.get(userId);
+export function sendNotification(userId: number, notification: any): void {
+  const userSockets = connections.get(userId);
+  if (!userSockets || userSockets.size === 0) return;
   
-  if (!userClients) {
-    return;
-  }
+  const payload = JSON.stringify({
+    type: 'notification',
+    ...notification,
+    timestamp: new Date().toISOString()
+  });
   
-  const messageString = JSON.stringify(message);
-  
-  for (const client of userClients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(messageString);
+  for (const socket of userSockets) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(payload);
     }
   }
 }
 
 /**
- * Broadcast a message to all connected clients
+ * Broadcast message to all connected users
+ * @param message Message to broadcast
  */
-export function broadcastToAll(message: any) {
-  const messageString = JSON.stringify(message);
+export function broadcastMessage(message: any): void {
+  const payload = JSON.stringify({
+    type: 'broadcast',
+    ...message,
+    timestamp: new Date().toISOString()
+  });
   
-  for (const [userId, userClients] of clients) {
-    for (const client of userClients) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(messageString);
+  for (const [userId, userSockets] of connections) {
+    for (const socket of userSockets) {
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(payload);
       }
     }
   }
