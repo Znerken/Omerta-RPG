@@ -630,54 +630,45 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
 
   return (
     <div className={`profile-page ${profileTheme}`}>
-      {/* Dynamic Action Button - Always visible floating at top right */}
-      <div className="fixed top-20 right-6 z-50">
-        {isViewingOwnProfile ? (
-          // Own profile - Show edit buttons
-          <>
-            {isEditing ? (
-              <div className="flex flex-col gap-2">
-                <Button
-                  size="sm"
-                  onClick={handleSaveProfile}
-                  className="flex items-center gap-1"
-                  disabled={updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending}
-                >
-                  {(updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending) ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" /> Save Changes
-                    </>
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(false)}
-                  className="flex items-center gap-1"
-                >
-                  <Trash2 className="h-4 w-4" /> Cancel
-                </Button>
-              </div>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                className="flex items-center gap-1 bg-black/50 backdrop-blur-sm hover:bg-black/70"
-              >
-                <FileEdit className="h-4 w-4" /> Edit Profile
-              </Button>
-            )}
-          </>
-        ) : (
-          // Other user's profile - Show friend actions
+      {/* Floating action buttons for save/cancel during edit mode only */}
+      {isViewingOwnProfile && isEditing && (
+        <div className="fixed top-20 right-6 z-50">
+          <div className="flex flex-col gap-2">
+            <Button
+              size="sm"
+              onClick={handleSaveProfile}
+              className="flex items-center gap-1"
+              disabled={updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending}
+            >
+              {(updateProfileMutation.isPending || uploadAvatarMutation.isPending || uploadBannerMutation.isPending) ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" /> Save Changes
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(false)}
+              className="flex items-center gap-1"
+            >
+              <Trash2 className="h-4 w-4" /> Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Other user's profile - Show friend actions in floating button */}
+      {!isViewingOwnProfile && (
+        <div className="fixed top-20 right-6 z-50">
           <FriendActionButton profile={userProfile} />
-        )}
-      </div>
+        </div>
+      )}
       
       {/* Integrated banner and profile section with overlapping elements */}
       <div className="relative w-full mb-14">
@@ -825,6 +816,18 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
             <Users className="h-4 w-4 mr-1 text-blue-500" />
             Crew: 6 Members
           </Badge>
+          
+          {/* Edit Profile Button - positioned with badges for visual consistency */}
+          {isViewingOwnProfile && !isEditing && (
+            <Button
+              size="sm"
+              onClick={() => setIsEditing(true)}
+              variant="outline"
+              className="flex items-center gap-1 bg-dark-lighter backdrop-blur-sm shadow-md hover:bg-black/70"
+            >
+              <FileEdit className="h-4 w-4" /> Edit Profile
+            </Button>
+          )}
         </div>
       </div>
       
