@@ -569,45 +569,77 @@ export const achievements = pgTable('achievements', {
   name: text('name').notNull(),
   description: text('description').notNull(),
   icon: text('icon'),
+  iconColor: text('icon_color'), // Color for the icon
+  bgColor: text('bg_color'), // Background color for the achievement card
+  borderColor: text('border_color'), // Border color for the achievement card
   category: text('category').notNull(),
-  requirementType: text('requirement_type').notNull(),
+  difficulty: text('difficulty').notNull().default('normal'), // easy, normal, hard, legendary
+  requirementType: text('requirement_type').notNull(), // e.g., 'crime_commit', 'money_earned', 'friend_count'
+  requirementTarget: text('requirement_target'), // Additional target info, like specific crime type
   requirementValue: integer('requirement_value').notNull(),
   cashReward: integer('cash_reward').notNull().default(0),
   respectReward: integer('respect_reward').notNull().default(0),
   xpReward: integer('xp_reward').notNull().default(0),
+  itemRewardId: integer('item_reward_id').references(() => items.id),
   hidden: boolean('hidden').notNull().default(false),
   secretDescription: text('secret_description'),
+  dependsOn: integer('depends_on').references(() => achievements.id), // Achievement prerequisite
+  series: text('series'), // Group related achievements in a series
+  seriesOrder: integer('series_order'), // Order in the series
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
 });
 
-// User achievement schema
+// User achievement progress schema - tracks progress toward unlocking
+export const achievementProgress = pgTable('achievement_progress', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  achievementId: integer('achievement_id').notNull().references(() => achievements.id),
+  currentValue: integer('current_value').notNull().default(0),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
+// User achievement schema - tracks unlocked achievements
 export const userAchievements = pgTable('user_achievements', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id),
   achievementId: integer('achievement_id').notNull().references(() => achievements.id),
   unlockedAt: timestamp('unlocked_at', { mode: 'date' }).notNull().defaultNow(),
   viewed: boolean('viewed').notNull().default(false),
+  rewardsClaimed: boolean('rewards_claimed').notNull().default(false),
 });
 
 // Create insert schemas for achievements
-export const insertAchievementSchema = createInsertSchema(achievements);
-export const insertUserAchievementSchema = createInsertSchema(userAchievements).pick({
-  userId: true,
-  achievementId: true,
-  viewed: true,
+export const insertAchievementSchema = createInsertSchema(achievements).omit({ 
+  id: true, 
+  createdAt: true 
+});
+
+export const insertAchievementProgressSchema = createInsertSchema(achievementProgress).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertUserAchievementSchema = createInsertSchema(userAchievements).omit({
+  id: true,
 });
 
 // Define achievement types
 export type InsertAchievement = z.infer<typeof insertAchievementSchema>;
 export type Achievement = typeof achievements.$inferSelect;
+
+export type InsertAchievementProgress = z.infer<typeof insertAchievementProgressSchema>;
+export type AchievementProgress = typeof achievementProgress.$inferSelect;
+
 export type InsertUserAchievement = z.infer<typeof insertUserAchievementSchema>;
 export type UserAchievement = typeof userAchievements.$inferSelect;
 
-// Custom type for achievements with unlocked status
+// Custom type for achievements with unlocked status and progress
 export type AchievementWithUnlocked = Achievement & { 
   unlocked: boolean, 
   unlockedAt?: Date, 
-  viewed: boolean 
+  viewed: boolean,
+  progress?: number,
+  rewardsClaimed?: boolean
 };
 
 // ========== Drug System Tables ==========
