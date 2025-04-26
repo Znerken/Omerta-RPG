@@ -241,19 +241,29 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Right Sidebar - Social */}
-      <aside className="hidden md:flex md:w-64 flex-col border-l border-border h-screen sticky top-0">
+      <aside className="hidden md:flex md:w-64 flex-col border-l border-border h-screen sticky top-0 bg-gradient-to-b from-background to-background/95">
         <div className="flex-1 px-4 py-6 overflow-y-auto">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-4 text-primary">Social</h2>
-            <nav className="space-y-1">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">Social Network</span>
+            </h2>
+            
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <ConnectionStatus />
+                <span className="text-xs text-muted-foreground">Network Status</span>
+              </div>
+            </div>
+            
+            <div className="space-y-2 mt-4">
               {socialNavItems.map((item) => (
                 <Link key={item.path} href={item.path}>
                   <div
                     className={cn(
-                      "group flex items-center px-3 py-2 text-sm font-medium rounded-sm transition-colors cursor-pointer",
+                      "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
                       location === item.path
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
                     {item.icon}
@@ -271,17 +281,10 @@ export function MafiaLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </Link>
               ))}
-            </nav>
+            </div>
           </div>
           
-          {/* Connection Status */}
-          <div className="mt-4 mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-muted-foreground">Connection Status</h3>
-              <ConnectionStatus />
-            </div>
-            <div className="h-px bg-border/30 w-full"></div>
-          </div>
+          <div className="h-px bg-gradient-to-r from-border/5 via-border to-border/5 my-4"></div>
           
           {/* Friends Section */}
           <div className="mt-6">
