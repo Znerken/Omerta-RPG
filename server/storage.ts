@@ -55,7 +55,14 @@ import {
   UserFriend,
   UserStatus,
   InsertUserFriend,
-  InsertUserStatus
+  InsertUserStatus,
+  // Location challenge types
+  LocationChallenge,
+  LocationProgress,
+  UserLocation,
+  InsertLocationChallenge,
+  InsertLocationProgress,
+  InsertUserLocation
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -204,6 +211,38 @@ export interface IStorage {
   updateChallengeProgress(userId: number, challengeId: number, data: Partial<ChallengeProgress>): Promise<ChallengeProgress | undefined>;
   createChallengeReward(reward: InsertChallengeReward): Promise<ChallengeReward>;
   getUserChallengeRewards(userId: number, limit?: number): Promise<ChallengeReward[]>;
+  
+  // Location-based challenge methods
+  getAllLocations(): Promise<LocationChallenge[]>;
+  getLocationById(id: number): Promise<LocationChallenge | undefined>;
+  getUserLocationsWithProgress(userId: number): Promise<(LocationChallenge & { 
+    unlocked: boolean;
+    last_completed?: Date | null;
+    cooldown_hours: number;
+  })[]>;
+  getLocationProgress(userId: number, locationId: number): Promise<LocationProgress | undefined>;
+  getNearbyLocations(userId: number, latitude: number, longitude: number, radiusKm?: number): Promise<LocationChallenge[]>;
+  updateUserLocation(userId: number, latitude: number, longitude: number): Promise<UserLocation>;
+  getUserLocation(userId: number): Promise<UserLocation | undefined>;
+  createLocation(locationData: InsertLocationChallenge): Promise<LocationChallenge>;
+  updateLocation(id: number, data: Partial<LocationChallenge>): Promise<LocationChallenge | undefined>;
+  deleteLocation(id: number): Promise<boolean>;
+  unlockLocationForUser(userId: number, locationId: number): Promise<LocationProgress>;
+  startLocationChallenge(userId: number, locationId: number): Promise<LocationProgress>;
+  completeLocationChallenge(
+    userId: number, 
+    locationId: number, 
+    rewards: { 
+      cash: number; 
+      xp: number; 
+      respect: number; 
+      special_item_id?: number | null 
+    }
+  ): Promise<{ 
+    progress: LocationProgress; 
+    user?: User; 
+    inventory?: UserInventory 
+  }>;
   
   // Social Methods - Friends
   getUserFriends(userId: number): Promise<UserWithStatus[]>;

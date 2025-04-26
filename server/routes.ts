@@ -12,6 +12,7 @@ import { registerSocialRoutes, setNotifyUserFunction } from "./social-routes";
 import { registerDevRoutes } from "./dev-routes";
 import challengeRoutes from "./challenge-routes";
 import gangRoutes from "./gang-routes";
+import locationRoutes from "./location-routes";
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
 import { z } from "zod";
@@ -39,6 +40,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register challenge routes
   app.use("/api", challengeRoutes);
+  
+  // Register location-based challenges
+  app.use("/api", locationRoutes);
   
   // Register gang routes with nested features
   app.use("/api/gangs", gangRoutes);
