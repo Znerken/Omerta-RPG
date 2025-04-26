@@ -573,18 +573,27 @@ export function getRarityClass(rarity: string) {
   }
 }
 
+// Import ProfileWidget type
+import { 
+  ProfileWidget, 
+  PROFILE_WIDGETS, 
+  WidgetPosition 
+} from './ProfileWidgets';
+
 // Types for the profile customization
 export interface ProfileCustomizationProps {
   selectedFrame: AvatarFrame;
   selectedTheme: ProfileTheme;
   selectedNameEffect: NameEffect;
   selectedBackgroundEffect: BackgroundEffect;
+  selectedWidgets: ProfileWidget[];
   userAvatar?: string | null;
   userName: string;
   onFrameChange: (frame: AvatarFrame) => void;
   onThemeChange: (theme: ProfileTheme) => void;
   onNameEffectChange: (effect: NameEffect) => void;
   onBgEffectChange: (effect: BackgroundEffect) => void;
+  onWidgetsChange: (widgets: ProfileWidget[]) => void;
   onClose: () => void;
 }
 
@@ -594,12 +603,14 @@ export const ProfileCustomizationDialog: React.FC<{
   selectedTheme: ProfileTheme;
   selectedNameEffect: NameEffect;
   selectedBackgroundEffect: BackgroundEffect;
+  selectedWidgets: ProfileWidget[];
   userAvatar?: string | null;
   userName: string;
   onFrameChange: (frame: AvatarFrame) => void;
   onThemeChange: (theme: ProfileTheme) => void;
   onNameEffectChange: (effect: NameEffect) => void;
   onBgEffectChange: (effect: BackgroundEffect) => void;
+  onWidgetsChange: (widgets: ProfileWidget[]) => void;
   onClose: () => void;
 }> = ({
   open,
@@ -607,12 +618,14 @@ export const ProfileCustomizationDialog: React.FC<{
   selectedTheme,
   selectedNameEffect,
   selectedBackgroundEffect,
+  selectedWidgets,
   userAvatar,
   userName,
   onFrameChange,
   onThemeChange,
   onNameEffectChange,
   onBgEffectChange,
+  onWidgetsChange,
   onClose
 }) => {
   return (
@@ -629,7 +642,7 @@ export const ProfileCustomizationDialog: React.FC<{
         </DialogHeader>
 
         <Tabs defaultValue="frames" className="py-4">
-          <TabsList className="grid grid-cols-4 mb-4">
+          <TabsList className="grid grid-cols-5 mb-4">
             <TabsTrigger value="frames" className="flex items-center gap-2">
               <Frame className="h-4 w-4" /> Avatar Frames
             </TabsTrigger>
@@ -641,6 +654,9 @@ export const ProfileCustomizationDialog: React.FC<{
             </TabsTrigger>
             <TabsTrigger value="effects" className="flex items-center gap-2">
               <Cloud className="h-4 w-4" /> Background
+            </TabsTrigger>
+            <TabsTrigger value="widgets" className="flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4" /> Widgets
             </TabsTrigger>
           </TabsList>
 
