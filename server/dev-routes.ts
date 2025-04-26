@@ -249,17 +249,22 @@ export function registerDevRoutes(app: Express) {
         return res.status(400).json({ message: "Username or email already exists, try again" });
       }
       
-      // Create the user with hashed password
+      // Create the user with hashed password - only pass valid fields to createUser
       const user = await storage.createUser({
         username,
         email,
         password: await hashPassword(password),
-        level: 5,
-        xp: 0,
-        cash: 500000, // 500,000 cash
-        respect: 100,
-        isAdmin: false, // Not an admin by default
       });
+      
+      // Update the user with additional fields after creation
+      await db.update(users)
+        .set({
+          level: 5,
+          xp: 0,
+          cash: 500000, // 500,000 cash
+          respect: 100
+        })
+        .where(eq(users.id, user.id));
       
       console.log(`Created test user: ${username} (ID: ${user.id})`);
       
