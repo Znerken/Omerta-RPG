@@ -172,7 +172,7 @@ export function ProfileCard({
                 <span className="text-xs text-muted-foreground">Strength</span>
                 <span className="text-xs">{stats.strength}/100</span>
               </div>
-              <Progress value={stats.strength} className="h-1.5" />
+              <Progress value={stats.strength} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-red-700 to-red-500" />
             </div>
             
             <div>
@@ -180,7 +180,7 @@ export function ProfileCard({
                 <span className="text-xs text-muted-foreground">Stealth</span>
                 <span className="text-xs">{stats.stealth}/100</span>
               </div>
-              <Progress value={stats.stealth} className="h-1.5" />
+              <Progress value={stats.stealth} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-green-700 to-green-500" />
             </div>
             
             <div>
