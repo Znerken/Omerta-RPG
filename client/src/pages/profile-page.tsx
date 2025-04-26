@@ -392,13 +392,15 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       <div className="relative w-full mb-20">
         {/* Banner Image - Full width with enhanced styling */}
         <div 
-          className="omerta-profile-banner w-full bg-gradient-to-r from-primary/30 to-accent/30"
+          className="omerta-profile-banner w-full bg-gradient-to-r from-primary/30 to-accent/30 rounded-sm"
           style={{
             backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
         >
+          {/* Animated glowing edge effect */}
+          <div className="omerta-profile-banner-glow"></div>
           {/* Animated overlay pattern */}
           <div className="absolute inset-0 bg-black/10 film-grain"></div>
           
@@ -479,14 +481,32 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       
       {/* User Identity - Centered below avatar with enhanced styling */}
       <div className="text-center mb-8">
-        {/* Apply rank-based styling to username */}
+        {/* Apply rank-based styling to username with special effects for Extortionist */}
         <h1 className={`text-3xl font-bold mb-1 omerta-profile-name ${
+          username.toLowerCase() === "extortionist" ? "extortionist-name" :
           userProfile.rank === "Boss" || (userProfile.gangRank === "Boss") ? "rank-boss-name" : 
           userProfile.rank === "Capo" || (userProfile.gangRank === "Capo") ? "rank-capo-name" : 
           userProfile.rank === "Soldier" || (userProfile.gangRank === "Soldier") ? "rank-soldier-name" : 
           "rank-associate-name"
         }`}>
           {username}
+          
+          {/* Flame particles for extortionist only */}
+          {username.toLowerCase() === "extortionist" && (
+            <div className="absolute left-0 right-0 bottom-0 top-[-5px] pointer-events-none overflow-hidden">
+              {Array.from({ length: 15 }).map((_, i) => (
+                <div 
+                  key={i} 
+                  className="flame-particle"
+                  style={{
+                    left: `${Math.random() * 100}%`,
+                    animationDelay: `${Math.random() * 2}s`,
+                    animationDuration: `${1 + Math.random() * 2}s`
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </h1>
         <div className="flex items-center justify-center text-gray-400 mb-2">
           <Medal className="h-5 w-5 mr-1" />
