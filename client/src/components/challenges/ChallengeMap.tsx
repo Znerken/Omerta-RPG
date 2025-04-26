@@ -147,7 +147,8 @@ export default function ChallengeMap({ locations, onRefresh }: ChallengeMapProps
     if (timeElapsed >= cooldownMs) return "Available now";
     
     const remainingTime = cooldownMs - timeElapsed;
-    return formatDistance(now, new Date(now.getTime() + remainingTime));
+    const futureDate = new Date(now.getTime() + remainingTime);
+    return `in ${formatDistanceToNow(futureDate, { addSuffix: false })}`;
   };
   
   // Calculate distance between two coordinates
