@@ -543,7 +543,7 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
                       </span>
                       <span className="text-sm font-mono">{stats.strength}/100</span>
                     </div>
-                    <Progress value={stats.strength} className="h-1.5" indicatorClassName="bg-red-600" />
+                    <Progress value={stats.strength} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-red-700 to-red-500" />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
@@ -552,7 +552,7 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
                       </span>
                       <span className="text-sm font-mono">{stats.stealth}/100</span>
                     </div>
-                    <Progress value={stats.stealth} className="h-1.5" indicatorClassName="bg-green-600" />
+                    <Progress value={stats.stealth} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-green-700 to-green-500" />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
@@ -561,7 +561,7 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
                       </span>
                       <span className="text-sm font-mono">{stats.charisma}/100</span>
                     </div>
-                    <Progress value={stats.charisma} className="h-1.5" indicatorClassName="bg-blue-600" />
+                    <Progress value={stats.charisma} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-blue-700 to-blue-500" />
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
@@ -570,7 +570,7 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
                       </span>
                       <span className="text-sm font-mono">{stats.intelligence}/100</span>
                     </div>
-                    <Progress value={stats.intelligence} className="h-1.5" indicatorClassName="bg-yellow-600" />
+                    <Progress value={stats.intelligence} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-yellow-700 to-yellow-500" />
                   </div>
                 </div>
               </div>

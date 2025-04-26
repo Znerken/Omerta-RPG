@@ -188,7 +188,7 @@ export function ProfileCard({
                 <span className="text-xs text-muted-foreground">Charisma</span>
                 <span className="text-xs">{stats.charisma}/100</span>
               </div>
-              <Progress value={stats.charisma} className="h-1.5" />
+              <Progress value={stats.charisma} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-blue-700 to-blue-500" />
             </div>
             
             <div>
@@ -196,7 +196,7 @@ export function ProfileCard({
                 <span className="text-xs text-muted-foreground">Intelligence</span>
                 <span className="text-xs">{stats.intelligence}/100</span>
               </div>
-              <Progress value={stats.intelligence} className="h-1.5" />
+              <Progress value={stats.intelligence} className="h-1.5 progress-bar-animated" indicatorClassName="bg-gradient-to-r from-yellow-700 to-yellow-500" />
             </div>
           </div>
         </div>
