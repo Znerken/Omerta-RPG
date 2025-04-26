@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Users, Circle, User, UserPlus, MessageSquare } from "lucide-react";
+import { Loader2, Circle, UserPlus, MessageSquare, CircleUser } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Friend } from "@/types/social";
@@ -29,7 +28,11 @@ export function SocialSidebar() {
   return (
     <div className="w-full">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-medium text-muted-foreground">Online Contacts</h3>
+        <h3 className="text-sm font-medium flex items-center">
+          <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
+            Contacts Directory
+          </span>
+        </h3>
         <Badge 
           variant="outline" 
           className="text-xs font-normal bg-primary/5 border-primary/10 text-primary"
@@ -47,51 +50,71 @@ export function SocialSidebar() {
           Could not load friends list
         </div>
       ) : friends.length === 0 ? (
-        <div className="p-3 border border-border/60 rounded-md bg-card/30 backdrop-blur-sm">
-          <div className="text-center py-4">
-            <UserPlus className="h-8 w-8 mx-auto mb-2 text-primary/30" />
-            <p className="text-sm text-muted-foreground">
-              No friends yet
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-3 w-full text-xs bg-primary/5 hover:bg-primary/10"
-              asChild
-            >
-              <Link href="/friends">Find Friends</Link>
-            </Button>
-          </div>
+        <div className="text-center py-6">
+          <CircleUser className="h-12 w-12 mx-auto mb-3 text-primary/20" />
+          <p className="text-sm text-muted-foreground">
+            No contacts in your network
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-4 w-full text-xs bg-primary/5 hover:bg-primary/10"
+            asChild
+          >
+            <Link href="/friends">
+              <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+              Find Associates
+            </Link>
+          </Button>
         </div>
       ) : (
-        <div className="bg-card/30 backdrop-blur-sm rounded-md border border-border/60">
-          <Tabs defaultValue="online" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 p-0.5 h-9 bg-transparent rounded-t-md rounded-b-none">
-              <TabsTrigger 
-                value="online" 
-                className="text-xs rounded-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
-              >
-                Online
-              </TabsTrigger>
-              <TabsTrigger 
-                value="all" 
-                className="text-xs rounded-sm data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
-              >
-                All Friends
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="online" className="m-0 border-t border-border/60 pt-2">
-              {onlineFriends.length === 0 ? (
-                <div className="text-center py-6">
-                  <Circle className="h-5 w-5 mx-auto mb-1 text-muted-foreground/30" />
-                  <p className="text-xs text-muted-foreground/70">
-                    No friends online right now
-                  </p>
+        <Tabs defaultValue="online" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 h-9 bg-muted/10 rounded-md mb-2">
+            <TabsTrigger 
+              value="online" 
+              className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              Online
+            </TabsTrigger>
+            <TabsTrigger 
+              value="all" 
+              className="text-xs data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
+              All Contacts
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="online" className="mt-0">
+            {onlineFriends.length === 0 ? (
+              <div className="text-center py-8">
+                <Circle className="h-6 w-6 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground/70">
+                  No associates online right now
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[280px]">
+                <div className="space-y-1 pt-2 pb-4">
+                  {onlineFriends.map((friend: Friend) => (
+                    <FriendListItem 
+                      key={friend.id}
+                      friend={friend}
+                      isOnline={true}
+                    />
+                  ))}
                 </div>
-              ) : (
-                <ScrollArea className="h-[250px] px-2">
-                  <div className="space-y-0.5 pt-1.5 pb-3">
+              </ScrollArea>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="all" className="mt-0">
+            <ScrollArea className="h-[280px]">
+              {onlineFriends.length > 0 && (
+                <div className="mb-4 mt-1">
+                  <h4 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-2 px-1">
+                    Active • {onlineFriends.length}
+                  </h4>
+                  <div className="space-y-1">
                     {onlineFriends.map((friend: Friend) => (
                       <FriendListItem 
                         key={friend.id}
@@ -100,63 +123,42 @@ export function SocialSidebar() {
                       />
                     ))}
                   </div>
-                </ScrollArea>
+                </div>
               )}
-            </TabsContent>
-            
-            <TabsContent value="all" className="m-0 border-t border-border/60 pt-2">
-              <ScrollArea className="h-[250px] px-2">
-                {onlineFriends.length > 0 && (
-                  <div className="mb-4 mt-1.5">
-                    <h4 className="text-[10px] uppercase tracking-wider font-medium text-primary/70 mb-2 px-1">
-                      Online • {onlineFriends.length}
-                    </h4>
-                    <div className="space-y-0.5">
-                      {onlineFriends.map((friend: Friend) => (
-                        <FriendListItem 
-                          key={friend.id}
-                          friend={friend}
-                          isOnline={true}
-                        />
-                      ))}
-                    </div>
+              
+              {offlineFriends.length > 0 && (
+                <div className="mb-2 mt-3">
+                  <h4 className="text-[11px] uppercase tracking-wider font-medium text-muted-foreground mb-2 px-1">
+                    Offline • {offlineFriends.length}
+                  </h4>
+                  <div className="space-y-1">
+                    {offlineFriends.map((friend: Friend) => (
+                      <FriendListItem 
+                        key={friend.id}
+                        friend={friend}
+                        isOnline={false}
+                      />
+                    ))}
                   </div>
-                )}
-                
-                {offlineFriends.length > 0 && (
-                  <div className="mb-2 mt-1.5">
-                    <h4 className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-2 px-1">
-                      Offline • {offlineFriends.length}
-                    </h4>
-                    <div className="space-y-0.5">
-                      {offlineFriends.map((friend: Friend) => (
-                        <FriendListItem 
-                          key={friend.id}
-                          friend={friend}
-                          isOnline={false}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </ScrollArea>
-            </TabsContent>
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
 
-            <div className="p-2 border-t border-border/60">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs h-8 bg-muted/30 hover:bg-muted/60"
-                asChild
-              >
-                <Link href="/friends">
-                  <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-                  Manage Friends
-                </Link>
-              </Button>
-            </div>
-          </Tabs>
-        </div>
+          <div className="mt-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs h-9 bg-muted/10 hover:bg-muted/20 border border-border/30"
+              asChild
+            >
+              <Link href="/friends">
+                <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                Manage Network
+              </Link>
+            </Button>
+          </div>
+        </Tabs>
       )}
     </div>
   );
@@ -171,21 +173,21 @@ function FriendListItem({ friend, isOnline }: FriendListItemProps) {
   return (
     <div 
       className={cn(
-        "group relative rounded-sm py-1.5 px-2 transition-colors",
+        "group relative rounded-md py-2.5 px-3 transition-colors",
         isOnline 
           ? "hover:bg-primary/5" 
-          : "hover:bg-muted/30"
+          : "hover:bg-muted/10"
       )}
     >
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <div className="relative flex-shrink-0">
             {isOnline && (
-              <div className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 ring-1 ring-background z-10" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 ring-1 ring-background z-10" />
             )}
-            <Avatar className="h-7 w-7">
+            <Avatar className="h-10 w-10">
               <AvatarImage src={friend.avatar || undefined} />
-              <AvatarFallback>{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="text-sm">{friend.username.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
           </div>
           <div>
@@ -193,13 +195,17 @@ function FriendListItem({ friend, isOnline }: FriendListItemProps) {
               userId={friend.id} 
               username={friend.username} 
               className={cn(
-                "text-xs",
+                "text-sm font-medium",
                 !isOnline && "text-muted-foreground"
               )}
             />
-            {friend.status?.lastLocation && !isOnline && (
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+            {friend.status?.lastLocation && !isOnline ? (
+              <p className="text-[11px] text-muted-foreground/70 mt-0.5">
                 Last seen: {friend.status.lastLocation}
+              </p>
+            ) : (
+              <p className="text-[11px] text-emerald-500/90 mt-0.5">
+                Online now
               </p>
             )}
           </div>
@@ -209,11 +215,11 @@ function FriendListItem({ friend, isOnline }: FriendListItemProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 rounded-sm"
+            className="h-7 w-7 rounded-full"
             asChild
           >
             <Link href={`/messages?userId=${friend.id}`}>
-              <MessageSquare className="h-3.5 w-3.5" />
+              <MessageSquare className="h-4 w-4" />
             </Link>
           </Button>
         </div>
