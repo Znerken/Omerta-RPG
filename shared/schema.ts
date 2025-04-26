@@ -542,6 +542,71 @@ export type InsertChallengeReward = z.infer<typeof insertChallengeRewardSchema>;
 export type ChallengeReward = typeof challengeRewards.$inferSelect;
 
 // Custom types for challenges
+
+// Location-based challenge system
+export const locationChallenges = pgTable('location_challenges', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  latitude: doublePrecision('latitude').notNull(),
+  longitude: doublePrecision('longitude').notNull(),
+  type: text('type').notNull(), // 'crime', 'drugs', 'training', 'secret', etc.
+  difficulty: text('difficulty').notNull().default('medium'), // 'easy', 'medium', 'hard', 'boss'
+  cash_reward: integer('cash_reward').notNull().default(0),
+  xp_reward: integer('xp_reward').notNull().default(0),
+  respect_reward: integer('respect_reward').notNull().default(0),
+  special_item_id: integer('special_item_id').references(() => items.id),
+  cooldown_hours: integer('cooldown_hours').notNull().default(24),
+  unlocked_by_default: boolean('unlocked_by_default').notNull().default(false),
+  image_url: text('image_url'),
+  created_at: timestamp('created_at').defaultNow(),
+});
+
+// User location progress tracking
+export const locationProgress = pgTable('location_progress', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  locationId: integer('location_id').notNull().references(() => locationChallenges.id),
+  unlocked: boolean('unlocked').notNull().default(false),
+  last_completed: timestamp('last_completed', { mode: 'date' }),
+  completion_count: integer('completion_count').notNull().default(0),
+  started_at: timestamp('started_at', { mode: 'date' }),
+  created_at: timestamp('created_at').defaultNow(),
+});
+
+// User current location tracking
+export const userLocations = pgTable('user_locations', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id).unique(),
+  latitude: doublePrecision('latitude').notNull(),
+  longitude: doublePrecision('longitude').notNull(),
+  last_updated: timestamp('last_updated').notNull().defaultNow(),
+});
+
+// Create insert schemas for location challenges
+export const insertLocationChallengeSchema = createInsertSchema(locationChallenges);
+export const insertLocationProgressSchema = createInsertSchema(locationProgress).pick({
+  userId: true,
+  locationId: true,
+  unlocked: true,
+});
+export const insertUserLocationSchema = createInsertSchema(userLocations).pick({
+  userId: true,
+  latitude: true,
+  longitude: true,
+});
+
+// Define location challenge types
+export type InsertLocationChallenge = z.infer<typeof insertLocationChallengeSchema>;
+export type LocationChallenge = typeof locationChallenges.$inferSelect;
+
+export type InsertLocationProgress = z.infer<typeof insertLocationProgressSchema>;
+export type LocationProgress = typeof locationProgress.$inferSelect;
+
+export type InsertUserLocation = z.infer<typeof insertUserLocationSchema>;
+export type UserLocation = typeof userLocations.$inferSelect;
+
+// Custom types for location challenges
 export type ChallengeWithProgress = Challenge & {
   progress?: ChallengeProgress;
   completed: boolean;
