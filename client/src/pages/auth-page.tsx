@@ -115,11 +115,11 @@ export default function AuthPage() {
         {/* Left column: Auth forms */}
         <div className="flex-1 flex flex-col justify-center z-10">
           <Card className="card-mafia backdrop-blur-sm shadow-dramatic p-8 border border-gold/20">
-            <div className="mb-8 flex items-center justify-center">
-              <FedoraIcon size="lg" color="gold" className="mr-4" />
-              <div>
-                <h1 className="text-4xl font-heading text-gold-gradient mb-2">Mafia Empire</h1>
-                <p className="text-muted-foreground">Enter the criminal underworld.</p>
+            <div className="mb-8 flex flex-col items-center justify-center">
+              <h1 className="text-5xl font-serif tracking-widest mb-2 text-gold-gradient">OMERTÀ</h1>
+              <p className="text-xs text-muted-foreground italic">The code of silence</p>
+              <div className="mt-2">
+                <p className="text-muted-foreground text-center">Enter the criminal underworld.</p>
               </div>
             </div>
             
@@ -293,14 +293,14 @@ export default function AuthPage() {
           <div className="backdrop-blur-sm bg-black/30 rounded-sm p-8 h-full shadow-dramatic border-l-4 border-gold/40">
             <div className="h-full flex flex-col justify-center space-y-8">
               <div className="mb-8 flex flex-col items-center md:items-start">
-                <img src="/assets/mafia-icon.svg" alt="Mafia Icon" className="w-24 h-24 mb-4" />
+                <h1 className="text-5xl font-serif tracking-widest mb-4 text-gold-gradient">OMERTÀ</h1>
                 <div className="inline-block mb-3 pb-1 border-b-2 border-gold/40">
                   <h2 className="text-3xl font-heading text-gold-gradient">Rise to Power</h2>
                 </div>
                 <p className="text-muted-foreground text-base">
-                  Welcome to Mafia Empire, where the streets are yours for the taking.
+                  Welcome to the underworld, where silence is golden and loyalty is everything.
                   Build your criminal empire, form powerful alliances, and leave your mark
-                  on the underworld.
+                  on the streets.
                 </p>
               </div>
               
