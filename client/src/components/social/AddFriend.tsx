@@ -115,7 +115,7 @@ export function AddFriend() {
     return (
       <div key={user.id} className="flex items-center justify-between py-2">
         <div className="flex items-center space-x-3">
-          <Link to={`/profile/${user.id}`} className="flex items-center hover:opacity-80 transition-opacity">
+          <Link to={`/player/${user.id}`} className="flex items-center hover:opacity-80 transition-opacity">
             <Avatar>
               <AvatarImage src={user.avatar || undefined} />
               <AvatarFallback>{user.username.charAt(0).toUpperCase()}</AvatarFallback>
