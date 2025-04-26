@@ -1,71 +1,39 @@
-import { Server } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { supabaseClient } from './supabase';
+import { Server } from 'http';
+import { validateSupabaseToken } from './supabase';
 import { db } from './db-supabase';
-import { users, userStatus } from '@shared/schema';
+import { userStatuses, type InsertUserStatus } from '@shared/schema';
 import { eq } from 'drizzle-orm';
 
-// Extend WebSocket type to include user properties
+// Extend WebSocket interface to include user data
 declare module 'ws' {
   interface WebSocket {
-    _userId?: number;
-    _username?: string;
     _isAlive: boolean;
-    _lastActivity: number;
+    _userId?: number;
+    _lastActivity: Date;
   }
 }
 
+// Store connected clients by user ID
+const clients = new Map<number, Set<WebSocket>>();
+
 /**
- * Set up WebSocket server for real-time communication with clients
- * @param httpServer The HTTP server to attach WebSocket server to
- * @returns WebSocketServer instance
+ * Set up WebSocket server
+ * @param server HTTP server to attach WebSocket server to
+ * @returns WebSocket server instance
  */
-export function setupWebSocketServer(httpServer: Server): WebSocketServer {
-  const wss = new WebSocketServer({
-    server: httpServer,
-    path: '/ws'
+export function setupWebSocketServer(server: Server): WebSocketServer {
+  const wss = new WebSocketServer({ 
+    server, 
+    path: '/ws' 
   });
 
-  console.log('WebSocket server initialized');
-
-  // Check for expired connections
-  const interval = setInterval(() => {
-    // Check inactive clients (heartbeat)
-    wss.clients.forEach((client) => {
-      if (client._isAlive === false) {
-        return client.terminate();
-      }
-
-      // Mark as inactive until next ping
-      client._isAlive = false;
-
-      // Ping to check if still alive
-      client.ping();
-
-      // Check for timeout (inactive for more than 5 minutes)
-      const inactiveTime = Date.now() - client._lastActivity;
-      if (inactiveTime > 5 * 60 * 1000) {
-        console.log(`Client inactive for ${inactiveTime}ms, terminating`);
-        handleDisconnect(client);
-        client.terminate();
-      }
-    });
-  }, 30000); // Check every 30 seconds
-
-  // Clean up on server close
-  wss.on('close', () => {
-    clearInterval(interval);
-  });
-
-  // Handle new connections
-  wss.on('connection', (ws, req) => {
-    console.log('New WebSocket connection');
-
-    // Initialize client
+  wss.on('connection', (ws) => {
+    // Initialize connection
     ws._isAlive = true;
-    ws._lastActivity = Date.now();
+    ws._lastActivity = new Date();
 
-    // Handle heartbeats
+    // Setup ping to keep connection alive
     ws.on('pong', () => {
       ws._isAlive = true;
     });
@@ -73,264 +41,350 @@ export function setupWebSocketServer(httpServer: Server): WebSocketServer {
     // Handle messages
     ws.on('message', async (message) => {
       try {
-        ws._lastActivity = Date.now();
-
         const data = JSON.parse(message.toString());
-        console.log('WebSocket message received:', data);
+        ws._lastActivity = new Date();
 
-        // Handle authentication message
+        // Handle authentication
         if (data.type === 'auth') {
-          await handleAuth(ws, data);
+          await handleAuth(ws, data.token);
         }
-        // Handle heartbeat message
-        else if (data.type === 'heartbeat') {
-          handleHeartbeat(ws, data);
+        // Handle other message types
+        else if (ws._userId) {
+          // User must be authenticated to send other messages
+          await handleMessage(ws, data);
+        } else {
+          // Not authenticated
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Authentication required'
+          }));
         }
-        // Handle status update message
-        else if (data.type === 'status_update') {
-          await handleStatusUpdate(ws, data);
-        }
-      } catch (error) {
-        console.error('Error handling WebSocket message:', error);
+      } catch (err) {
+        console.error('Error processing WebSocket message:', err);
+        ws.send(JSON.stringify({
+          type: 'error',
+          message: 'Invalid message format'
+        }));
       }
     });
 
     // Handle disconnection
     ws.on('close', () => {
-      handleDisconnect(ws);
+      if (ws._userId) {
+        removeClient(ws, ws._userId);
+        updateUserStatus(ws._userId, 'offline');
+      }
+    });
+
+    // Handle errors
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      if (ws._userId) {
+        removeClient(ws, ws._userId);
+        updateUserStatus(ws._userId, 'offline');
+      }
     });
   });
 
-  /**
-   * Handle authentication request from client
-   * @param ws WebSocket client
-   * @param data Authentication data (token)
-   */
-  async function handleAuth(ws: WebSocket, data: any) {
-    try {
-      const { token } = data;
-
-      if (!token) {
-        ws.send(JSON.stringify({
-          type: 'auth_response',
-          success: false,
-          error: 'No token provided'
-        }));
-        return;
-      }
-
-      // Verify the token with Supabase
-      const { data: { user }, error } = await supabaseClient.auth.getUser(token);
-
-      if (error || !user) {
-        ws.send(JSON.stringify({
-          type: 'auth_response',
-          success: false,
-          error: 'Invalid token'
-        }));
-        return;
-      }
-
-      // Find the corresponding user in our database
-      const [dbUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.supabaseId, user.id));
-
-      if (!dbUser) {
-        ws.send(JSON.stringify({
-          type: 'auth_response',
-          success: false,
-          error: 'User not found'
-        }));
-        return;
-      }
-
-      // Store user info in WebSocket connection
-      ws._userId = dbUser.id;
-      ws._username = dbUser.username;
-
-      // Update user's online status
-      await updateUserStatus(dbUser.id, 'online');
-
-      // Notify client of successful authentication
-      ws.send(JSON.stringify({
-        type: 'auth_response',
-        success: true,
-        user: {
-          id: dbUser.id,
-          username: dbUser.username
+  // Set up interval to clean up dead connections
+  const pingInterval = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if (ws._isAlive === false) {
+        if (ws._userId) {
+          removeClient(ws, ws._userId);
+          updateUserStatus(ws._userId, 'offline');
         }
-      }));
-
-      // Notify other clients that user is online
-      for (const client of wss.clients) {
-        if (client !== ws && client.readyState === WebSocket.OPEN && client._userId) {
-          client.send(JSON.stringify({
-            type: 'friend_status',
-            data: {
-              userId: dbUser.id,
-              username: dbUser.username,
-              avatar: dbUser.avatar,
-              status: 'online'
-            }
-          }));
-        }
-      }
-
-      console.log(`User ${dbUser.username} (ID: ${dbUser.id}) authenticated via WebSocket`);
-    } catch (error) {
-      console.error('Error authenticating WebSocket connection:', error);
-      ws.send(JSON.stringify({
-        type: 'auth_response',
-        success: false,
-        error: 'Authentication failed'
-      }));
-    }
-  }
-
-  /**
-   * Handle heartbeat message from client
-   * @param ws WebSocket client
-   * @param data Heartbeat data
-   */
-  function handleHeartbeat(ws: WebSocket, data: any) {
-    // Update last activity timestamp
-    ws._lastActivity = Date.now();
-
-    // Send heartbeat response
-    ws.send(JSON.stringify({
-      type: 'heartbeat_response',
-      timestamp: Date.now()
-    }));
-  }
-
-  /**
-   * Handle status update message from client
-   * @param ws WebSocket client
-   * @param data Status data
-   */
-  async function handleStatusUpdate(ws: WebSocket, data: any) {
-    try {
-      if (!ws._userId) {
-        ws.send(JSON.stringify({
-          type: 'status_update_response',
-          success: false,
-          error: 'Not authenticated'
-        }));
+        ws.terminate();
         return;
       }
 
-      const { status } = data.data;
-      if (!status) {
-        ws.send(JSON.stringify({
-          type: 'status_update_response',
-          success: false,
-          error: 'No status provided'
-        }));
-        return;
+      ws._isAlive = false;
+      ws.ping();
+      
+      // Check if user has been inactive for too long
+      const now = new Date();
+      const inactiveTime = now.getTime() - ws._lastActivity.getTime();
+      
+      // If inactive for more than 30 minutes, set status to 'away'
+      if (inactiveTime > 30 * 60 * 1000 && ws._userId) {
+        updateUserStatus(ws._userId, 'away');
       }
+    });
+  }, 30000);
 
-      // Update user's status
-      await updateUserStatus(ws._userId, status);
-
-      // Send success response
-      ws.send(JSON.stringify({
-        type: 'status_update_response',
-        success: true
-      }));
-
-      // Notify other clients of status change
-      for (const client of wss.clients) {
-        if (client !== ws && client.readyState === WebSocket.OPEN && client._userId) {
-          client.send(JSON.stringify({
-            type: 'friend_status',
-            data: {
-              userId: ws._userId,
-              username: ws._username,
-              status
-            }
-          }));
-        }
-      }
-    } catch (error) {
-      console.error('Error updating user status:', error);
-      ws.send(JSON.stringify({
-        type: 'status_update_response',
-        success: false,
-        error: 'Failed to update status'
-      }));
-    }
-  }
-
-  /**
-   * Handle client disconnection
-   * @param ws WebSocket client
-   */
-  async function handleDisconnect(ws: WebSocket) {
-    try {
-      if (ws._userId) {
-        // Update user status to offline
-        await updateUserStatus(ws._userId, 'offline');
-
-        // Notify other clients
-        for (const client of wss.clients) {
-          if (client !== ws && client.readyState === WebSocket.OPEN && client._userId) {
-            client.send(JSON.stringify({
-              type: 'friend_status',
-              data: {
-                userId: ws._userId,
-                username: ws._username,
-                status: 'offline'
-              }
-            }));
-          }
-        }
-
-        console.log(`User ${ws._username} (ID: ${ws._userId}) disconnected`);
-      }
-    } catch (error) {
-      console.error('Error handling client disconnection:', error);
-    }
-  }
-
-  /**
-   * Update user's status in the database
-   * @param userId User ID
-   * @param status Status to set
-   */
-  async function updateUserStatus(userId: number, status: string) {
-    try {
-      // Check if user status exists
-      const [existingStatus] = await db
-        .select()
-        .from(userStatus)
-        .where(eq(userStatus.userId, userId));
-
-      if (existingStatus) {
-        // Update existing status
-        await db
-          .update(userStatus)
-          .set({
-            status,
-            lastUpdated: new Date()
-          })
-          .where(eq(userStatus.userId, userId));
-      } else {
-        // Create new status
-        await db
-          .insert(userStatus)
-          .values({
-            userId,
-            status,
-            lastUpdated: new Date()
-          });
-      }
-    } catch (error) {
-      console.error(`Error updating status for user ${userId}:`, error);
-      throw error;
-    }
-  }
+  // Clean up interval when server closes
+  wss.on('close', () => {
+    clearInterval(pingInterval);
+  });
 
   return wss;
+}
+
+/**
+ * Handle authentication message
+ * @param ws WebSocket connection
+ * @param token Supabase JWT token
+ */
+async function handleAuth(ws: WebSocket, token: string): Promise<void> {
+  try {
+    // Validate token
+    const supabaseUser = await validateSupabaseToken(token);
+    
+    if (!supabaseUser) {
+      ws.send(JSON.stringify({
+        type: 'auth_response',
+        success: false,
+        error: 'Invalid token'
+      }));
+      return;
+    }
+    
+    // Get user from database
+    const [user] = await db
+      .select()
+      .from(userStatuses)
+      .where(eq(userStatuses.supabaseId, supabaseUser.id));
+    
+    if (!user) {
+      ws.send(JSON.stringify({
+        type: 'auth_response',
+        success: false,
+        error: 'User not found'
+      }));
+      return;
+    }
+
+    // Add client to map
+    ws._userId = user.userId;
+    addClient(ws, user.userId);
+    
+    // Update user status to online
+    await updateUserStatus(user.userId, 'online');
+    
+    // Send successful auth response
+    ws.send(JSON.stringify({
+      type: 'auth_response',
+      success: true,
+      userId: user.userId
+    }));
+    
+    // Broadcast user online status
+    broadcastUserStatus(user.userId, 'online');
+  } catch (error) {
+    console.error('Auth error:', error);
+    ws.send(JSON.stringify({
+      type: 'auth_response',
+      success: false,
+      error: 'Authentication failed'
+    }));
+  }
+}
+
+/**
+ * Handle incoming messages
+ * @param ws WebSocket connection
+ * @param data Message data
+ */
+async function handleMessage(ws: WebSocket, data: any): Promise<void> {
+  switch (data.type) {
+    case 'ping':
+      ws.send(JSON.stringify({ type: 'pong' }));
+      break;
+      
+    case 'status_change':
+      if (ws._userId && data.status) {
+        await updateUserStatus(ws._userId, data.status);
+        broadcastUserStatus(ws._userId, data.status);
+      }
+      break;
+      
+    case 'location_change':
+      if (ws._userId && data.location) {
+        await updateUserLocation(ws._userId, data.location);
+      }
+      break;
+      
+    default:
+      ws.send(JSON.stringify({
+        type: 'error',
+        message: 'Unknown message type'
+      }));
+  }
+}
+
+/**
+ * Add client to the clients map
+ * @param ws WebSocket connection
+ * @param userId User ID
+ */
+function addClient(ws: WebSocket, userId: number): void {
+  if (!clients.has(userId)) {
+    clients.set(userId, new Set());
+  }
+  
+  clients.get(userId)!.add(ws);
+  console.log(`User ${userId} connected. Total connections: ${clients.get(userId)!.size}`);
+}
+
+/**
+ * Remove client from the clients map
+ * @param ws WebSocket connection
+ * @param userId User ID
+ */
+function removeClient(ws: WebSocket, userId: number): void {
+  const userClients = clients.get(userId);
+  
+  if (userClients) {
+    userClients.delete(ws);
+    
+    if (userClients.size === 0) {
+      clients.delete(userId);
+    }
+    
+    console.log(`User ${userId} disconnected. Remaining connections: ${userClients.size}`);
+  }
+}
+
+/**
+ * Update user status in database
+ * @param userId User ID
+ * @param status Status to set
+ */
+async function updateUserStatus(userId: number, status: string): Promise<void> {
+  try {
+    const [existingStatus] = await db
+      .select()
+      .from(userStatuses)
+      .where(eq(userStatuses.userId, userId));
+    
+    if (existingStatus) {
+      await db
+        .update(userStatuses)
+        .set({ status, lastActive: new Date() })
+        .where(eq(userStatuses.userId, userId));
+    } else {
+      await db
+        .insert(userStatuses)
+        .values({
+          userId,
+          status,
+          lastActive: new Date(),
+          lastLocation: 'Unknown',
+          lastUpdated: new Date()
+        } as InsertUserStatus);
+    }
+  } catch (error) {
+    console.error(`Error updating status for user ${userId}:`, error);
+  }
+}
+
+/**
+ * Update user location in database
+ * @param userId User ID
+ * @param location Location to set
+ */
+async function updateUserLocation(userId: number, location: string): Promise<void> {
+  try {
+    const [existingStatus] = await db
+      .select()
+      .from(userStatuses)
+      .where(eq(userStatuses.userId, userId));
+    
+    if (existingStatus) {
+      await db
+        .update(userStatuses)
+        .set({ lastLocation: location, lastActive: new Date() })
+        .where(eq(userStatuses.userId, userId));
+    } else {
+      await db
+        .insert(userStatuses)
+        .values({
+          userId,
+          status: 'online',
+          lastActive: new Date(),
+          lastLocation: location,
+          lastUpdated: new Date()
+        } as InsertUserStatus);
+    }
+  } catch (error) {
+    console.error(`Error updating location for user ${userId}:`, error);
+  }
+}
+
+/**
+ * Broadcast user status to friends
+ * @param userId User ID
+ * @param status Status to broadcast
+ */
+async function broadcastUserStatus(userId: number, status: string): Promise<void> {
+  try {
+    // In a real app, you would get the user's friends and only broadcast to them
+    // For simplicity, we're not implementing the friends logic here
+    const message = JSON.stringify({
+      type: 'user_status_change',
+      userId,
+      status
+    });
+    
+    // Broadcast to all connected clients
+    for (const [, userClients] of clients) {
+      for (const client of userClients) {
+        if (client._userId !== userId && client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Error broadcasting status for user ${userId}:`, error);
+  }
+}
+
+/**
+ * Send notification to specific user
+ * @param userId User ID to send notification to
+ * @param type Notification type
+ * @param data Notification data
+ */
+export function notifyUser(userId: number, type: string, data: any): void {
+  const userClients = clients.get(userId);
+  if (!userClients) return;
+  
+  const message = JSON.stringify({
+    type,
+    data
+  });
+  
+  for (const client of userClients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  }
+}
+
+/**
+ * Broadcast message to all connected clients
+ * @param type Message type
+ * @param data Message data
+ */
+export function broadcast(type: string, data: any): void {
+  const message = JSON.stringify({
+    type,
+    data
+  });
+  
+  for (const [, userClients] of clients) {
+    for (const client of userClients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    }
+  }
+}
+
+/**
+ * Get users with online status
+ * @returns Array of online user IDs
+ */
+export function getOnlineUsers(): number[] {
+  return Array.from(clients.keys());
 }

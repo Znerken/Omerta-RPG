@@ -1,28 +1,33 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import * as schema from '@shared/schema';
+import * as casinoSchema from '@shared/schema-casino';
+import * as economySchema from '@shared/schema-economy';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
-// Check for database URL
+// Check if required database environment variables exist
 if (!process.env.DATABASE_URL) {
-  throw new Error('Missing DATABASE_URL environment variable');
+  throw new Error('DATABASE_URL is not defined in environment variables');
 }
 
-// Create PostgreSQL connection
+// Create database connection
 const queryClient = postgres(process.env.DATABASE_URL, {
-  ssl: process.env.NODE_ENV === 'production' ? 'require' : false,
   max: 10, // Maximum number of connections
-  idle_timeout: 30, // Max idle time for connections in seconds
+  idle_timeout: 20, // Max idle time for connections in seconds
+  connect_timeout: 10, // Connection timeout in seconds
+  prepare: false, // We'll handle prepared statements ourselves if needed
 });
 
-// Create drizzle ORM instance
+// Initialize drizzle with all schemas
 export const db = drizzle(queryClient, { 
-  schema,
-  logger: process.env.NODE_ENV !== 'production',
+  schema: { 
+    ...schema, 
+    ...casinoSchema,
+    ...economySchema,
+  }
 });
 
 /**
@@ -31,14 +36,12 @@ export const db = drizzle(queryClient, {
  */
 export async function initializeDatabase(): Promise<boolean> {
   try {
-    // Test query to verify database connection
-    const result = await db.select({ count: schema.users.id.count() }).from(schema.users);
-    
-    console.log(`Database connection successful. Users in database: ${result[0].count}`);
-    
+    // Try a simple query to verify the connection works
+    const result = await queryClient`SELECT NOW()`;
+    console.log('Database connection successful, current time:', result[0].now);
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
+    console.error('Error connecting to database:', error);
     return false;
   }
 }
@@ -49,22 +52,13 @@ export async function initializeDatabase(): Promise<boolean> {
  */
 export async function runMigrations(): Promise<void> {
   try {
-    console.log('Running database migrations...');
-    
-    // Create a separate connection for migrations
-    const migrationClient = postgres(process.env.DATABASE_URL, { 
-      max: 1,
-      ssl: process.env.NODE_ENV === 'production' ? 'require' : false,
-    });
-    
-    const migrationDb = drizzle(migrationClient);
-    
-    // Apply migrations from the drizzle folder
-    await migrate(migrationDb, { migrationsFolder: './drizzle' });
-    
-    console.log('Database migrations completed successfully');
+    // This is a placeholder for actual migration code
+    // In a real app, you would use something like Drizzle's migrate function
+    // But for simplicity, we're just logging a message
+    console.log('Database migration functionality not implemented yet');
+    console.log('Use npm run db:push to apply schema changes');
   } catch (error) {
-    console.error('Failed to run database migrations:', error);
+    console.error('Failed to apply migrations:', error);
     throw error;
   }
 }

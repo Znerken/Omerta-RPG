@@ -1,74 +1,74 @@
-import express, { Request, Response, NextFunction } from "express";
-import path from "path";
-import { fileURLToPath } from "url";
-import cookieParser from "cookie-parser";
-import cors from "cors";
-import { registerRoutes } from "./routes";
-import { setupSupabaseAuth } from "./auth-supabase";
-import { initializeDatabase } from "./db-supabase";
-import dotenv from "dotenv";
+import express, { Request, Response, NextFunction } from 'express';
+import { json, urlencoded } from 'express';
+import path from 'path';
+import dotenv from 'dotenv';
+import { viteNodeApp } from './vite';
+import { registerRoutes } from './routes-supabase';
+import { initializeDatabase } from './db-supabase';
 
-// Load environment variables from .env file if it exists
+// Load environment variables
 dotenv.config();
+
+// Print environment for debugging
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`);
 
 // Create Express app
 const app = express();
 
-// Get directory name (for ES modules)
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Configure middleware
+app.use(json());
+app.use(urlencoded({ extended: true }));
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(cors({
-  origin: process.env.NODE_ENV === "production" 
-    ? process.env.CORS_ORIGIN || "https://your-production-domain.com" 
-    : "http://localhost:3000",
-  credentials: true
-}));
+// Serve static files for asset files
+app.use('/attached_assets', express.static(path.resolve(process.cwd(), 'attached_assets')));
 
-// Public directories for file uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Initialize database
+initializeDatabase()
+  .then((success) => {
+    if (!success) {
+      console.error('Failed to initialize database, exiting...');
+      process.exit(1);
+    }
 
-// Set up Supabase auth middleware
-setupSupabaseAuth(app);
+    // In development mode, use Vite's dev server
+    if (process.env.NODE_ENV === 'development') {
+      app.use(viteNodeApp);
+    } else {
+      // In production, serve built client files
+      app.use(express.static(path.resolve(process.cwd(), 'dist/client')));
+      
+      // For any GET request that doesn't match an API or static file, serve the index.html
+      app.get('*', (_req, res) => {
+        res.sendFile(path.resolve(process.cwd(), 'dist/client/index.html'));
+      });
+    }
 
-// Serve Vite app in development
-if (process.env.NODE_ENV === 'development') {
-  const { createServer: createViteServer } = await import('./vite.js');
-  await createViteServer(app);
-}
+    // Register API routes & WebSocket
+    registerRoutes(app)
+      .then((server) => {
+        // Get port from environment or use default
+        const PORT = process.env.PORT || 5000;
 
-// API routes
-const httpServer = await registerRoutes(app);
+        // Start the server
+        server.listen(PORT, '0.0.0.0', () => {
+          console.log(`[express] serving on port ${PORT}`);
+        });
+      })
+      .catch((err) => {
+        console.error('Failed to register routes:', err);
+        process.exit(1);
+      });
+  })
+  .catch((err) => {
+    console.error('Error during initialization:', err);
+    process.exit(1);
+  });
 
-// Error handling middleware
+// Global error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error("Express error:", err);
-  res.status(err.status || 500).json({
-    message: err.message || "Something went wrong",
-    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  console.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
   });
 });
-
-// Initialize database and start server
-const PORT = process.env.PORT || 5000;
-
-try {
-  // Verify database connection
-  const dbInitialized = await initializeDatabase();
-  
-  if (!dbInitialized) {
-    console.error("Failed to initialize database. Please check your Supabase configuration.");
-    process.exit(1);
-  }
-  
-  // Start the server
-  httpServer.listen(PORT, () => {
-    console.log(`[express] serving on port ${PORT}`);
-  });
-} catch (error) {
-  console.error("Failed to start server:", error);
-  process.exit(1);
-}

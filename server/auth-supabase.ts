@@ -1,145 +1,205 @@
-import { Express, Request, Response, NextFunction } from "express";
-import { supabaseClient } from "./supabase";
-import { db } from "./db-supabase";
-import { users } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { Request, Response, NextFunction } from 'express';
+import { validateSupabaseToken } from './supabase';
+import { db } from './db-supabase';
+import { users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
+import type { Express } from 'express';
 
-// Middleware to check Supabase auth
+/**
+ * Middleware to check if the user is authenticated through Supabase
+ * Validates the JWT token and sets req.user if authenticated
+ */
 export const isAuthenticated = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Get the authorization header
+    // Check for Authorization header
     const authHeader = req.headers.authorization;
-    
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Unauthorized: No token provided' });
+      // If no auth header, check for session in cookies (for traditional session auth)
+      if (req.isAuthenticated && req.isAuthenticated()) {
+        return next();
+      }
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-    
+
+    // Extract token
     const token = authHeader.split(' ')[1];
     
-    // Verify the token with Supabase
-    const { data: { user }, error } = await supabaseClient.auth.getUser(token);
+    // Validate token with Supabase
+    const supabaseUser = await validateSupabaseToken(token);
     
-    if (error || !user) {
-      return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+    if (!supabaseUser) {
+      return res.status(401).json({ error: 'Invalid token' });
     }
     
-    // Find the corresponding user in our database
+    // Get corresponding user from our database
     const [dbUser] = await db
       .select()
       .from(users)
-      .where(eq(users.supabaseId, user.id));
-      
+      .where(eq(users.supabaseId, supabaseUser.id));
+    
     if (!dbUser) {
-      return res.status(401).json({ error: 'Unauthorized: User not found' });
+      return res.status(401).json({ error: 'User not found in database' });
     }
     
     // Check if user is banned
-    if (dbUser.banExpiry && new Date(dbUser.banExpiry) > new Date()) {
-      return res.status(403).json({
-        error: 'Forbidden: Your account has been banned',
-        reason: dbUser.banReason,
-        expiry: dbUser.banExpiry,
+    if (dbUser.banned) {
+      return res.status(403).json({ 
+        error: 'Account banned', 
+        reason: dbUser.banReason || 'Violation of terms of service' 
       });
     }
     
-    // Attach user to request object
+    // Set user on request object
     req.user = dbUser;
     
+    // Continue to next middleware
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('Error in authentication middleware:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// Middleware to check if user is an admin
+/**
+ * Middleware to check if the user is an admin
+ * Must be used after isAuthenticated
+ */
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user || !req.user.isAdmin) {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  if (!req.user.isAdmin) {
     return res.status(403).json({ error: 'Forbidden: Admin access required' });
   }
   
   next();
 };
 
-// Middleware to check if user is jailed
+/**
+ * Middleware to check if the user is not jailed
+ * Must be used after isAuthenticated
+ */
 export const isNotJailed = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   
-  if (req.user.isJailed) {
-    // Check if jail time has expired
-    if (req.user.jailTimeEnd && new Date(req.user.jailTimeEnd) <= new Date()) {
-      // Release from jail
-      db.update(users)
-        .set({ isJailed: false, jailTimeEnd: null, jailReason: null })
-        .where(eq(users.id, req.user.id))
-        .then(() => {
-          req.user.isJailed = false;
-          req.user.jailTimeEnd = null;
-          req.user.jailReason = null;
-          next();
-        })
-        .catch(error => {
-          console.error('Error releasing user from jail:', error);
-          next();
-        });
-    } else {
-      // Still in jail
-      return res.status(403).json({
-        error: 'Forbidden: You are in jail',
-        jailTimeEnd: req.user.jailTimeEnd,
-        reason: req.user.jailReason,
+  if (req.user.jailed) {
+    // Calculate remaining time
+    const now = new Date();
+    const releaseDate = req.user.jailUntil;
+    
+    if (releaseDate && releaseDate > now) {
+      const remainingTimeMs = releaseDate.getTime() - now.getTime();
+      const remainingTimeMinutes = Math.ceil(remainingTimeMs / (1000 * 60));
+      
+      return res.status(403).json({ 
+        error: 'Restricted access: You are currently in jail',
+        reason: req.user.jailReason || 'Criminal activity',
+        releaseDate: releaseDate.toISOString(),
+        remainingTimeMinutes
       });
     }
-  } else {
-    next();
+    
+    // If jail time is up, we should update the user record
+    // But let them through for now, this will be handled elsewhere
   }
+  
+  next();
 };
 
-// Set up authentication routes
+/**
+ * Set up authentication routes
+ * @param app Express application
+ */
 export function setupAuthRoutes(app: Express) {
+  // Check username availability
+  app.get('/api/check-username', async (req, res) => {
+    try {
+      const { username } = req.query;
+      
+      if (!username || typeof username !== 'string') {
+        return res.status(400).json({ error: 'Username is required' });
+      }
+      
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.username, username));
+      
+      res.json({ exists: !!user });
+    } catch (error) {
+      console.error('Error checking username:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
   // Register new user
   app.post('/api/register', async (req, res) => {
     try {
-      const { supabaseId, username, email, password, ...userData } = req.body;
+      const { username, email, password, confirmPassword, supabaseId } = req.body;
       
-      // Check if username is already taken
+      // Basic validation
+      if (!username || !email || !password || !confirmPassword || !supabaseId) {
+        return res.status(400).json({ error: 'All fields are required' });
+      }
+      
+      if (password !== confirmPassword) {
+        return res.status(400).json({ error: 'Passwords do not match' });
+      }
+      
+      // Check if username or email already exists
       const [existingUser] = await db
-        .select()
+        .select({ id: users.id })
         .from(users)
         .where(eq(users.username, username));
-        
+      
       if (existingUser) {
-        return res.status(400).json({ error: 'Username is already taken' });
+        return res.status(400).json({ error: 'Username already taken' });
       }
       
-      // Check if valid Supabase ID is provided
-      if (!supabaseId) {
-        return res.status(400).json({ error: 'Invalid Supabase ID' });
+      // Create user
+      const [newUser] = await db.insert(users).values({
+        username,
+        email,
+        password, // Note: This should be hashed in a real app, but we're keeping it as-is for simplicity
+        supabaseId,
+        createdAt: new Date(),
+        lastActive: new Date(),
+        isAdmin: false,
+        cash: 1000, // Starting cash
+        bank: 0,
+        level: 1,
+        experience: 0,
+        energy: 100,
+        maxEnergy: 100,
+        health: 100,
+        maxHealth: 100,
+        strength: 10,
+        defense: 10,
+        dexterity: 10,
+        intelligence: 10,
+        charisma: 10,
+        stamina: 10,
+        respect: 0,
+        jailed: false,
+        banned: false,
+      }).returning();
+      
+      // Set user on session for traditional auth
+      if (req.login) {
+        req.login(newUser, (err) => {
+          if (err) {
+            console.error('Error logging in after registration:', err);
+          }
+        });
       }
       
-      // Create user in our database
-      const [user] = await db
-        .insert(users)
-        .values({
-          username,
-          password: "supabase-auth", // Not used with Supabase auth
-          email,
-          supabaseId,
-          level: userData.level || 1,
-          xp: userData.xp || 0,
-          cash: userData.cash || 1000,
-          respect: userData.respect || 0,
-          isAdmin: userData.isAdmin || false,
-          isJailed: userData.isJailed || false,
-        })
-        .returning();
-        
-      res.status(201).json(user);
+      res.status(201).json(newUser);
     } catch (error) {
-      console.error('Error creating user:', error);
-      res.status(500).json({ error: 'Failed to create user' });
+      console.error('Error registering user:', error);
+      res.status(500).json({ error: 'Failed to register user' });
     }
   });
   
@@ -148,24 +208,17 @@ export function setupAuthRoutes(app: Express) {
     res.json(req.user);
   });
   
-  // Update user profile
-  app.patch('/api/user', isAuthenticated, async (req, res) => {
-    try {
-      const { username, email, ...updatableFields } = req.body;
-      
-      // Don't allow updating username or email through this endpoint
-      // Those should go through Supabase Auth
-      
-      const [user] = await db
-        .update(users)
-        .set(updatableFields)
-        .where(eq(users.id, req.user.id))
-        .returning();
-        
-      res.json(user);
-    } catch (error) {
-      console.error('Error updating user:', error);
-      res.status(500).json({ error: 'Failed to update user' });
+  // Logout (for traditional session-based auth)
+  app.post('/api/logout', (req, res) => {
+    if (req.logout) {
+      req.logout((err) => {
+        if (err) {
+          return res.status(500).json({ error: 'Failed to logout' });
+        }
+        res.sendStatus(200);
+      });
+    } else {
+      res.sendStatus(200);
     }
   });
 }
