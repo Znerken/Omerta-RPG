@@ -191,9 +191,16 @@ export default function DashboardPage() {
                 whileHover={{ scale: 1.05 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="h-full w-full bg-gradient-to-br from-black/80 to-red-900/50 flex items-center justify-center">
-                  <FedoraIcon size="xl" className="text-red-400" />
-                </div>
+                {user.avatar ? (
+                  <div 
+                    className="h-full w-full bg-cover bg-center" 
+                    style={{ backgroundImage: `url(${user.avatar})` }}
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-black/80 to-red-900/50 flex items-center justify-center">
+                    <FedoraIcon size="xl" className="text-red-400" />
+                  </div>
+                )}
               </motion.div>
               
               <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
@@ -397,13 +404,19 @@ export default function DashboardPage() {
                 {user.gangId ? (
                   <>
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-medium text-zinc-200">The Valentini Family</h3>
-                      <Badge variant="outline" className="bg-black/30">Boss Rank</Badge>
+                      <h3 className="font-medium text-zinc-200">
+                        {dashboardData?.user?.gang?.name || "Kekw"} Family
+                      </h3>
+                      <Badge variant="outline" className="bg-black/30">
+                        {dashboardData?.user?.gangMember?.rank || "Boss"} Rank
+                      </Badge>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="bg-black/30 rounded-lg p-3 text-center">
-                        <div className="text-xl font-semibold text-amber-400">5</div>
+                        <div className="text-xl font-semibold text-amber-400">
+                          {dashboardData?.user?.gang?.members?.length || 4}
+                        </div>
                         <div className="text-xs text-zinc-400">Members</div>
                       </div>
                       <div className="bg-black/30 rounded-lg p-3 text-center">
