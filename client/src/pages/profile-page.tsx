@@ -593,95 +593,149 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         )}
       </div>
       
-      {/* Avatar centered without banner - Banner moved to showcase section */}
-      <div className="relative w-full mb-10 flex justify-center">
-        <div className="relative">
-          <div className="relative perspective-1000">
-            {/* Decorative circular frame around avatar */}
-            <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-secondary/30 to-primary/30 blur-md"></div>
-            
-            <UserAvatar 
-              username={username} 
-              avatarUrl={avatarPreview || userProfile.avatar} 
-              size="xl" 
-              linkToProfile={false}
-              withBorder={true}
-              withRing={true}
-              borderColor="border-background"
-              ringColor="ring-primary/30"
-              className="shadow-lg relative z-10"
-            />
-            
-            {isEditing && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8 z-20"
-                onClick={() => avatarInputRef.current?.click()}
-              >
-                <Camera className="h-4 w-4" />
-                <input
-                  type="file"
-                  ref={avatarInputRef}
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  onChange={handleAvatarChange}
+      {/* Integrated banner and profile section with overlapping elements */}
+      <div className="relative w-full mb-14">
+        {/* Enhanced Banner with Avatar and User Info Overlay */}
+        <div 
+          className="omerta-profile-banner w-full bg-gradient-to-r from-primary/30 to-accent/30 rounded-md overflow-hidden"
+          style={{
+            backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            minHeight: '260px',
+          }}
+        >
+          {/* Animated glowing edge effect */}
+          <div className="omerta-profile-banner-glow"></div>
+          
+          {/* Animated overlay pattern */}
+          <div className="absolute inset-0 bg-black/20 film-grain"></div>
+          
+          {/* Gradient overlay for better text readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
+          
+          {/* Decorative frame for banner */}
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
+          <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
+          <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
+          
+          {/* Banner corner decorations */}
+          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-secondary/40"></div>
+          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-secondary/40"></div>
+          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-secondary/40"></div>
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-secondary/40"></div>
+          
+          {isEditing && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 z-10"
+              onClick={() => bannerInputRef.current?.click()}
+            >
+              <Image className="h-5 w-5" />
+              <input
+                type="file"
+                ref={bannerInputRef}
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleBannerChange}
+              />
+            </Button>
+          )}
+          
+          {/* Centered Avatar that overlaps banner and content area */}
+          <div className="absolute left-1/2 -bottom-12 transform -translate-x-1/2 z-20">
+            <div className="relative">
+              <div className="relative perspective-1000">
+                {/* Decorative circular frame around avatar with enhanced glow */}
+                <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-secondary/30 to-primary/30 animate-pulse blur-md"></div>
+                
+                <UserAvatar 
+                  username={username} 
+                  avatarUrl={avatarPreview || userProfile.avatar} 
+                  size="xl" 
+                  linkToProfile={false}
+                  withBorder={true}
+                  withRing={true}
+                  borderColor="border-background"
+                  ringColor="ring-primary/50"
+                  className="shadow-lg relative z-10 transform hover:scale-105 transition-transform duration-300"
                 />
-              </Button>
-            )}
+                
+                {isEditing && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8 z-20"
+                    onClick={() => avatarInputRef.current?.click()}
+                  >
+                    <Camera className="h-4 w-4" />
+                    <input
+                      type="file"
+                      ref={avatarInputRef}
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* User Identity - Positioned within the banner */}
+          <div className="absolute bottom-0 inset-x-0 pb-16 pt-10 text-center">
+            {/* Apply rank-based styling to username with special effects for Extortionist */}
+            <h1 className={`text-4xl font-bold mb-2 omerta-profile-name relative z-10 ${
+              username.toLowerCase() === "extortionist" ? "extortionist-name text-shadow-lg" :
+              userProfile.rank === "Boss" || (userProfile.gangRank === "Boss") ? "rank-boss-name" : 
+              userProfile.rank === "Capo" || (userProfile.gangRank === "Capo") ? "rank-capo-name" : 
+              userProfile.rank === "Soldier" || (userProfile.gangRank === "Soldier") ? "rank-soldier-name" : 
+              "rank-associate-name"
+            }`}>
+              {username}
+              
+              {/* Flame particles for extortionist only - enhanced intensity */}
+              {username.toLowerCase() === "extortionist" && (
+                <div className="absolute left-0 right-0 bottom-0 top-[-10px] pointer-events-none overflow-hidden">
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="flame-particle"
+                      style={{
+                        left: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 2}s`,
+                        animationDuration: `${0.8 + Math.random() * 1.5}s`
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </h1>
+            
+            <div className="flex items-center justify-center text-white mb-2 relative z-10">
+              <Medal className="h-5 w-5 mr-1 text-amber-400" />
+              <span className="text-lg font-semibold">Level {level}</span>
+            </div>
           </div>
         </div>
-      </div>
-      
-      {/* User Identity - Centered below avatar with enhanced styling */}
-      <div className="text-center mb-8">
-        {/* Apply rank-based styling to username with special effects for Extortionist */}
-        <h1 className={`text-3xl font-bold mb-1 omerta-profile-name ${
-          username.toLowerCase() === "extortionist" ? "extortionist-name" :
-          userProfile.rank === "Boss" || (userProfile.gangRank === "Boss") ? "rank-boss-name" : 
-          userProfile.rank === "Capo" || (userProfile.gangRank === "Capo") ? "rank-capo-name" : 
-          userProfile.rank === "Soldier" || (userProfile.gangRank === "Soldier") ? "rank-soldier-name" : 
-          "rank-associate-name"
-        }`}>
-          {username}
-          
-          {/* Flame particles for extortionist only */}
-          {username.toLowerCase() === "extortionist" && (
-            <div className="absolute left-0 right-0 bottom-0 top-[-5px] pointer-events-none overflow-hidden">
-              {Array.from({ length: 15 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="flame-particle"
-                  style={{
-                    left: `${Math.random() * 100}%`,
-                    animationDelay: `${Math.random() * 2}s`,
-                    animationDuration: `${1 + Math.random() * 2}s`
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </h1>
-        <div className="flex items-center justify-center text-gray-400 mb-2">
-          <Medal className="h-5 w-5 mr-1" />
-          <span className="text-lg">Level {level}</span>
-        </div>
         
-        {/* User status badges/stats */}
-        <div className="flex justify-center gap-2 flex-wrap mt-3">
-          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+        {/* User stats badges - positioned below avatar for better visual flow */}
+        <div className="flex justify-center gap-2 flex-wrap mt-16 mb-2">
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter backdrop-blur-sm shadow-md">
             <DollarSign className="h-4 w-4 mr-1 text-green-500" />
             {formatCurrency(cash)}
           </Badge>
-          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter backdrop-blur-sm shadow-md">
             <Award className="h-4 w-4 mr-1 text-primary" />
             {respect.toLocaleString()} Respect
           </Badge>
-          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter backdrop-blur-sm shadow-md">
             <Briefcase className="h-4 w-4 mr-1 text-amber-500" />
             Mafia Boss
           </Badge>
-          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter">
+          <Badge variant="outline" className="px-3 py-1 text-sm bg-dark-lighter backdrop-blur-sm shadow-md">
             <Users className="h-4 w-4 mr-1 text-blue-500" />
             Crew: 6 Members
           </Badge>
