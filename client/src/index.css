@@ -872,6 +872,119 @@ h1, h2, h3, h4, h5, h6 {
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
+/* OMERTÀ profile animations and effects */
+.omerta-profile-name {
+  @apply font-heading uppercase tracking-wider;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.1em;
+}
+
+/* Rank-based username color animations */
+.rank-boss-name {
+  background: linear-gradient(to right, rgba(255, 215, 0, 1), rgba(255, 165, 0, 1));
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: shimmer 3s ease infinite;
+}
+
+.rank-capo-name {
+  background: linear-gradient(to right, rgba(59, 130, 246, 1), rgba(16, 185, 129, 1));
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: shimmer 4s ease infinite;
+}
+
+.rank-soldier-name {
+  background: linear-gradient(to right, rgba(16, 185, 129, 1), rgba(59, 130, 246, 0.8));
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: shimmer 5s ease infinite;
+}
+
+.rank-associate-name {
+  background: linear-gradient(to right, rgba(156, 163, 175, 1), rgba(209, 213, 219, 1));
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: shimmer 6s ease infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+  100% { background-position: 0% center; }
+}
+
+/* 3D profile picture effects */
+.omerta-profile-avatar {
+  transform-style: preserve-3d;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+}
+
+.omerta-profile-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 215, 0, 0.5), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+  filter: blur(10px);
+}
+
+.omerta-profile-avatar:hover {
+  transform: translateZ(10px) rotateX(3deg) rotateY(3deg);
+}
+
+.omerta-profile-avatar:hover::before {
+  opacity: 1;
+}
+
+.omerta-profile-avatar-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: linear-gradient(45deg, rgba(255, 215, 0, 0.5), rgba(255, 215, 0, 0.2)) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: rotate-ring 10s linear infinite;
+}
+
+@keyframes rotate-ring {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Enhanced banner styling */
+.omerta-profile-banner {
+  @apply relative overflow-hidden;
+  height: 300px; /* Increased height */
+  perspective: 1000px;
+}
+
+.omerta-profile-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, 
+    rgba(0, 0, 0, 0.1) 0%, 
+    rgba(0, 0, 0, 0.3) 80%, 
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  z-index: 1;
+}
+
 /* OMERTÀ styled tables */
 .omerta-table {
   @apply w-full text-sm border-collapse;

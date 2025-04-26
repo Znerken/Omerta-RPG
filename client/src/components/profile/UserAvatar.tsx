@@ -48,21 +48,32 @@ export function UserAvatar({
     sizeClasses[size],
     withBorder ? `border-2 ${borderColor}` : "",
     withRing ? `ring-2 ${ringColor}` : "",
+    "omerta-profile-avatar", // Add our new 3D effect class
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
   const avatar = (
-    <Avatar className={avatarClasses}>
-      {avatarUrl ? (
-        <AvatarImage src={avatarUrl} alt={username} />
-      ) : (
-        <AvatarFallback className="font-heading bg-primary/20">
-          {getInitials(username)}
-        </AvatarFallback>
+    <div className="relative group perspective-1000">
+      <Avatar className={avatarClasses}>
+        {avatarUrl ? (
+          <AvatarImage src={avatarUrl} alt={username} />
+        ) : (
+          <AvatarFallback className="font-heading bg-primary/20">
+            {getInitials(username)}
+          </AvatarFallback>
+        )}
+      </Avatar>
+      
+      {/* Animated ring effect */}
+      {withRing && (
+        <div className="omerta-profile-avatar-ring opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       )}
-    </Avatar>
+      
+      {/* Spotlight effect on hover */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-secondary/0 to-secondary/20 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300 z-10 pointer-events-none"></div>
+    </div>
   );
 
   // Wrap in a link if linkToProfile is true

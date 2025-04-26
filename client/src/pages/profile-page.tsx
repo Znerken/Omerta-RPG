@@ -389,21 +389,36 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       </div>
       
       {/* Full-width Banner with Avatar */}
-      <div className="relative w-full mb-16">
-        {/* Banner Image - Full width */}
+      <div className="relative w-full mb-20">
+        {/* Banner Image - Full width with enhanced styling */}
         <div 
-          className="w-full h-64 bg-gradient-to-r from-primary/30 to-accent/30 relative overflow-hidden"
+          className="omerta-profile-banner w-full bg-gradient-to-r from-primary/30 to-accent/30"
           style={{
             backgroundImage: bannerPreview ? `url(${bannerPreview})` : undefined,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
         >
+          {/* Animated overlay pattern */}
+          <div className="absolute inset-0 bg-black/10 film-grain"></div>
+          
+          {/* Decorative frame for banner */}
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent"></div>
+          <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
+          <div className="absolute inset-y-0 right-0 w-1 bg-gradient-to-b from-transparent via-secondary/50 to-transparent"></div>
+          
+          {/* Banner corner decorations */}
+          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-secondary/40"></div>
+          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-secondary/40"></div>
+          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-secondary/40"></div>
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-secondary/40"></div>
+          
           {isEditing && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70"
+              className="absolute bottom-4 right-4 bg-black/50 hover:bg-black/70 z-10"
               onClick={() => bannerInputRef.current?.click()}
             >
               <Image className="h-5 w-5" />
@@ -417,14 +432,17 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
             </Button>
           )}
           
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent"></div>
+          {/* Enhanced overlay gradient */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent"></div>
         </div>
         
-        {/* Avatar - Positioned to overlap banner and content */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+        {/* Avatar - Positioned to overlap banner and content with enhanced styling */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
           <div className="relative">
-            <div className="relative">
+            <div className="relative perspective-1000">
+              {/* Decorative circular frame around avatar */}
+              <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-secondary/30 to-primary/30 blur-md"></div>
+              
               <UserAvatar 
                 username={username} 
                 avatarUrl={avatarPreview || userProfile.avatar} 
@@ -434,14 +452,14 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
                 withRing={true}
                 borderColor="border-background"
                 ringColor="ring-primary/30"
-                className="shadow-lg"
+                className="shadow-lg relative z-10"
               />
               
               {isEditing && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8"
+                  className="absolute bottom-1 right-1 bg-black/50 hover:bg-black/70 rounded-full h-8 w-8 z-20"
                   onClick={() => avatarInputRef.current?.click()}
                 >
                   <Camera className="h-4 w-4" />
@@ -459,9 +477,17 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         </div>
       </div>
       
-      {/* User Identity - Centered below avatar */}
+      {/* User Identity - Centered below avatar with enhanced styling */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{username}</h1>
+        {/* Apply rank-based styling to username */}
+        <h1 className={`text-3xl font-bold mb-1 omerta-profile-name ${
+          userProfile.rank === "Boss" || (userProfile.gangRank === "Boss") ? "rank-boss-name" : 
+          userProfile.rank === "Capo" || (userProfile.gangRank === "Capo") ? "rank-capo-name" : 
+          userProfile.rank === "Soldier" || (userProfile.gangRank === "Soldier") ? "rank-soldier-name" : 
+          "rank-associate-name"
+        }`}>
+          {username}
+        </h1>
         <div className="flex items-center justify-center text-gray-400 mb-2">
           <Medal className="h-5 w-5 mr-1" />
           <span className="text-lg">Level {level}</span>
