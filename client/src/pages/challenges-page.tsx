@@ -416,7 +416,7 @@ export default function ChallengesPage() {
               bubbleRefs.current[i] = el;
             }
           }}
-          className="animate-bubble-rise absolute bottom-0 bg-white/10 rounded-full pointer-events-none"
+          className="animate-bubble-rise-small absolute bottom-0 bg-white/10 rounded-full pointer-events-none"
           style={{
             width: `${size}px`,
             height: `${size}px`,
