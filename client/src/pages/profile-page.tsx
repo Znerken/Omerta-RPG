@@ -1265,19 +1265,11 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         {/* Right Widgets Area */}
         {selectedWidgets.filter(w => w.position === 'right').length > 0 && (
           <div className="xl:col-span-3">
-            <WidgetContainer position="right">
-              {selectedWidgets
-                .filter(widget => widget.position === 'right')
-                .map(widget => (
-                  <ProfileWidget 
-                    key={widget.id} 
-                    widget={widget} 
-                    userData={userProfile}
-                    position="right"
-                  />
-                ))
-              }
-            </WidgetContainer>
+            <WidgetContainer
+              widgets={selectedWidgets.filter(widget => widget.position === 'right')}
+              userData={userProfile}
+              position="right"
+            />
           </div>
         )}
           
@@ -1440,19 +1432,11 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       {/* Bottom Widgets Area */}
       {selectedWidgets.filter(w => w.position === 'bottom').length > 0 && (
         <div className="mt-6">
-          <WidgetContainer position="bottom">
-            {selectedWidgets
-              .filter(widget => widget.position === 'bottom')
-              .map(widget => (
-                <ProfileWidget 
-                  key={widget.id} 
-                  widget={widget} 
-                  userData={userProfile}
-                  position="bottom"
-                />
-              ))
-            }
-          </WidgetContainer>
+          <WidgetContainer
+            widgets={selectedWidgets.filter(widget => widget.position === 'bottom')}
+            userData={userProfile}
+            position="bottom"
+          />
         </div>
       )}
       
