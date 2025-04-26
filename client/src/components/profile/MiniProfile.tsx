@@ -1,11 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { UserAvatar } from "./UserAvatar";
+import { StatDisplay } from "./StatDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Medal, Shield } from "lucide-react";
+import { ChevronRight, Medal, Shield, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,9 @@ export function MiniProfile({
   variant = "sidebar",
   className = ""
 }: MiniProfileProps) {
+  // State to toggle stats display
+  const [showStats, setShowStats] = useState(false);
+  
   // Fetch user profile data
   const { data: profile, isLoading } = useQuery({
     queryKey: ["/api/user/profile"],
@@ -48,7 +52,7 @@ export function MiniProfile({
   // Navbar variant is horizontal, sidebar variant is more compact
   if (variant === "navbar") {
     return (
-      <div className={cn("flex items-center p-2 rounded-lg bg-black/20 border border-border/50 hover:bg-black/30 transition", className)}>
+      <div className={cn("relative flex items-center p-2 rounded-lg bg-black/20 border border-border/50 hover:bg-black/30 transition", className)}>
         <UserAvatar 
           username={username} 
           avatarUrl={avatar} 
@@ -75,41 +79,98 @@ export function MiniProfile({
             <span className="mx-1.5">•</span>
             ${cash?.toLocaleString()}
           </div>
+          
+          {/* Stats accordion */}
+          {showStats && profile.stats && (
+            <div className="mt-3 pt-2 border-t border-border/20">
+              <StatDisplay 
+                stats={profile.stats} 
+                size="xs" 
+                showValues={true} 
+                showLabels={false}
+                compact={true}
+              />
+            </div>
+          )}
         </div>
         
-        <Link href="/profile">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ChevronRight className="h-4 w-4" />
+        <div className="flex flex-col">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 mb-1"
+            onClick={() => setShowStats(!showStats)}
+          >
+            {showStats ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
           </Button>
-        </Link>
+          
+          <Link href="/profile">
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </div>
     );
   }
   
   // Sidebar variant (default)
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <UserAvatar 
-        username={username} 
-        avatarUrl={avatar} 
-        size="md"
-        withBorder={true}
-        withRing={true}
-      />
-      <div className="flex-1">
-        <div className="flex items-center">
-          <p className="font-medium text-sm">{username}</p>
-          {isAdmin && (
-            <Badge variant="outline" className="ml-2 py-0 h-5">
-              <Shield className="h-3 w-3 mr-1 text-primary" />
-              Admin
-            </Badge>
-          )}
+    <div className={cn("w-full", className)}>
+      <div className="flex items-center gap-3">
+        <UserAvatar 
+          username={username} 
+          avatarUrl={avatar} 
+          size="md"
+          withBorder={true}
+          withRing={true}
+        />
+        <div className="flex-1">
+          <div className="flex items-center">
+            <p className="font-medium text-sm">{username}</p>
+            {isAdmin && (
+              <Badge variant="outline" className="ml-2 py-0 h-5">
+                <Shield className="h-3 w-3 mr-1 text-primary" />
+                Admin
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Level {level}
+            </p>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 ml-1"
+              onClick={() => setShowStats(!showStats)}
+            >
+              {showStats ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Level {level}
-        </p>
       </div>
+      
+      {/* Stats accordion */}
+      {showStats && profile.stats && (
+        <div className="mt-3 pt-3 pl-10 border-t border-border/10">
+          <StatDisplay 
+            stats={profile.stats} 
+            size="xs" 
+            showValues={true} 
+            showLabels={true}
+            compact={true}
+          />
+        </div>
+      )}
     </div>
   );
 }
