@@ -907,6 +907,348 @@ export const ProfileCustomizationDialog: React.FC<{
               ))}
             </div>
           </TabsContent>
+          
+          {/* Widgets tab */}
+          <TabsContent value="widgets">
+            <div className="space-y-4">
+              <div className="flex justify-between mb-2">
+                <h3 className="text-lg font-semibold flex items-center">
+                  <LayoutGrid className="h-5 w-5 mr-2 text-primary" /> 
+                  Profile Widgets
+                </h3>
+                <Badge variant="outline" className="px-2 py-1">
+                  {selectedWidgets.filter(w => w.position !== 'disabled').length} Active
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-4">
+                {/* Widget position areas */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-md font-medium mb-2 flex items-center">
+                      <ArrowUp className="h-4 w-4 mr-1" /> Top Widgets
+                    </h4>
+                    <div className="bg-black/30 border border-white/10 rounded-md p-4 min-h-[100px] flex flex-wrap gap-2 justify-center">
+                      {selectedWidgets.filter(w => w.position === 'top').length > 0 ? (
+                        selectedWidgets
+                          .filter(w => w.position === 'top')
+                          .map(widget => (
+                            <div 
+                              key={widget.id} 
+                              className="relative p-1 border border-white/20 rounded bg-black/50 hover:bg-black/70 transition-colors"
+                              onClick={() => {
+                                const updatedWidgets = selectedWidgets.map(w => 
+                                  w.id === widget.id ? {...w, position: 'disabled'} : w
+                                );
+                                onWidgetsChange(updatedWidgets);
+                              }}
+                            >
+                              <div className="flex items-center px-3 py-1 gap-1">
+                                {widget.icon}
+                                <span className="text-sm">{widget.name}</span>
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-900/80 hover:bg-red-800"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-500 italic text-sm">
+                          No widgets assigned to top position
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-md font-medium mb-2 flex items-center">
+                        <ArrowLeft className="h-4 w-4 mr-1" /> Left Widgets
+                      </h4>
+                      <div className="bg-black/30 border border-white/10 rounded-md p-4 min-h-[200px]">
+                        {selectedWidgets.filter(w => w.position === 'left').length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedWidgets
+                              .filter(w => w.position === 'left')
+                              .map(widget => (
+                                <div 
+                                  key={widget.id} 
+                                  className="relative p-1 border border-white/20 rounded bg-black/50 hover:bg-black/70 transition-colors"
+                                  onClick={() => {
+                                    const updatedWidgets = selectedWidgets.map(w => 
+                                      w.id === widget.id ? {...w, position: 'disabled'} : w
+                                    );
+                                    onWidgetsChange(updatedWidgets);
+                                  }}
+                                >
+                                  <div className="flex items-center px-3 py-2 gap-2">
+                                    {widget.icon}
+                                    <span>{widget.name}</span>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-900/80 hover:bg-red-800"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))
+                            }
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-500 italic text-sm">
+                            No widgets assigned to left position
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-md font-medium mb-2 flex items-center">
+                        <ArrowRight className="h-4 w-4 mr-1" /> Right Widgets
+                      </h4>
+                      <div className="bg-black/30 border border-white/10 rounded-md p-4 min-h-[200px]">
+                        {selectedWidgets.filter(w => w.position === 'right').length > 0 ? (
+                          <div className="space-y-2">
+                            {selectedWidgets
+                              .filter(w => w.position === 'right')
+                              .map(widget => (
+                                <div 
+                                  key={widget.id} 
+                                  className="relative p-1 border border-white/20 rounded bg-black/50 hover:bg-black/70 transition-colors"
+                                  onClick={() => {
+                                    const updatedWidgets = selectedWidgets.map(w => 
+                                      w.id === widget.id ? {...w, position: 'disabled'} : w
+                                    );
+                                    onWidgetsChange(updatedWidgets);
+                                  }}
+                                >
+                                  <div className="flex items-center px-3 py-2 gap-2">
+                                    {widget.icon}
+                                    <span>{widget.name}</span>
+                                  </div>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-900/80 hover:bg-red-800"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              ))
+                            }
+                          </div>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-500 italic text-sm">
+                            No widgets assigned to right position
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-md font-medium mb-2 flex items-center">
+                      <ArrowDown className="h-4 w-4 mr-1" /> Bottom Widgets
+                    </h4>
+                    <div className="bg-black/30 border border-white/10 rounded-md p-4 min-h-[100px]">
+                      {selectedWidgets.filter(w => w.position === 'bottom').length > 0 ? (
+                        <div className="space-y-2">
+                          {selectedWidgets
+                            .filter(w => w.position === 'bottom')
+                            .map(widget => (
+                              <div 
+                                key={widget.id} 
+                                className="relative p-1 border border-white/20 rounded bg-black/50 hover:bg-black/70 transition-colors"
+                                onClick={() => {
+                                  const updatedWidgets = selectedWidgets.map(w => 
+                                    w.id === widget.id ? {...w, position: 'disabled'} : w
+                                  );
+                                  onWidgetsChange(updatedWidgets);
+                                }}
+                              >
+                                <div className="flex items-center px-3 py-2 gap-2">
+                                  {widget.icon}
+                                  <span>{widget.name}</span>
+                                </div>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-900/80 hover:bg-red-800"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-500 italic text-sm">
+                          No widgets assigned to bottom position
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Available widgets */}
+                <div className="border-t border-white/10 pt-4 mt-2">
+                  <h4 className="text-md font-medium mb-4 flex items-center">
+                    <Package className="h-4 w-4 mr-1" /> Available Widgets
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {PROFILE_WIDGETS.filter(w => 
+                      w.unlocked && 
+                      !selectedWidgets.some(sw => sw.id === w.id && sw.position !== 'disabled')
+                    ).map(widget => (
+                      <div 
+                        key={widget.id}
+                        className={cn(
+                          "relative rounded-lg border p-3 flex flex-col cursor-pointer transition-all duration-200",
+                          "border-white/10 hover:border-white/30",
+                        )}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-black/50 flex items-center justify-center">
+                              {widget.icon}
+                            </div>
+                            <div>
+                              <div className="font-medium">{widget.name}</div>
+                              <div className="text-xs text-zinc-500 line-clamp-1">{widget.description}</div>
+                            </div>
+                          </div>
+                          
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-[10px] uppercase font-semibold",
+                              getRarityClass(widget.rarity)
+                            )}
+                          >
+                            {widget.rarity}
+                          </Badge>
+                        </div>
+                        
+                        <div className="mt-4 flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="flex-1 text-xs h-8"
+                            onClick={() => {
+                              const updatedWidgets = [
+                                ...selectedWidgets,
+                                {...widget, position: 'top'}
+                              ];
+                              onWidgetsChange(updatedWidgets);
+                            }}
+                          >
+                            <ArrowUp className="h-3 w-3 mr-1" /> Top
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="flex-1 text-xs h-8"
+                            onClick={() => {
+                              const updatedWidgets = [
+                                ...selectedWidgets,
+                                {...widget, position: 'left'}
+                              ];
+                              onWidgetsChange(updatedWidgets);
+                            }}
+                          >
+                            <ArrowLeft className="h-3 w-3 mr-1" /> Left
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="flex-1 text-xs h-8"
+                            onClick={() => {
+                              const updatedWidgets = [
+                                ...selectedWidgets,
+                                {...widget, position: 'right'}
+                              ];
+                              onWidgetsChange(updatedWidgets);
+                            }}
+                          >
+                            <ArrowRight className="h-3 w-3 mr-1" /> Right
+                          </Button>
+                        </div>
+                        <div className="mt-1">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="w-full text-xs h-8"
+                            onClick={() => {
+                              const updatedWidgets = [
+                                ...selectedWidgets,
+                                {...widget, position: 'bottom'}
+                              ];
+                              onWidgetsChange(updatedWidgets);
+                            }}
+                          >
+                            <ArrowDown className="h-3 w-3 mr-1" /> Bottom
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Locked widgets */}
+                    {PROFILE_WIDGETS.filter(w => !w.unlocked).map(widget => (
+                      <div 
+                        key={widget.id}
+                        className="relative rounded-lg border p-3 flex flex-col opacity-60 cursor-not-allowed border-white/5"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-black/50 flex items-center justify-center">
+                              {widget.icon}
+                            </div>
+                            <div>
+                              <div className="font-medium">{widget.name}</div>
+                              <div className="text-xs text-zinc-500 line-clamp-1">{widget.description}</div>
+                            </div>
+                          </div>
+                          
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-[10px] uppercase font-semibold",
+                              getRarityClass(widget.rarity)
+                            )}
+                          >
+                            {widget.rarity}
+                          </Badge>
+                        </div>
+                        
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                          <Badge variant="outline" className="bg-red-900/30 border-red-900/50 text-xs">
+                            {widget.requirement || "Locked"}
+                          </Badge>
+                        </div>
+                        
+                        {widget.cost && (
+                          <div className="absolute bottom-2 left-2 z-10">
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] bg-black/50 border-amber-700/50 text-amber-400"
+                            >
+                              ${widget.cost.toLocaleString()}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
 
         <DialogFooter className="sm:justify-between flex-wrap gap-2">

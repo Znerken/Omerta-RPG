@@ -27,6 +27,12 @@ import {
   type BackgroundEffect,
   getNameEffectStyles 
 } from "@/components/profile/ProfileCustomization";
+import {
+  PROFILE_WIDGETS,
+  type ProfileWidget,
+  type WidgetPosition,
+  WidgetContainer
+} from "@/components/profile/ProfileWidgets";
 import { 
   User, 
   DollarSign, 
@@ -154,11 +160,42 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         ? BACKGROUND_EFFECTS.find(effect => effect.id === savedBgEffectId) 
         : BACKGROUND_EFFECTS.find(effect => effect.id === 'none');
       
+      // Widgets
+      const savedWidgetsData = localStorage.getItem('profile-widgets');
+      let widgetsToUse: ProfileWidget[] = [];
+      
+      if (savedWidgetsData) {
+        try {
+          const parsedWidgets = JSON.parse(savedWidgetsData);
+          
+          if (Array.isArray(parsedWidgets)) {
+            widgetsToUse = parsedWidgets.map((widgetData: any) => {
+              const baseWidget = PROFILE_WIDGETS.find(w => w.id === widgetData.id);
+              if (!baseWidget) return null;
+              return { ...baseWidget, position: widgetData.position as WidgetPosition };
+            }).filter(Boolean) as ProfileWidget[];
+          }
+        } catch (e) {
+          console.error("Error parsing widgets data:", e);
+        }
+      }
+      
+      // If no widgets loaded, set up defaults
+      if (widgetsToUse.length === 0) {
+        widgetsToUse = [
+          { ...PROFILE_WIDGETS.find(w => w.id === 'cash')!, position: 'top' },
+          { ...PROFILE_WIDGETS.find(w => w.id === 'respect')!, position: 'top' },
+          { ...PROFILE_WIDGETS.find(w => w.id === 'rank')!, position: 'left' },
+          { ...PROFILE_WIDGETS.find(w => w.id === 'crew')!, position: 'right' }
+        ].filter(Boolean) as ProfileWidget[];
+      }
+      
       return {
         frame: frameToUse || AVATAR_FRAMES[0],
         theme: themeToUse || PROFILE_THEMES[0],
         nameEffect: nameEffectToUse || NAME_EFFECTS[0],
-        bgEffect: bgEffectToUse || BACKGROUND_EFFECTS[0]
+        bgEffect: bgEffectToUse || BACKGROUND_EFFECTS[0],
+        widgets: widgetsToUse
       };
     } catch (error) {
       console.error("Error loading customization settings:", error);
@@ -179,6 +216,9 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   );
   const [selectedBgEffect, setSelectedBgEffect] = useState<BackgroundEffect>(
     savedSettings?.bgEffect || BACKGROUND_EFFECTS.find(effect => effect.id === 'none') || BACKGROUND_EFFECTS[0]
+  );
+  const [selectedWidgets, setSelectedWidgets] = useState<ProfileWidget[]>(
+    savedSettings?.widgets || []
   );
   const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
   
@@ -220,6 +260,13 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
     
     // Until we set up the API endpoints, we'll use localStorage for persistence
     localStorage.setItem('userCustomization', JSON.stringify(customizationData));
+    
+    // Save widgets configuration separately (so it's easier to maintain)
+    const widgetsData = selectedWidgets.map(widget => ({
+      id: widget.id,
+      position: widget.position
+    }));
+    localStorage.setItem('profile-widgets', JSON.stringify(widgetsData));
     
     toast({
       title: "Profile customization saved",
