@@ -6,6 +6,8 @@ import fs from "fs";
 import sanitizeHtml from "sanitize-html";
 import { isAuthenticated } from "./middleware/auth";
 import { fileURLToPath } from "url";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 // Get directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -87,39 +89,100 @@ export function registerProfileRoutes(app: Express) {
     }
   });
 
-  // Get another user's profile
+  // Get another user's profile - EMERGENCY FALLBACK VERSION
   app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
       
-      // First check if the user exists
-      const user = await storage.getUser(userId);
-      if (!user) {
-        console.log(`User ID ${userId} not found in database`);
-        return res.status(404).json({ message: "User not found" });
-      }
-      
+      // Direct query to get user data
       try {
-        const profile = await storage.getUserProfile(userId);
+        // Directly query the user from DB
+        const userResult = await db.execute(
+          sql`SELECT * FROM users WHERE id = ${userId}`
+        );
         
-        if (!profile) {
-          console.log(`Failed to retrieve profile for user ID ${userId}`);
+        if (userResult.rows.length === 0) {
+          console.log(`User ID ${userId} not found in database`);
           return res.status(404).json({ message: "User not found" });
         }
         
-        // Remove sensitive fields
-        const { password, email, ...publicProfile } = profile;
+        const user = userResult.rows[0];
         
-        // Only show achievements if user allows it
-        if (!profile.showAchievements) {
-          delete publicProfile.achievements;
+        // Try to get gang info with a direct query that matches the actual DB schema
+        let gangInfo = null;
+        try {
+          const gangResult = await db.execute(
+            sql`
+              SELECT 
+                g.*, 
+                gm.role 
+              FROM 
+                users u
+              JOIN 
+                gang_members gm ON u.id = gm.user_id
+              JOIN 
+                gangs g ON gm.gang_id = g.id
+              WHERE 
+                u.id = ${userId}
+            `
+          );
+          
+          if (gangResult.rows.length > 0) {
+            const gangData = gangResult.rows[0];
+            gangInfo = {
+              id: gangData.id,
+              name: gangData.name,
+              description: gangData.description,
+              respect: gangData.respect,
+              money: gangData.money,
+              level: gangData.level,
+              image: gangData.image,
+              color: gangData.color,
+              leaderId: gangData.leader_id,
+              territory: gangData.territory,
+              createdAt: gangData.created_at,
+              role: gangData.role
+            };
+          }
+        } catch (gangError) {
+          console.error("Error fetching gang info:", gangError);
+          // Continue without gang info
         }
         
-        res.json(publicProfile);
-      } catch (profileError) {
-        console.error(`Error retrieving profile for user ID ${userId}:`, profileError);
+        // Build the profile object 
+        const profile = {
+          id: user.id,
+          username: user.username,
+          level: user.level || 1,
+          xp: user.xp || 0,
+          cash: user.cash || 0,
+          respect: user.respect || 0,
+          avatar: user.avatar,
+          bannerImage: user.banner_image || user.bannerImage,
+          bio: user.bio,
+          htmlProfile: user.html_profile || user.htmlProfile,
+          profileTheme: user.profile_theme || user.profileTheme,
+          showAchievements: user.show_achievements !== false,
+          isJailed: user.is_jailed || false,
+          jailTimeEnd: user.jail_time_end,
+          createdAt: user.created_at,
+          inGang: gangInfo !== null,
+          gang: gangInfo,
+          gangRole: gangInfo ? gangInfo.role : null
+        };
         
-        // Return a basic profile with just the user information if there's an error with the profile
+        // Return the profile
+        res.json(profile);
+      } catch (error) {
+        console.error("Error with direct profile query:", error);
+        
+        // Final fallback - just use the storage.getUser method
+        const user = await storage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Create a minimal profile
         const basicProfile = {
           id: user.id,
           username: user.username,
@@ -136,7 +199,7 @@ export function registerProfileRoutes(app: Express) {
           createdAt: user.createdAt
         };
         
-        console.log(`Returning basic profile for user ID ${userId} due to error`);
+        console.log(`Returning minimal profile for user ID ${userId}`);
         res.json(basicProfile);
       }
     } catch (error) {
