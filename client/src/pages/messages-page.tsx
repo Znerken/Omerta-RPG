@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useWebSocketContext } from '@/hooks/use-websocket-context';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +44,7 @@ type NewMessageForm = {
 export default function MessagesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const { isConnected } = useWebSocketContext(); // Use the global WebSocket context
+  const { isConnected, socket } = useWebSocketContext(); // Use the global WebSocket context
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('personal');
   const [newMessage, setNewMessage] = useState<NewMessageForm>({
@@ -151,29 +152,14 @@ export default function MessagesPage() {
     }
   });
 
-  // Setup WebSocket connection for real-time updates
+  // Use the shared WebSocketContext for real-time updates
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isConnected) return;
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?userId=${user.id}`;
-
-    // Close existing connection if any
-    if (socket) {
-      socket.close();
-    }
-
-    // Create new WebSocket connection
-    socket = new WebSocket(wsUrl);
-
-    socket.onopen = () => {
-      console.log('WebSocket connection established');
-    };
-
-    socket.onmessage = (event) => {
+    // Setup message handler for WebSocket messages
+    const handleWebSocketMessage = (data: any) => {
       try {
-        const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
+        console.log('WebSocket message received in messages-page:', data);
 
         if (data.type === 'newMessage' || data.type === 'newGangMessage') {
           // Display notification for new message
@@ -188,7 +174,14 @@ export default function MessagesPage() {
             (data.type === 'newMessage' && activeTab === 'personal') ||
             (data.type === 'newGangMessage' && activeTab === 'gang')
           ) {
-            refetch();
+            // Use a slight delay to prevent excessive refreshes
+            setTimeout(() => {
+              queryClient.invalidateQueries({ 
+                queryKey: ['/api/messages', activeTab],
+                refetchType: "none" // Prevent automatic refetch
+              });
+              refetch();
+            }, 300);
           }
         } else if (data.type === 'unreadMessages') {
           setUnreadCount(data.data.count);
@@ -200,7 +193,14 @@ export default function MessagesPage() {
           });
 
           if (activeTab === 'global') {
-            refetch();
+            // Use a slight delay to prevent excessive refreshes
+            setTimeout(() => {
+              queryClient.invalidateQueries({ 
+                queryKey: ['/api/messages', activeTab],
+                refetchType: "none" // Prevent automatic refetch 
+              });
+              refetch();
+            }, 300);
           }
         }
       } catch (err) {
@@ -208,22 +208,16 @@ export default function MessagesPage() {
       }
     };
 
-    socket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+    // Add event listener for messages in WebSocketContext
+    document.addEventListener('websocket-message', (e: any) => {
+      handleWebSocketMessage(e.detail);
+    });
 
-    socket.onclose = () => {
-      console.log('WebSocket connection closed');
-    };
-
-    // Clean up on unmount
     return () => {
-      if (socket) {
-        socket.close();
-        socket = null;
-      }
+      // Remove event listener when component unmounts
+      document.removeEventListener('websocket-message', handleWebSocketMessage);
     };
-  }, [user, activeTab, refetch, toast]);
+  }, [user, isConnected, activeTab, refetch, toast, queryClient]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
