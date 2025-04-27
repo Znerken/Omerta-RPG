@@ -16,6 +16,7 @@ type AuthContextType = {
   signUpMutation: UseMutationResult<any, Error, { email: string; username: string; password: string }>;
   logoutMutation: UseMutationResult<boolean, Error, void>;
   checkEmailAndUsername: (email: string, username: string) => Promise<{ available: boolean, message?: string }>;
+  signOut: () => Promise<void>; // Direct signOut method for emergency use
 };
 
 // Define the authentication context
@@ -305,6 +306,20 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const isAuthenticated = !!supabaseUser && !!gameUser;
   const isLoading = !!supabaseUser && isUserLoading;
 
+  // Direct sign out function for emergency cases
+  async function signOut() {
+    console.log("Emergency sign out triggered");
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+        queryClient.clear();
+        window.location.href = '/auth';
+      }
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  }
+
   // Define the context value
   const contextValue: AuthContextType = {
     supabaseUser,
@@ -315,6 +330,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     signUpMutation,
     logoutMutation,
     checkEmailAndUsername,
+    signOut,
   };
 
   return (
