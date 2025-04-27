@@ -110,92 +110,162 @@ export default function EmergencyProfilePage() {
   
   return (
     <div className="container mx-auto max-w-3xl p-6">
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <Link href="/" className="flex items-center text-blue-500 hover:underline">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Link>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100 px-2 py-1 rounded-md font-medium">
+            EMERGENCY MODE
+          </span>
+          <Link href={`/player/${user.id}`} className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
+            Try Normal View
+          </Link>
+        </div>
       </div>
       
-      {/* Basic profile card */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm mb-6">
-        <div className="p-6">
-          <div className="flex items-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl font-bold">
-              {user.username ? user.username.charAt(0).toUpperCase() : "?"}
-            </div>
-            <div className="ml-4">
-              <h1 className="text-2xl font-bold">{user.username}</h1>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                ID: {user.id} • Level {user.level || 1}
-              </div>
+      {/* Basic profile card with noir theme styling */}
+      <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-lg shadow-lg mb-6 overflow-hidden">
+        {/* Banner section */}
+        <div className="h-32 bg-gradient-to-r from-gray-800 to-gray-900 relative">
+          {/* Animated film grain overlay */}
+          <div className="absolute inset-0 bg-black/20 film-grain opacity-30"></div>
+          
+          {/* Banner decorative elements */}
+          <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
+          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
+          <div className="absolute inset-y-0 left-0 w-0.5 bg-gradient-to-b from-transparent via-amber-500/40 to-transparent"></div>
+          <div className="absolute inset-y-0 right-0 w-0.5 bg-gradient-to-b from-transparent via-amber-500/40 to-transparent"></div>
+        </div>
+        
+        <div className="p-6 relative">
+          {/* Avatar positioned to overlap banner */}
+          <div className="absolute -top-16 left-1/2 transform -translate-x-1/2">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 border-4 border-gray-800 shadow-lg flex items-center justify-center text-3xl font-bold overflow-hidden">
+              {user.avatar ? (
+                <img src={user.avatar} alt={user.username} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-amber-500">{user.username ? user.username.charAt(0).toUpperCase() : "?"}</span>
+              )}
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="bg-gray-50 dark:bg-gray-900 rounded p-3">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Cash</div>
-              <div className="text-lg font-semibold">${user.cash?.toLocaleString() || 0}</div>
+          {/* User identity */}
+          <div className="text-center mt-12 mb-6">
+            <h1 className="text-3xl font-bold text-white mb-1">{user.username}</h1>
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <span className="text-amber-500">ID: {user.id}</span>
+              <span className="text-gray-400">•</span>
+              <span className="text-amber-500">Level {user.level || 1}</span>
+              <span className="text-gray-400">•</span>
+              <span className={user.is_admin ? "text-red-400" : "text-gray-400"}>
+                {user.is_admin ? "Admin" : "Member"}
+              </span>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-900 rounded p-3">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Respect</div>
-              <div className="text-lg font-semibold">{user.respect || 0}</div>
+          </div>
+          
+          {/* User stats grid */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-gray-800/50 rounded-md border border-gray-700 p-4">
+              <div className="text-sm text-gray-400 mb-1">Cash</div>
+              <div className="text-xl font-semibold text-amber-500">${user.cash?.toLocaleString() || 0}</div>
+            </div>
+            <div className="bg-gray-800/50 rounded-md border border-gray-700 p-4">
+              <div className="text-sm text-gray-400 mb-1">Respect</div>
+              <div className="text-xl font-semibold text-amber-500">{user.respect || 0}</div>
             </div>
           </div>
           
           {user.bio && (
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold mb-1">Bio</h2>
-              <p className="text-gray-600 dark:text-gray-300">{user.bio}</p>
+            <div className="mb-6 bg-gray-800/50 rounded-md border border-gray-700 p-4">
+              <h2 className="text-lg font-semibold text-white mb-2">Bio</h2>
+              <p className="text-gray-300">{user.bio}</p>
             </div>
           )}
           
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-            <h2 className="text-lg font-semibold mb-3">Account Details</h2>
-            <ul className="space-y-2 text-sm">
-              <li className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Member Since</span>
-                <span>{new Date(user.created_at).toLocaleDateString()}</span>
+          {/* User details */}
+          <div className="bg-gray-800/50 rounded-md border border-gray-700 p-4">
+            <h2 className="text-lg font-semibold text-white mb-3">Account Details</h2>
+            <ul className="space-y-3">
+              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
+                <span className="text-gray-400">Member Since</span>
+                <span className="text-white">{new Date(user.created_at).toLocaleDateString()}</span>
               </li>
-              <li className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Status</span>
-                <span className={user.is_jailed ? "text-red-500" : ""}>
+              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
+                <span className="text-gray-400">Status</span>
+                <span className={user.is_jailed ? "text-red-400" : "text-green-400"}>
                   {user.is_jailed ? "In Jail" : "Free"}
                 </span>
               </li>
-              <li className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Gang</span>
-                <span>{user.gang_id ? `ID: ${user.gang_id}` : "None"}</span>
+              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
+                <span className="text-gray-400">Gang</span>
+                <span className="text-white">{user.gang_id ? `ID: ${user.gang_id}` : "None"}</span>
               </li>
-              <li className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Online Status</span>
-                <span className={user.status === 'online' ? "text-green-500" : "text-gray-500"}>
+              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
+                <span className="text-gray-400">Online Status</span>
+                <span className={user.status === 'online' ? "text-green-400" : "text-gray-400"}>
                   {user.status || "Offline"}
                 </span>
               </li>
-              <li className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Last Seen</span>
-                <span>{user.last_seen ? new Date(user.last_seen).toLocaleString() : "Unknown"}</span>
+              <li className="flex justify-between items-center">
+                <span className="text-gray-400">Last Seen</span>
+                <span className="text-white">{user.last_seen ? new Date(user.last_seen).toLocaleString() : "Unknown"}</span>
               </li>
             </ul>
           </div>
         </div>
       </div>
       
-      {/* Raw data section for debugging */}
-      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-semibold">Raw JSON Data</h2>
+      {/* Raw data section for debugging with improved styling */}
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-6">
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-lg font-semibold text-white">
+            <span className="text-amber-500 mr-2">{"{"}</span>
+            Raw JSON Data
+            <span className="text-amber-500 ml-2">{"}"}</span>
+          </h2>
           <button 
-            className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-1 rounded"
-            onClick={() => navigator.clipboard.writeText(rawUserData || JSON.stringify(data, null, 2))}
+            className="flex items-center gap-1 text-xs bg-amber-500 hover:bg-amber-600 text-black px-3 py-1.5 rounded-md transition-colors"
+            onClick={() => {
+              navigator.clipboard.writeText(rawUserData || JSON.stringify(data, null, 2));
+              toast({
+                title: "Copied to clipboard",
+                description: "The raw JSON data has been copied to your clipboard.",
+                status: "success",
+              });
+            }}
           >
-            Copy to Clipboard
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            Copy JSON
           </button>
         </div>
-        <pre className="text-xs overflow-auto max-h-96 bg-white dark:bg-gray-800 p-3 rounded border border-gray-200 dark:border-gray-700">
+        <pre className="text-xs overflow-auto max-h-96 bg-gray-950 p-4 rounded-md border border-gray-800 text-amber-300 font-mono">
           {rawUserData || JSON.stringify(data, null, 2)}
         </pre>
+      </div>
+      
+      {/* Database field reference */}
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
+        <h2 className="text-lg font-semibold text-white mb-3">Database Field Reference</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {user && Object.entries(user).map(([key, value]) => (
+            <div key={key} className="flex items-start gap-2 bg-gray-800/50 rounded p-2 border border-gray-700">
+              <span className="text-amber-500 font-mono text-xs whitespace-nowrap">{key}:</span>
+              <span className="text-gray-300 text-xs break-all">
+                {value === null ? (
+                  <span className="text-gray-500">null</span>
+                ) : typeof value === 'object' ? (
+                  JSON.stringify(value)
+                ) : (
+                  String(value)
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

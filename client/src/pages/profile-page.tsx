@@ -741,12 +741,27 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         />
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold mb-4">Profile not available</h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-6">
             {isViewingOwnProfile 
               ? "There was an error loading your profile data. Please try again later."
               : "This user's profile could not be found or is no longer available."
             }
           </p>
+          
+          {/* Emergency profile link */}
+          {currentUser?.id && (
+            <div className="inline-block mt-2 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md">
+              <p className="text-amber-800 dark:text-amber-300 text-sm mb-2">
+                Try the emergency profile viewer instead:
+              </p>
+              <a 
+                href={`/emergency-profile/${currentUser.id}`}
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-amber-100 dark:bg-amber-900 text-amber-900 dark:text-amber-200 rounded-md hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors"
+              >
+                View Emergency Profile
+              </a>
+            </div>
+          )}
         </div>
       </>
     );
