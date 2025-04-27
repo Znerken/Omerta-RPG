@@ -12,6 +12,7 @@ import { registerSocialRoutes, setNotifyUserFunction } from "./social-routes";
 import { registerDevRoutes } from "./dev-routes";
 import challengeRoutes from "./challenge-routes";
 import gangRoutes from "./gang-routes";
+import newGangRoutes from "./new-gang-routes";
 import locationRoutes from "./location-routes";
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
@@ -84,7 +85,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api", locationRoutes);
   
   // Register gang routes with nested features
-  app.use("/api/gangs", gangRoutes);
+  app.use("/api/gangs-old", gangRoutes);
+  
+  // Register the new improved gang system
+  app.use("/api/gangs", newGangRoutes);
   
   // Register casino routes
   registerCasinoRoutes(app);

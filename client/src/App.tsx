@@ -22,6 +22,7 @@ import EmergencyProfilePage from "@/pages/emergency-profile";
 import CrimesPage from "@/pages/crimes-page";
 import TrainingPage from "@/pages/training-page";
 import GangPage from "@/pages/gang-page";
+import NewGangPage from "@/pages/new-gang-page";
 import JailPage from "@/pages/jail-page";
 import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";
