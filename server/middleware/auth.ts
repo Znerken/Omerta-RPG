@@ -7,6 +7,9 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
   console.log('auth middleware checking authentication');
   
   try {
+    console.log('AUTH MIDDLEWARE STARTED - PATH:', req.path);
+    console.log('AUTH HEADERS:', JSON.stringify(req.headers, null, 2));
+    
     // Check if we already have a user (set by main auth middleware)
     if (req.user) {
       console.log('User already authenticated via main middleware');
@@ -27,6 +30,8 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
       return res.status(401).json({ message: "Unauthorized - No token" });
     }
     
+    console.log('Got token from header (first 15 chars):', token.substring(0, 15) + '...');
+    
     // Validate JWT token with Supabase
     console.log('Validating token');
     const supabaseUser = await extractAndValidateToken(req);
@@ -36,6 +41,7 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
     }
     
     console.log('Token validated, fetching user with Supabase ID:', supabaseUser.sub);
+    console.log('Token email is:', supabaseUser.email);
     
     // Get user from database using Supabase ID
     console.log('Looking up user with Supabase ID:', supabaseUser.sub);
