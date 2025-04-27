@@ -36,6 +36,56 @@ const registerSchema = z.object({
   email: z.string().email(),
 });
 
+// Reset token storage (in memory for now)
+interface ResetToken {
+  userId: number;
+  token: string;
+  expires: Date;
+  used: boolean;
+}
+
+const resetTokens: ResetToken[] = [];
+
+// Generate a reset token
+function generateResetToken(userId: number): string {
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date();
+  expires.setHours(expires.getHours() + 1); // Token expires in 1 hour
+  
+  // Remove any existing tokens for this user
+  const userTokenIndex = resetTokens.findIndex(t => t.userId === userId);
+  if (userTokenIndex >= 0) {
+    resetTokens.splice(userTokenIndex, 1);
+  }
+  
+  // Store the new token
+  resetTokens.push({
+    userId,
+    token,
+    expires,
+    used: false
+  });
+  
+  return token;
+}
+
+// Validate a reset token
+function validateResetToken(token: string): ResetToken | null {
+  const now = new Date();
+  const tokenObj = resetTokens.find(t => t.token === token && !t.used && t.expires > now);
+  return tokenObj || null;
+}
+
+// Mark a token as used
+function useResetToken(token: string): boolean {
+  const tokenIndex = resetTokens.findIndex(t => t.token === token);
+  if (tokenIndex >= 0) {
+    resetTokens[tokenIndex].used = true;
+    return true;
+  }
+  return false;
+}
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "mafia-game-secret",
@@ -190,6 +240,92 @@ export function setupAuth(app: Express) {
       res.json(userProfile);
     } catch (error) {
       res.status(500).json({ message: "Failed to get user profile" });
+    }
+  });
+
+  // Password reset request endpoint
+  app.post("/api/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // For security reasons, don't reveal if the email exists or not
+        return res.status(200).json({ 
+          message: "If your email is in our system, you will receive a password reset link." 
+        });
+      }
+      
+      // Generate a token for this user
+      const token = generateResetToken(user.id);
+      
+      // Send email with reset link
+      // In a real application, we would use SendGrid or another email service here
+      // For now, we'll just log the token to the console
+      console.log(`PASSWORD RESET TOKEN for ${user.username}: ${token}`);
+      console.log(`Reset URL: http://localhost:5000/reset-password?token=${token}`);
+      
+      // Return success message to the client
+      res.status(200).json({ 
+        message: "If your email is in our system, you will receive a password reset link." 
+      });
+    } catch (error) {
+      console.error("Error in forgot password:", error);
+      res.status(500).json({ message: "An error occurred while processing your request" });
+    }
+  });
+  
+  // Validate reset token endpoint
+  app.get("/api/reset-password/:token/validate", async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      // Validate the token
+      const validToken = validateResetToken(token);
+      
+      if (!validToken) {
+        return res.status(400).json({ valid: false, message: "Invalid or expired token" });
+      }
+      
+      res.status(200).json({ valid: true });
+    } catch (error) {
+      console.error("Error validating reset token:", error);
+      res.status(500).json({ valid: false, message: "An error occurred while validating your token" });
+    }
+  });
+  
+  // Reset password endpoint
+  app.post("/api/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+      
+      // Validate the token
+      const validToken = validateResetToken(token);
+      
+      if (!validToken) {
+        return res.status(400).json({ message: "Invalid or expired token" });
+      }
+      
+      // Update the user's password
+      const hashedPassword = await hashPassword(password);
+      await storage.updateUserPassword(validToken.userId, hashedPassword);
+      
+      // Mark the token as used
+      useResetToken(token);
+      
+      res.status(200).json({ message: "Password has been reset successfully" });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "An error occurred while resetting your password" });
     }
   });
 }
