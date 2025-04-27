@@ -27,7 +27,9 @@ import {
   CheckCircle2,
   X,
   Plus,
-  Minus
+  Minus,
+  User,
+  Quote
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -55,6 +57,11 @@ export function PhotoGalleryGenerator({
   const [photoUrls, setPhotoUrls] = useState<string[]>(Array(10).fill(''));
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  
+  // Name customization options
+  const [displayName, setDisplayName] = useState('');
+  const [selectedNameColor, setSelectedNameColor] = useState('gradient-gold');
+  const [selectedNameEffect, setSelectedNameEffect] = useState('glow');
 
   // Update photo URLs array when photo count changes
   useEffect(() => {
@@ -69,6 +76,13 @@ export function PhotoGalleryGenerator({
     }
     setPhotoUrls(newUrls);
   }, [photoCount]);
+  
+  // Set display name default to username
+  useEffect(() => {
+    if (!displayName && username) {
+      setDisplayName(username);
+    }
+  }, [displayName, username]);
 
   // Handle photo URL input change
   const handlePhotoUrlChange = (index: number, url: string) => {
@@ -119,8 +133,68 @@ export function PhotoGalleryGenerator({
       // Only use the number of photos selected by the user
       const selectedPhotoUrls = photoUrls.slice(0, photoCount);
       
+      // Define style properties based on name color selection
+      let nameColorStyle = '';
+      switch (selectedNameColor) {
+        case 'gradient-gold':
+          nameColorStyle = 'background: linear-gradient(90deg, #f9d423, #ff8a00); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;';
+          break;
+        case 'gradient-neon':
+          nameColorStyle = 'background: linear-gradient(90deg, #00ff87, #60efff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;';
+          break;
+        case 'gradient-fire':
+          nameColorStyle = 'background: linear-gradient(90deg, #ff4e50, #f9d423); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;';
+          break;
+        case 'gradient-ocean':
+          nameColorStyle = 'background: linear-gradient(90deg, #4facfe, #00f2fe); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;';
+          break;
+        case 'gradient-purple':
+          nameColorStyle = 'background: linear-gradient(90deg, #8e2de2, #4a00e0); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;';
+          break;
+        case 'gradient-rainbow':
+          nameColorStyle = 'background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;';
+          break;
+        case 'bloody':
+          nameColorStyle = 'color: #ff0000;';
+          break;
+        default:
+          nameColorStyle = 'color: #ffffff;';
+      }
+      
+      // Define effect properties based on name effect selection
+      let nameEffectStyle = '';
+      switch (selectedNameEffect) {
+        case 'glow':
+          nameEffectStyle = 'text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);';
+          break;
+        case 'shadow':
+          nameEffectStyle = 'text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);';
+          break;
+        case 'outline':
+          nameEffectStyle = 'text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;';
+          break;
+        case 'blur':
+          nameEffectStyle = 'filter: blur(0.5px);';
+          break;
+        case 'retro':
+          nameEffectStyle = 'font-family: monospace; letter-spacing: 2px;';
+          break;
+        default:
+          nameEffectStyle = '';
+      }
+      
+      // Use the actual display name if provided, otherwise fall back to username
+      const nameToDisplay = displayName || username;
+      
       const htmlTemplate = `
 <div style="font-family: 'Inter', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; border-radius: 10px; max-width: 800px; margin: 0 auto;">
+  <!-- Custom Name Title -->
+  <div style="text-align: center; margin-bottom: 25px;">
+    <h1 style="font-size: 2.2rem; font-weight: 900; ${nameColorStyle} ${nameEffectStyle} margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">
+      ${nameToDisplay}
+    </h1>
+  </div>
+
   <!-- Album Header Section -->
   <div style="margin-bottom: 25px; position: relative; overflow: hidden; border-radius: 12px;">
     <!-- Album cover and title -->
@@ -172,7 +246,7 @@ export function PhotoGalleryGenerator({
       "${songTitle}" • OMERTÀ • ESTABLISHED 2025
     </div>
     <div style="margin-top: 8px; opacity: 0.3; font-size: 0.7em;">
-      ${customQuote || username.toUpperCase()}
+      ${customQuote || nameToDisplay.toUpperCase()}
     </div>
   </div>
 </div>
@@ -373,6 +447,207 @@ export function PhotoGalleryGenerator({
                 </div>
               </div>
 
+              {/* Display Name Customization */}
+              <div className="space-y-4 p-4 border border-border rounded-lg bg-card/50">
+                <div className="flex items-center">
+                  <User className="w-5 h-5 mr-2" />
+                  <h3 className="text-base font-semibold">Customize Your Name Display</h3>
+                </div>
+                
+                {/* Name Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="display-name" className="text-sm font-medium">
+                    Display Name
+                  </Label>
+                  <Input
+                    id="display-name"
+                    placeholder="Your display name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                </div>
+                
+                {/* Name Color Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Name Color Style
+                  </Label>
+                  <div className="grid grid-cols-4 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('gradient-gold')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'gradient-gold' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold bg-gradient-to-r from-yellow-300 to-amber-600 bg-clip-text text-transparent">
+                        Gold
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('gradient-neon')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'gradient-neon' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
+                        Neon
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('gradient-fire')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'gradient-fire' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent">
+                        Fire
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('gradient-ocean')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'gradient-ocean' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold bg-gradient-to-r from-blue-400 to-indigo-600 bg-clip-text text-transparent">
+                        Ocean
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('gradient-purple')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'gradient-purple' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold bg-gradient-to-r from-purple-500 to-violet-600 bg-clip-text text-transparent">
+                        Royal
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('gradient-rainbow')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'gradient-rainbow' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold bg-gradient-to-r from-red-500 via-green-500 to-blue-500 bg-clip-text text-transparent">
+                        Rainbow
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('bloody')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'bloody' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-red-600">
+                        Bloody
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameColor('white')}
+                      className={`p-2 rounded-md text-center ${selectedNameColor === 'white' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-white">
+                        Classic
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Name Effect Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Name Effect
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameEffect('glow')}
+                      className={`p-2 rounded-md text-center ${selectedNameEffect === 'glow' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]">
+                        Glow
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameEffect('shadow')}
+                      className={`p-2 rounded-md text-center ${selectedNameEffect === 'shadow' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-white drop-shadow-[2px_2px_2px_rgba(0,0,0,0.8)]">
+                        Shadow
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameEffect('outline')}
+                      className={`p-2 rounded-md text-center ${selectedNameEffect === 'outline' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-white" style={{ textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>
+                        Outline
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameEffect('blur')}
+                      className={`p-2 rounded-md text-center ${selectedNameEffect === 'blur' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-white blur-[0.5px]">
+                        Blur
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameEffect('retro')}
+                      className={`p-2 rounded-md text-center ${selectedNameEffect === 'retro' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-white" style={{ fontFamily: 'monospace', letterSpacing: '1px' }}>
+                        Retro
+                      </span>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNameEffect('none')}
+                      className={`p-2 rounded-md text-center ${selectedNameEffect === 'none' ? 'ring-2 ring-primary' : 'border border-border'}`}
+                    >
+                      <span className="block text-sm font-semibold text-muted-foreground">
+                        None
+                      </span>
+                    </button>
+                  </div>
+                  
+                  {/* Name Preview */}
+                  <div className="mt-4 p-4 bg-black/50 rounded-md flex justify-center items-center">
+                    <h3 className={`text-xl font-bold 
+                      ${selectedNameColor === 'gradient-gold' ? 'bg-gradient-to-r from-yellow-300 to-amber-600 bg-clip-text text-transparent' : ''}
+                      ${selectedNameColor === 'gradient-neon' ? 'bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent' : ''}
+                      ${selectedNameColor === 'gradient-fire' ? 'bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text text-transparent' : ''}
+                      ${selectedNameColor === 'gradient-ocean' ? 'bg-gradient-to-r from-blue-400 to-indigo-600 bg-clip-text text-transparent' : ''}
+                      ${selectedNameColor === 'gradient-purple' ? 'bg-gradient-to-r from-purple-500 to-violet-600 bg-clip-text text-transparent' : ''}
+                      ${selectedNameColor === 'gradient-rainbow' ? 'bg-gradient-to-r from-red-500 via-green-500 to-blue-500 bg-clip-text text-transparent' : ''}
+                      ${selectedNameColor === 'bloody' ? 'text-red-600' : ''}
+                      ${selectedNameColor === 'white' ? 'text-white' : ''}
+                      ${selectedNameEffect === 'glow' ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''}
+                      ${selectedNameEffect === 'shadow' ? 'drop-shadow-[2px_2px_2px_rgba(0,0,0,0.8)]' : ''}
+                      ${selectedNameEffect === 'blur' ? 'blur-[0.5px]' : ''}
+                      ${selectedNameEffect === 'retro' ? 'font-mono tracking-widest' : ''}
+                    `}
+                    style={{
+                      ...(selectedNameEffect === 'outline' ? { textShadow: "-1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" } : {})
+                    }}
+                    >
+                      {displayName || username || "YOUR NAME"}
+                    </h3>
+                  </div>
+                </div>
+              </div>
+            
               {/* Custom Quote */}
               <div className="space-y-2">
                 <Label htmlFor="custom-quote" className="text-sm font-medium">
