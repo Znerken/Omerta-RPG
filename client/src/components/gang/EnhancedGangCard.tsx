@@ -23,19 +23,19 @@ import {
   MapPin,
   ChevronUp,
   Swords,
-  BriefcaseBusiness,
+  Briefcase,
   CheckCircle,
   Target,
   UserPlus,
   UserCheck,
-  Building,
-  BarChart3,
-  ArrowTrendingUp,
+  Home,
+  BarChart,
+  TrendingUp,
   Timer,
-  CircleDollarSign,
+  DollarSign as CircleDollarSign,
   UserMinus,
-  FolderKanban,
-  GanttChartSquare,
+  Folder,
+  ListChecks,
   Loader2
 } from "lucide-react";
 import { useState } from "react";
@@ -325,7 +325,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                 value="overview" 
                 className="py-3 flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
-                <Building className="h-4 w-4" />
+                <Home className="h-4 w-4" />
                 <span>Overview</span>
               </TabsTrigger>
               <TabsTrigger 
@@ -339,7 +339,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                 value="operations" 
                 className="py-3 flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
-                <GanttChartSquare className="h-4 w-4" />
+                <ListChecks className="h-4 w-4" />
                 <span>Operations</span>
               </TabsTrigger>
               <TabsTrigger 
@@ -353,7 +353,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                 value="settings" 
                 className="py-3 flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground md:col-span-1 col-span-2"
               >
-                <FolderKanban className="h-4 w-4" />
+                <Folder className="h-4 w-4" />
                 <span>Management</span>
               </TabsTrigger>
             </TabsList>
@@ -421,7 +421,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                 <Card className="bg-gray-900/30 border-gray-800">
                   <CardHeader className="py-3 px-4">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-gray-400" />
+                      <BarChart className="h-4 w-4 text-gray-400" />
                       Top Contributors
                     </CardTitle>
                   </CardHeader>
@@ -610,7 +610,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                                 {/* Show management options for leaders/admins */}
                                 {isLeader && memberId !== userId && (
                                   <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-white">
-                                    <ArrowTrendingUp className="h-4 w-4" />
+                                    <TrendingUp className="h-4 w-4" />
                                   </Button>
                                 )}
                               </div>
@@ -679,7 +679,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                                 {/* Show promote option for leaders/admins */}
                                 {(isLeader || userRank === "Underboss") && memberId !== userId && (
                                   <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-white">
-                                    <ArrowTrendingUp className="h-4 w-4" />
+                                    <TrendingUp className="h-4 w-4" />
                                   </Button>
                                 )}
                               </div>
@@ -770,7 +770,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                   <Card className="bg-gray-900/30 border-gray-800">
                     <CardHeader className="py-3 px-4">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <FolderKanban className="h-4 w-4 text-gray-400" />
+                        <Folder className="h-4 w-4 text-gray-400" />
                         Available Operations
                       </CardTitle>
                     </CardHeader>
@@ -797,7 +797,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                   <Card className="bg-gray-900/30 border-gray-800">
                     <CardHeader className="py-3 px-4">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-gray-400" />
+                        <BarChart className="h-4 w-4 text-gray-400" />
                         Operation Stats
                       </CardTitle>
                     </CardHeader>
@@ -997,7 +997,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                   <Card className="bg-gray-900/30 border-gray-800">
                     <CardHeader className="py-3 px-4">
                       <CardTitle className="text-base flex items-center gap-2">
-                        <BarChart3 className="h-4 w-4 text-gray-400" />
+                        <BarChart className="h-4 w-4 text-gray-400" />
                         Territory Stats
                       </CardTitle>
                     </CardHeader>

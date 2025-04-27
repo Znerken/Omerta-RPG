@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { GangCard } from "@/components/gang/GangCard";
+import { EnhancedGangCard } from "@/components/gang/EnhancedGangCard";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -266,7 +266,7 @@ export default function GangPage() {
         <div className="lg:col-span-5">
           {isInGang && userGang ? (
             // If user is in a gang, show the gang card with details
-            <GangCard 
+            <EnhancedGangCard 
               gang={userGang} 
               isUserInGang={true} 
               userRank={userGangRank}
