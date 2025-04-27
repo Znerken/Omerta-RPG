@@ -1,82 +1,204 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase credentials from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Validate credentials
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+// Check environment variables
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  console.error('Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
 }
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create a Supabase client
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL || '',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+);
 
-// Helper function to get the current session
-export async function getCurrentSession() {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) {
-    console.error('Error getting session:', error);
+/**
+ * Get the current session
+ * @returns Current session or null if not logged in
+ */
+export async function getSession() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('Error getting session:', error.message);
+      return null;
+    }
+    return data.session;
+  } catch (error) {
+    console.error('Exception getting session:', error);
     return null;
   }
-  return data.session;
 }
 
-// Helper function to get the current user
+/**
+ * Get current user
+ * @returns Current user or null if not logged in
+ */
 export async function getCurrentUser() {
-  const { data, error } = await supabase.auth.getUser();
-  if (error) {
-    console.error('Error getting user:', error);
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error('Error getting user:', error.message);
+      return null;
+    }
+    return user;
+  } catch (error) {
+    console.error('Exception getting user:', error);
     return null;
   }
-  return data.user;
 }
 
-// Helper function to sign out
+/**
+ * Sign in with email and password
+ * @param email User email
+ * @param password User password
+ * @returns Session data if successful, error message if failed
+ */
+export async function signInWithPassword(email: string, password: string) {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      return { error: error.message };
+    }
+    
+    return { data };
+  } catch (error: any) {
+    return { error: error.message || 'An unknown error occurred' };
+  }
+}
+
+/**
+ * Sign up with email and password
+ * @param email User email
+ * @param password User password
+ * @param metadata Additional user metadata
+ * @returns Session data if successful, error message if failed
+ */
+export async function signUp(email: string, password: string, metadata: any = {}) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: metadata,
+      },
+    });
+    
+    if (error) {
+      return { error: error.message };
+    }
+    
+    return { data };
+  } catch (error: any) {
+    return { error: error.message || 'An unknown error occurred' };
+  }
+}
+
+/**
+ * Sign out
+ * @returns True if successful, false if failed
+ */
 export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  if (error) {
-    console.error('Error signing out:', error);
-    throw error;
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Exception signing out:', error);
+    return false;
   }
-  return true;
 }
 
-// Helper function to get an authorization header with the current session token
-export async function getAuthHeader() {
-  const session = await getCurrentSession();
-  if (!session) {
-    return {};
+/**
+ * Reset password
+ * @param email User email
+ * @returns True if successful, error message if failed
+ */
+export async function resetPassword(email: string) {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    if (error) {
+      return { error: error.message };
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || 'An unknown error occurred' };
   }
+}
+
+/**
+ * Update password
+ * @param newPassword New password
+ * @returns True if successful, error message if failed
+ */
+export async function updatePassword(newPassword: string) {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    if (error) {
+      return { error: error.message };
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || 'An unknown error occurred' };
+  }
+}
+
+/**
+ * Get auth token for API requests
+ * @returns Auth token or null if not logged in
+ */
+export async function getAuthToken() {
+  try {
+    const session = await getSession();
+    return session?.access_token || null;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+}
+
+/**
+ * Add auth token to fetch options
+ * @param options Fetch options
+ * @returns Fetch options with auth token
+ */
+export async function withAuth(options: RequestInit = {}): Promise<RequestInit> {
+  const token = await getAuthToken();
+  
+  if (!token) {
+    return options;
+  }
+  
+  const headers = new Headers(options.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  
   return {
-    Authorization: `Bearer ${session.access_token}`
-  };
-}
-
-// Helper function to wrap fetch with authorization
-export async function fetchWithAuth(url: string, options: RequestInit = {}) {
-  const authHeader = await getAuthHeader();
-  const headers = {
-    ...options.headers,
-    ...authHeader
-  };
-  
-  return fetch(url, {
     ...options,
-    headers
-  });
+    headers,
+  };
 }
 
-// WebSocket connection setup with authentication
-export async function createAuthenticatedWebSocket(path: string = '/ws') {
-  const session = await getCurrentSession();
-  if (!session) {
-    throw new Error('No active session found. Please authenticate first.');
-  }
-  
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const token = session.access_token;
-  const wsUrl = `${protocol}//${window.location.host}${path}?token=${token}`;
-  
-  return new WebSocket(wsUrl);
+/**
+ * Fetch with auth token
+ * @param url URL to fetch
+ * @param options Fetch options
+ * @returns Fetch response
+ */
+export async function fetchWithAuth(url: string, options: RequestInit = {}) {
+  const authOptions = await withAuth(options);
+  return fetch(url, authOptions);
 }

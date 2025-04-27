@@ -1,75 +1,70 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
+import session from 'express-session';
 import cookieParser from 'cookie-parser';
-import { initializeDatabase, createTables, syncSupabaseUsers } from './db-supabase';
+import dotenv from 'dotenv';
+import { initializeDatabase } from './db-supabase';
 import { registerRoutes } from './routes-supabase';
 import { setupAuthRoutes } from './auth-supabase';
-import { storage } from './storage-supabase';
-import { createWebSocketServer } from './websocket-supabase';
-import { createServer as createViteServer, ViteDevServer } from 'vite';
-import path from 'path';
 
 // Load environment variables
 dotenv.config();
 
 // Initialize Express app
 const app = express();
+const port = process.env.PORT || 3000;
 
-// Base middleware
-app.use(cors());
+// Set up middleware
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.CORS_ORIGIN || true
+    : true,
+  credentials: true
+}));
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
 
-// Create uploads directory for user files
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Set up session middleware
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'omerta-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true
+  }
+}));
 
-// Main entry point
-async function main() {
+// Initialize Supabase authentication
+setupAuthRoutes(app);
+
+// Initialize the server
+async function startServer() {
   try {
-    // Initialize database
-    console.log('Initializing database connection...');
-    const dbConnected = await initializeDatabase();
-    if (!dbConnected) {
-      console.error('Failed to connect to database. Exiting.');
-      process.exit(1);
+    // Initialize database connection
+    const dbInitialized = await initializeDatabase();
+    if (!dbInitialized) {
+      throw new Error('Failed to initialize database connection');
     }
 
-    // Create tables if they don't exist
-    console.log('Ensuring database tables exist...');
-    await createTables();
-
-    // Sync users from Supabase Auth
-    console.log('Synchronizing users from Supabase Auth...');
-    await syncSupabaseUsers();
-
-    // Set up authentication routes
-    console.log('Setting up authentication routes...');
-    setupAuthRoutes(app);
-
     // Register API routes
-    console.log('Registering API routes...');
-    const httpServer = await registerRoutes(app);
+    const server = await registerRoutes(app);
 
-    // Set up WebSocket server
-    console.log('Setting up WebSocket server...');
-    createWebSocketServer(httpServer);
-
-    // Determine port
-    const PORT = process.env.PORT || 5000;
-
-    // Start server
-    httpServer.listen(PORT, () => {
-      console.log(`[express] serving on port ${PORT}`);
+    // Start the server
+    server.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port}`);
     });
 
-    // Handle shutdown
-    process.on('SIGINT', async () => {
-      console.log('Shutting down gracefully...');
-      httpServer.close();
-      process.exit(0);
+    // Handle cleanup on shutdown
+    process.on('SIGTERM', () => {
+      console.log('SIGTERM received, shutting down gracefully');
+      server.close(() => {
+        console.log('Server closed');
+        process.exit(0);
+      });
     });
   } catch (error) {
     console.error('Error starting server:', error);
@@ -78,4 +73,4 @@ async function main() {
 }
 
 // Start the server
-main().catch(console.error);
+startServer();

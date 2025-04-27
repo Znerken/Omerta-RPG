@@ -1,28 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
 
 // Load environment variables
 dotenv.config();
 
-// Check for Supabase credentials in environment variables
+// Validate required environment variables
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing Supabase credentials. Please set SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY environment variables.');
-  process.exit(1);
+  throw new Error('Missing Supabase environment variables');
 }
 
-// Create a Supabase client with anonymous key for public operations
+// Create Supabase clients
 export const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
+  process.env.SUPABASE_ANON_KEY
 );
 
-// Create a Supabase admin client with service role key for admin operations
 export const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -35,91 +28,11 @@ export const supabaseAdmin = createClient(
 );
 
 /**
- * Verify a JWT token from Supabase Auth
- * @param token JWT token
- * @returns User data if token is valid, null otherwise
- */
-export async function verifyToken(token: string) {
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    
-    if (error) {
-      console.error('Token verification error:', error.message);
-      return null;
-    }
-    
-    return user;
-  } catch (error) {
-    console.error('Token verification exception:', error);
-    return null;
-  }
-}
-
-/**
- * Validate an authentication token from request headers
- * @param authHeader Authorization header
- * @returns User data if token is valid, null otherwise
- */
-export async function validateAuthHeader(authHeader: string) {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-  
-  const token = authHeader.split(' ')[1];
-  if (!token) {
-    return null;
-  }
-  
-  return await verifyToken(token);
-}
-
-/**
- * Get all users from Supabase Auth
- * @returns List of users or null if error
- */
-export async function getAllSupabaseUsers() {
-  try {
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
-    
-    if (error) {
-      console.error('Error fetching Supabase users:', error.message);
-      return null;
-    }
-    
-    return data.users;
-  } catch (error) {
-    console.error('Exception fetching Supabase users:', error);
-    return null;
-  }
-}
-
-/**
- * Get a user from Supabase Auth by ID
- * @param userId Supabase user ID
- * @returns User data if found, null otherwise
- */
-export async function getSupabaseUser(userId: string) {
-  try {
-    const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-    
-    if (error) {
-      console.error('Error fetching Supabase user:', error.message);
-      return null;
-    }
-    
-    return data.user;
-  } catch (error) {
-    console.error('Exception fetching Supabase user:', error);
-    return null;
-  }
-}
-
-/**
- * Create a new user in Supabase Auth
+ * Create a new Supabase user
  * @param email User email
  * @param password User password
  * @param metadata Additional user metadata
- * @returns User data if created, null otherwise
+ * @returns User data or null if error
  */
 export async function createSupabaseUser(email: string, password: string, metadata: any = {}) {
   try {
@@ -129,12 +42,12 @@ export async function createSupabaseUser(email: string, password: string, metada
       email_confirm: true,
       user_metadata: metadata
     });
-    
+
     if (error) {
       console.error('Error creating Supabase user:', error.message);
       return null;
     }
-    
+
     return data.user;
   } catch (error) {
     console.error('Exception creating Supabase user:', error);
@@ -143,23 +56,62 @@ export async function createSupabaseUser(email: string, password: string, metada
 }
 
 /**
- * Update a user in Supabase Auth
- * @param userId Supabase user ID
- * @param userData User data to update
- * @returns Updated user data if successful, null otherwise
+ * Get a Supabase user by ID
+ * @param id Supabase user ID
+ * @returns User data or null if error
  */
-export async function updateSupabaseUser(userId: string, userData: any) {
+export async function getSupabaseUser(id: string) {
   try {
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
-      userId,
-      userData
-    );
-    
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+
+    if (error) {
+      console.error('Error getting Supabase user:', error.message);
+      return null;
+    }
+
+    return data.user;
+  } catch (error) {
+    console.error('Exception getting Supabase user:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a Supabase user
+ * @param id Supabase user ID
+ * @returns True if successful, false if error
+ */
+export async function deleteSupabaseUser(id: string) {
+  try {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+    if (error) {
+      console.error('Error deleting Supabase user:', error.message);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Exception deleting Supabase user:', error);
+    return false;
+  }
+}
+
+/**
+ * Update a Supabase user
+ * @param id Supabase user ID
+ * @param updates User updates
+ * @returns Updated user data or null if error
+ */
+export async function updateSupabaseUser(id: string, updates: any) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(id, updates);
+
     if (error) {
       console.error('Error updating Supabase user:', error.message);
       return null;
     }
-    
+
     return data.user;
   } catch (error) {
     console.error('Exception updating Supabase user:', error);
@@ -168,22 +120,61 @@ export async function updateSupabaseUser(userId: string, userData: any) {
 }
 
 /**
- * Delete a user from Supabase Auth
- * @param userId Supabase user ID
- * @returns True if successful, false otherwise
+ * Validate a JWT token from Authorization header
+ * @param authHeader Authorization header
+ * @returns User data or null if invalid
  */
-export async function deleteSupabaseUser(userId: string) {
+export async function validateAuthHeader(authHeader: string) {
   try {
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    // Check header format
+    if (!authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+
+    // Extract token
+    const token = authHeader.split(' ')[1];
+    
+    if (!token) {
+      return null;
+    }
+
+    // Decode token without verification to extract user ID
+    const decoded = jwt.decode(token);
+    if (!decoded || typeof decoded !== 'object' || !decoded.sub) {
+      return null;
+    }
+
+    // Verify with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      console.error('Error validating token:', error?.message);
+      return null;
+    }
+
+    return user;
+  } catch (error) {
+    console.error('Exception validating token:', error);
+    return null;
+  }
+}
+
+/**
+ * Check connection to Supabase
+ * @returns True if connected, false if not
+ */
+export async function checkSupabaseConnection() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
     
     if (error) {
-      console.error('Error deleting Supabase user:', error.message);
+      console.error('Error checking Supabase connection:', error.message);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Exception deleting Supabase user:', error);
+    console.error('Exception checking Supabase connection:', error);
     return false;
   }
 }
