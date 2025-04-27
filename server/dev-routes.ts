@@ -7,7 +7,7 @@ import {
   challengeProgress, achievementProgress
 } from "@shared/schema";
 import { casinoGames, casinoBets, casinoStats } from "@shared/schema-casino";
-import { eq, and, like } from "drizzle-orm";
+import { eq, and, like, or } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
