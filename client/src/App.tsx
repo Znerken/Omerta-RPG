@@ -32,6 +32,7 @@ import AchievementsPage from "@/pages/achievements-page";
 import AdminPage from "@/pages/admin-page";
 import DrugsPage from "@/pages/drugs-page";
 import CasinoPage from "@/pages/casino-page";
+import NewCasinoPage from "@/pages/new-casino-page";
 import FriendsPage from "@/pages/friends-page";
 import FriendSystemTestPage from "@/pages/friend-system-test";
 import LocationsPage from "@/pages/locations-page";
@@ -143,6 +144,12 @@ function AppRouter() {
       <Route path="/casino">
         {() => (
           <ProtectedRoute path="/casino" component={() => <ProtectedPage component={CasinoPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/casino-new">
+        {() => (
+          <ProtectedRoute path="/casino-new" component={() => <ProtectedPage component={NewCasinoPage} />} />
         )}
       </Route>
       
