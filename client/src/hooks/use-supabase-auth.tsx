@@ -41,29 +41,42 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (!supabase) return; // Skip if supabase client is not available yet
     
+    console.log("Setting up Supabase auth listeners");
+    
     // Get the initial session
     supabase.auth.getSession().then(({ data: { session } }: any) => {
+      console.log("Initial session check:", session ? "Session found" : "No session");
       if (session?.user) {
+        console.log("Setting initial Supabase user from session");
         setSupabaseUser(session.user);
+        // Force a refetch of the game user
+        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       }
     });
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event: any, session: any) => {
-        setSupabaseUser(session?.user || null);
+      (event: any, session: any) => {
+        console.log("Auth state change event:", event);
         
-        // Invalidate user data query when auth state changes
         if (session?.user) {
+          console.log("Supabase user updated from auth change");
+          setSupabaseUser(session.user);
+          // Force a refetch of the game user data
           queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         } else {
+          console.log("Supabase user cleared from auth change");
+          setSupabaseUser(null);
           queryClient.setQueryData(['/api/user'], null);
         }
       }
     );
 
     // Clean up the subscription
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("Cleaning up Supabase auth subscription");
+      subscription.unsubscribe();
+    };
   }, [supabase, queryClient]);
 
   // Fetch the game user profile if authenticated
@@ -74,15 +87,23 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   } = useQuery({
     queryKey: ['/api/user'],
     queryFn: async () => {
-      if (!supabaseUser) return null;
+      console.log('Executing gameUser query with supabaseUser:', !!supabaseUser);
+      if (!supabaseUser) {
+        console.log('No Supabase user - skipping game user fetch');
+        return null;
+      }
       
       try {
+        console.log('Fetching game user data from API...');
         const res = await apiRequest('GET', '/api/user');
+        
         if (!res.ok) {
+          console.error(`Failed to fetch user: ${res.status}`);
           throw new Error(`Failed to fetch user: ${res.status}`);
         }
         
         const userData = await res.json();
+        console.log('Received game user data from API:', userData);
         
         // Check if we got a "needs linking" response
         if (userData.needsLinking) {
@@ -97,6 +118,8 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       }
     },
     enabled: !!supabaseUser,
+    staleTime: 10000, // 10 seconds - don't refetch too frequently
+    refetchOnWindowFocus: false, // Don't refetch on window focus to avoid unnecessary requests
   });
 
   // Handle login mutation

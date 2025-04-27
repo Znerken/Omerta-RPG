@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 export default function DashboardPage() {
   const { gameUser: user, signOut, supabaseUser } = useSupabaseAuth();
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const queryClient = useQueryClient();
   
   // Debug logging for authentication state
   useEffect(() => {
@@ -12,6 +14,12 @@ export default function DashboardPage() {
       gameUser: !!user 
     });
     
+    // If we have a supabase user but no game user, try to force refresh the data
+    if (supabaseUser && !user) {
+      console.log("Have Supabase user but no game user - forcing refresh of user data");
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+    }
+    
     // Collect debug info in state
     setDebugInfo({
       hasSupabaseUser: !!supabaseUser,
@@ -19,9 +27,9 @@ export default function DashboardPage() {
       supabaseId: supabaseUser?.id,
       gameUserId: user?.id,
       username: user?.username,
-      email: supabaseUser?.email
+      email: supabaseUser?.email || (user?.email)
     });
-  }, [user, supabaseUser]);
+  }, [user, supabaseUser, queryClient]);
   
   // Emergency fallback - always show something
   return (

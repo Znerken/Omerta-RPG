@@ -73,23 +73,8 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
               // Otherwise it's a normal game user profile
               console.log('Successfully prefetched game user profile');
               
-              // Reload the page to pick up the new game user data, but only once
-              // Set a flag in localStorage to avoid reload loops
-              const hasReloaded = localStorage.getItem('auth_reload_done');
-              const currentUserId = localStorage.getItem('current_user_id');
-              
-              // Check if we have userData and don't need to reload
-              if (hasReloaded || gameUser) {
-                console.log('Already authenticated, no need to reload');
-                return;
-              }
-              
-              // Only reload once per session to break the loop
-              console.log('Setting reload flag and refreshing to update game user data');
-              localStorage.setItem('auth_reload_done', 'true');
-              localStorage.setItem('current_user_id', userData.id.toString());
-              
-              // Instead of navigating/reloading, just set the local state to proceed
+              // No need to reload the page, just set auth state directly and proceed
+              console.log('Successfully authenticated, proceeding...');
               setIsChecking(false);
               setHasDirectAuth(true);
               return;
@@ -109,9 +94,6 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
         } else {
           console.log('No direct auth found - redirecting to login');
           setHasDirectAuth(false);
-          
-          // Clear any reload flags
-          localStorage.removeItem('auth_reload_done');
         }
         
         setIsChecking(false);
@@ -119,18 +101,10 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
         console.error('Error verifying auth:', error);
         setHasDirectAuth(false);
         setIsChecking(false);
-        
-        // Clear any reload flags on error
-        localStorage.removeItem('auth_reload_done');
       }
     }
     
     verifyAuth();
-    
-    // Clear reload flag when component unmounts
-    return () => {
-      localStorage.removeItem('auth_reload_done');
-    };
   }, [isAuthenticated, isLoading, gameUser]);
 
   if (isLoading || isChecking) {
