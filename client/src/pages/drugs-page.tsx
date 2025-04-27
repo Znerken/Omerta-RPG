@@ -653,10 +653,10 @@ const LabsTab = React.memo(function LabsTab() {
       return await res.json();
     },
     onSuccess: (data) => {
-      if (data.success) {
+      if (data.production) {
         toast({
           title: "Production Started",
-          description: data.message,
+          description: data.message || `Started production that will complete in ${data.estimated_time_minutes} minutes`,
         });
         // Reset form
         setSelectedDrug(null);
@@ -668,7 +668,7 @@ const LabsTab = React.memo(function LabsTab() {
       } else {
         toast({
           title: "Failed to Start Production",
-          description: data.message || "An error occurred",
+          description: data.message || data.error || "An error occurred",
           variant: "destructive",
         });
       }
@@ -691,10 +691,10 @@ const LabsTab = React.memo(function LabsTab() {
       return await res.json();
     },
     onSuccess: (data) => {
-      if (data.success) {
+      if (data.collected) {
         toast({
           title: "Production Collected",
-          description: data.message,
+          description: data.message || "Successfully collected drug production",
         });
         
         // Invalidate queries to refresh data
@@ -703,7 +703,7 @@ const LabsTab = React.memo(function LabsTab() {
       } else {
         toast({
           title: "Collection Failed",
-          description: data.message || "An error occurred",
+          description: data.message || data.error || "An error occurred",
           variant: "destructive",
         });
       }
