@@ -18,23 +18,29 @@ export function getSupabaseClient() {
     const { supabase, isLoading, error } = useSupabase();
     
     if (isLoading) {
+      console.warn('[getSupabaseClient] Supabase client is still loading');
       throw new Error('Supabase client is still loading');
     }
     
     if (error) {
+      console.error('[getSupabaseClient] Supabase client error:', error);
       throw new Error(`Supabase client error: ${error}`);
     }
     
     if (!supabase) {
+      console.error('[getSupabaseClient] Supabase client is not available');
       throw new Error('Supabase client is not available');
     }
     
+    console.log('[getSupabaseClient] Supabase client obtained successfully');
     return supabase;
   } catch (err) {
     // Fallback to window global as a last resort
     if (window.__SUPABASE_CLIENT) {
+      console.log('[getSupabaseClient] Using global Supabase client fallback');
       return window.__SUPABASE_CLIENT;
     }
+    console.error('[getSupabaseClient] Failed to get Supabase client:', err);
     throw err;
   }
 }
@@ -61,15 +67,24 @@ export const supabase = new Proxy({} as SupabaseClient, {
  */
 export async function getSession() {
   try {
+    console.log('[getSession] Attempting to get session');
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.getSession();
+    
     if (error) {
-      console.error('Error getting session:', error.message);
+      console.error('[getSession] Error getting session:', error.message);
       return null;
     }
+    
+    if (!data.session) {
+      console.log('[getSession] No active session found');
+      return null;
+    }
+    
+    console.log('[getSession] Session found, expires at:', new Date(data.session.expires_at * 1000).toLocaleString());
     return data.session;
   } catch (error) {
-    console.error('Exception getting session:', error);
+    console.error('[getSession] Exception getting session:', error);
     return null;
   }
 }
@@ -80,15 +95,24 @@ export async function getSession() {
  */
 export async function getCurrentUser() {
   try {
+    console.log('[getCurrentUser] Attempting to get user');
     const supabase = getSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser();
+    
     if (error) {
-      console.error('Error getting user:', error.message);
+      console.error('[getCurrentUser] Error getting user:', error.message);
       return null;
     }
+    
+    if (!user) {
+      console.log('[getCurrentUser] No authenticated user found');
+      return null;
+    }
+    
+    console.log('[getCurrentUser] User found:', user.id, 'Email:', user.email);
     return user;
   } catch (error) {
-    console.error('Exception getting user:', error);
+    console.error('[getCurrentUser] Exception getting user:', error);
     return null;
   }
 }

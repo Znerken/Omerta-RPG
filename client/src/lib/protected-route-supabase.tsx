@@ -24,7 +24,7 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
       try {
         // First check if we already have auth from the context
         if (isAuthenticated && gameUser) {
-          console.log('Protected route using context auth');
+          console.log('Protected route using context auth - authenticated with game user');
           setHasDirectAuth(true);
           setIsChecking(false);
           return;
@@ -32,19 +32,27 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
         
         // If the context is still loading, wait for it
         if (isLoading) {
+          console.log('Auth context still loading, waiting...');
           return;
         }
         
+        console.log('Context auth check failed, double checking with Supabase directly');
+        
         // Double check with Supabase directly
         const session = await getSession();
+        console.log('Session check result:', session ? 'Session found' : 'No session found');
+        
         const user = await getCurrentUser();
+        console.log('User check result:', user ? `User found: ${user.id}` : 'No user found');
         
         if (session && user) {
-          console.log('Protected route found direct auth');
+          console.log('Protected route found direct auth via session and user checks');
           setHasDirectAuth(true);
           
           // Force prefetch the game user
           try {
+            console.log('Attempting to prefetch game user profile with token:', session.access_token.substring(0, 10) + '...');
+            
             const res = await fetch('/api/user/profile', {
               headers: {
                 'Authorization': `Bearer ${session.access_token}`
@@ -52,13 +60,23 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
             });
             
             if (res.ok) {
-              console.log('Successfully prefetched game user profile');
+              const gameUserData = await res.json();
+              console.log('Successfully prefetched game user profile:', gameUserData ? 'Data found' : 'No data returned');
+            } else {
+              console.error('Failed to prefetch game user profile:', res.status, res.statusText);
+              // Try to get the error message from the response
+              try {
+                const errorData = await res.text();
+                console.error('Error response:', errorData);
+              } catch (e) {
+                console.error('Could not parse error response');
+              }
             }
           } catch (err) {
-            console.error('Error prefetching game user profile', err);
+            console.error('Exception prefetching game user profile:', err);
           }
         } else {
-          console.log('No direct auth found');
+          console.log('No direct auth found - redirecting to login');
           setHasDirectAuth(false);
         }
         
