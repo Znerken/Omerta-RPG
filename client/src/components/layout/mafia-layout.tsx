@@ -25,7 +25,9 @@ import {
   Pill,
   DollarSign,
   UserPlus,
-  Bell
+  Bell,
+  Gauge,
+  Zap
 } from "lucide-react";
 import { 
   TommyGunIcon, 
@@ -63,6 +65,10 @@ const economyItems = [
 const socialNavItems = [
   { name: "Friends", path: "/friends", icon: <UserPlus className="h-4.5 w-4.5 mr-2.5" /> },
   { name: "Messages", path: "/messages", icon: <MailIcon className="h-4.5 w-4.5 mr-2.5" /> },
+];
+
+const developmentItems = [
+  { name: "Throttle Demo", path: "/throttle-demo", icon: <Gauge className="h-4.5 w-4.5 mr-2.5" /> },
 ];
 
 export interface MafiaLayoutProps {
@@ -198,6 +204,31 @@ export function MafiaLayout({ children, title, description }: MafiaLayoutProps) 
                       location === item.path
                         ? "bg-primary/10 text-primary border-l-2 border-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-l-2 border-transparent"
+                    )}
+                  >
+                    {item.icon}
+                    {item.name}
+                  </div>
+                </Link>
+              ))}
+            </nav>
+          </div>
+          
+          {/* Development Category */}
+          <div className="mb-5">
+            <h3 className="text-[11px] uppercase tracking-wider font-medium text-indigo-500/70 mb-3 px-1.5">
+              Development
+            </h3>
+            
+            <nav className="space-y-1">
+              {developmentItems.map((item) => (
+                <Link key={item.path} href={item.path}>
+                  <div
+                    className={cn(
+                      "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                      location === item.path
+                        ? "bg-indigo-500/10 text-indigo-500 border-l-2 border-indigo-500"
+                        : "text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/5 border-l-2 border-transparent"
                     )}
                   >
                     {item.icon}
@@ -394,6 +425,32 @@ export function MafiaLayout({ children, title, description }: MafiaLayoutProps) 
                           {unreadCount}
                         </Badge>
                       )}
+                    </div>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            
+            {/* Development Category */}
+            <div className="mb-5">
+              <h3 className="text-[11px] uppercase tracking-wider font-medium text-indigo-500/70 mb-3 px-1.5">
+                Development
+              </h3>
+              
+              <nav className="space-y-1">
+                {developmentItems.map((item) => (
+                  <Link key={item.path} href={item.path}>
+                    <div
+                      className={cn(
+                        "group flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors cursor-pointer",
+                        location === item.path
+                          ? "bg-indigo-500/10 text-indigo-500 border-l-2 border-indigo-500"
+                          : "text-muted-foreground hover:text-indigo-500 hover:bg-indigo-500/5 border-l-2 border-transparent"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      {item.icon}
+                      {item.name}
                     </div>
                   </Link>
                 ))}
