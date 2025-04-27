@@ -105,6 +105,17 @@ export async function getFriendRequest(
         .from(friendRequests)
         .where(eq(friendRequests.id, requestId));
       
+      // Handle both snake_case and camelCase formats
+      if (request) {
+        // Add camelCase properties if they don't exist but snake_case does
+        if (request.sender_id !== undefined && request.senderId === undefined) {
+          request.senderId = request.sender_id;
+        }
+        if (request.receiver_id !== undefined && request.receiverId === undefined) {
+          request.receiverId = request.receiver_id;
+        }
+      }
+      
       return request;
     } else if (userId && friendId) {
       // Find by user pair (check both directions)
@@ -123,6 +134,17 @@ export async function getFriendRequest(
             )
           )
         );
+      
+      // Handle both snake_case and camelCase formats
+      if (request) {
+        // Add camelCase properties if they don't exist but snake_case does
+        if (request.sender_id !== undefined && request.senderId === undefined) {
+          request.senderId = request.sender_id;
+        }
+        if (request.receiver_id !== undefined && request.receiverId === undefined) {
+          request.receiverId = request.receiver_id;
+        }
+      }
       
       return request;
     }
