@@ -91,8 +91,8 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
                 
               // Give a short delay to avoid interrupting any pending operations
               setTimeout(() => {
-                // Navigate to dashboard to avoid reload loops
-                navigate('/dashboard');
+                // Navigate to the dashboard (home page) to avoid reload loops
+                navigate('/');
               }, 100);
               return;
             } else {
