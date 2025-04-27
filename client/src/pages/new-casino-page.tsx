@@ -114,12 +114,12 @@ export default function NewCasinoPage() {
   });
 
   // Place bet mutation
-  const placeBetMutation = useMutation({
-    mutationFn: async (data: {
-      gameId: number;
-      betAmount: number;
-      betDetails: any;
-    }) => {
+  const placeBetMutation = useMutation<
+    any, 
+    Error,
+    { gameId: number; betAmount: number; betDetails: any }
+  >({
+    mutationFn: async (data) => {
       const res = await apiRequest("POST", "/api/casino/place-bet", data);
       return await res.json();
     },
@@ -272,7 +272,7 @@ export default function NewCasinoPage() {
             houseEdge={game.houseEdge}
             imageUrl={game.imageUrl}
             active={activeGame?.id === game.id}
-            onSelect={(id) => setActiveGame(games.find(g => g.id === id) || null)}
+            onSelect={(id) => setActiveGame(games.find((g: CasinoGame) => g.id === id) || null)}
           />
         ))}
       </div>

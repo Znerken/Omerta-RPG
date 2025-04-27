@@ -66,7 +66,7 @@ type DiceGameProps = {
     gameId: number;
     betAmount: number;
     betDetails: any;
-  }) => Promise<any>;
+  }) => void;
   betResult: any | null;
   isPlacingBet: boolean;
 };
