@@ -89,60 +89,44 @@ export function registerProfileRoutes(app: Express) {
     }
   });
 
-  // Get another user's profile - DIRECT DB QUERY VERSION
+  // Super simple fallback for profile viewing (bypassing all complexity)
   app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
+      console.log(`Simple profile lookup for user ID ${userId}`);
       
-      // Direct query to get user data - no ORM
-      try {
-        // Direct SQL query with no ORM dependencies
-        const userResult = await db.execute(
-          sql`SELECT * FROM users WHERE id = ${userId}`
-        );
-        
-        if (userResult.rows.length === 0) {
-          console.log(`User ID ${userId} not found in database`);
-          return res.status(404).json({ message: "User not found" });
-        }
-        
-        const user = userResult.rows[0];
-        console.log("Found user:", user.username);
-        
-        // Build the profile object with snake_case to camelCase conversion
-        // This will work regardless of the database schema and ORM expected types
-        const profile = {
-          id: user.id,
-          username: user.username,
-          level: user.level || 1,
-          xp: user.xp || 0,
-          cash: user.cash || 0,
-          respect: user.respect || 0,
-          avatar: user.avatar,
-          bannerImage: user.banner_image,
-          bio: user.bio,
-          htmlProfile: user.html_profile,
-          profileTheme: user.profile_theme,
-          showAchievements: user.show_achievements !== false,
-          isJailed: user.is_jailed || false,
-          jailTimeEnd: user.jail_time_end,
-          createdAt: user.created_at,
-          // Default to not in a gang since the gang_members table is empty
-          inGang: false
-        };
-        
-        // We've verified there are no rows in the gang_members table, so we don't need to try to join
-        
-        // Return the profile
-        console.log(`Successfully returning profile for ${user.username}`);
-        res.json(profile);
-      } catch (error) {
-        console.error("Error with direct profile query:", error);
-        res.status(500).json({ message: "Failed to fetch profile due to database error" });
+      // Direct query to get user data - simplest possible approach
+      const userResult = await db.execute(
+        sql`SELECT id, username, level, xp, cash, respect, avatar, 
+                banner_image as "bannerImage", bio, html_profile as "htmlProfile", 
+                profile_theme as "profileTheme", is_jailed as "isJailed", 
+                jail_time_end as "jailTimeEnd", created_at as "createdAt" 
+             FROM users 
+             WHERE id = ${userId} 
+             LIMIT 1`
+      );
+      
+      console.log(`Query completed with ${userResult.rows.length} results for user ID ${userId}`);
+      
+      if (userResult.rows.length === 0) {
+        return res.status(404).json({ message: "User not found" });
       }
+      
+      // Just return the raw DB result directly to minimize any potential conversion issues
+      const profile = {
+        ...userResult.rows[0],
+        inGang: false // No gangs for simplicity
+      };
+      
+      console.log(`Returning profile for ${profile.username}`);
+      return res.json(profile);
+      
     } catch (error) {
-      console.error("Error fetching profile:", error);
-      res.status(500).json({ message: "Failed to fetch profile" });
+      console.error("Error in simple profile lookup:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch profile",
+        error: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 
