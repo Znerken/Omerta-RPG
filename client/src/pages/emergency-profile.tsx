@@ -2,49 +2,78 @@ import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Users, Award, Star, CalendarIcon, Clock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+
+// Define a conversion function for the database fields
+function convertDbUserToProfile(dbUser: any) {
+  // Convert database field names to the expected profile object structure
+  return {
+    id: dbUser.id,
+    username: dbUser.username,
+    level: dbUser.level || 1,
+    avatar: dbUser.avatar || null,
+    bannerImage: dbUser.banner_image || null,
+    bio: dbUser.bio || null,
+    htmlProfile: dbUser.html_profile || null,
+    showAchievements: dbUser.show_achievements === true,
+    createdAt: dbUser.created_at || new Date().toISOString(),
+    status: dbUser.status || "offline",
+    gang: dbUser.gang_id ? {
+      id: dbUser.gang_id,
+      name: "Unknown Gang",
+      tag: "???"
+    } : undefined,
+    // Add additional stats that our UI might need
+    cash: dbUser.cash || 0,
+    respect: dbUser.respect || 0,
+    xp: dbUser.xp || 0,
+    // Flag for special traits
+    isAdmin: dbUser.is_admin === true,
+    isJailed: dbUser.is_jailed === true
+  };
+}
 
 export default function EmergencyProfilePage() {
   const params = useParams<{ id: string }>();
-  console.log("EmergencyProfilePage - params:", params);
+  const { toast } = useToast();
   
   const userId = params?.id ? parseInt(params.id) : null;
   console.log("EmergencyProfilePage - userId:", userId);
   
   // Local state to store raw data for inspection
   const [rawUserData, setRawUserData] = useState<string | null>(null);
+  const [showRawData, setShowRawData] = useState(false);
   
   // Fetch user data using our emergency endpoint
   const { data, isLoading, error } = useQuery({
     queryKey: ['/api/debug/user', userId],
     queryFn: async () => {
-      console.log(`Emergency profile request for user ID ${userId}`);
+      console.log(`Requesting profile for user ID ${userId} using debug endpoint`);
       
       try {
         const res = await fetch(`/api/debug/user/${userId}`);
         console.log("Response status:", res.status);
-        console.log("Response type:", res.headers.get('content-type'));
+        console.log("Response headers:", Object.fromEntries([...res.headers.entries()]));
         
         if (!res.ok) {
           throw new Error(`Failed to fetch profile: ${res.status} ${res.statusText}`);
         }
         
-        const contentType = res.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const text = await res.text();
-          console.error("Non-JSON response:", text.substring(0, 500));
-          throw new Error("Received non-JSON response");
-        }
-        
         const jsonData = await res.json();
-        console.log("Raw profile data:", jsonData);
+        console.log("Profile data from debug endpoint:", JSON.stringify(jsonData, null, 2));
         
         // Store the raw data for display
         setRawUserData(JSON.stringify(jsonData, null, 2));
         
         return jsonData;
       } catch (err) {
-        console.error("Fetch error:", err);
+        console.error("Profile fetch error:", err);
         throw err;
       }
     },
@@ -62,22 +91,22 @@ export default function EmergencyProfilePage() {
   
   if (error) {
     return (
-      <div className="container mx-auto max-w-3xl p-6">
+      <div className="container mx-auto max-w-4xl py-6">
         <div className="mb-6">
-          <Link href="/" className="flex items-center text-blue-500 hover:underline">
+          <Link href="/" className="flex items-center text-muted-foreground hover:text-primary">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
+            Back to Dashboard
           </Link>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <h2 className="text-2xl font-bold mb-2 text-red-700">Error Loading Profile</h2>
-          <p className="text-red-600 mb-4">
+        <Card className="p-6 text-center">
+          <h2 className="text-2xl font-bold mb-2">Profile Error</h2>
+          <p className="text-muted-foreground mb-4">
             {error instanceof Error ? error.message : "Unknown error occurred"}
           </p>
-          <pre className="bg-red-100 p-4 rounded text-left text-sm overflow-auto max-h-48">
+          <pre className="bg-muted/30 p-4 rounded text-left text-sm overflow-auto max-h-48">
             {error instanceof Error && error.stack ? error.stack : "No stack trace available"}
           </pre>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -85,186 +114,218 @@ export default function EmergencyProfilePage() {
   // If the data is not properly structured
   if (!data || !data.success || !data.user) {
     return (
-      <div className="container mx-auto max-w-3xl p-6">
+      <div className="container mx-auto max-w-4xl py-6">
         <div className="mb-6">
-          <Link href="/" className="flex items-center text-blue-500 hover:underline">
+          <Link href="/" className="flex items-center text-muted-foreground hover:text-primary">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Home
+            Back to Dashboard
           </Link>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <Card className="p-6 text-center">
           <h2 className="text-2xl font-bold mb-2">Profile Data Issue</h2>
-          <p className="text-yellow-800 mb-4">The profile data returned by the server is not in the expected format.</p>
+          <p className="text-muted-foreground mb-4">The profile data returned by the server is not in the expected format.</p>
           
-          <h3 className="font-semibold mb-2 text-yellow-700">Raw Response:</h3>
-          <pre className="bg-yellow-100 p-4 rounded text-sm overflow-auto max-h-96 text-left">
+          <pre className="bg-muted/30 p-4 rounded text-sm overflow-auto max-h-96 text-left">
             {rawUserData || JSON.stringify(data, null, 2)}
           </pre>
-        </div>
+        </Card>
       </div>
     );
   }
   
-  // Extract user data
-  const user = data.user;
+  // Extract user data from the database response and convert to our profile format
+  const dbUser = data.user;
+  const profile = convertDbUserToProfile(dbUser);
+  
+  // Format member since date
+  const memberSince = profile.createdAt ? format(new Date(profile.createdAt), 'MMMM d, yyyy') : 'Unknown';
   
   return (
-    <div className="container mx-auto max-w-3xl p-6">
+    <div className="container mx-auto max-w-4xl py-6">
       <div className="mb-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center text-blue-500 hover:underline">
+        <Link href="/" className="flex items-center text-muted-foreground hover:text-primary">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
+          Back to Dashboard
         </Link>
         <div className="flex items-center space-x-2">
-          <span className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-800 dark:text-amber-100 px-2 py-1 rounded-md font-medium">
-            EMERGENCY MODE
-          </span>
-          <Link href={`/player/${user.id}`} className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-2 py-1 rounded-md hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors">
-            Try Normal View
+          <Badge variant="outline" className="text-xs">Direct DB Access</Badge>
+          <Link href={`/player/${profile.id}`} className="text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2 py-1 rounded-md transition-colors">
+            Try Standard View
           </Link>
         </div>
       </div>
       
-      {/* Basic profile card with noir theme styling */}
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-lg shadow-lg mb-6 overflow-hidden">
-        {/* Banner section */}
-        <div className="h-32 bg-gradient-to-r from-gray-800 to-gray-900 relative">
-          {/* Animated film grain overlay */}
-          <div className="absolute inset-0 bg-black/20 film-grain opacity-30"></div>
-          
-          {/* Banner decorative elements */}
-          <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
-          <div className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent"></div>
-          <div className="absolute inset-y-0 left-0 w-0.5 bg-gradient-to-b from-transparent via-amber-500/40 to-transparent"></div>
-          <div className="absolute inset-y-0 right-0 w-0.5 bg-gradient-to-b from-transparent via-amber-500/40 to-transparent"></div>
+      {/* Profile Header with Banner */}
+      <div className="relative mb-6">
+        {profile.bannerImage ? (
+          <div className="w-full h-48 overflow-hidden rounded-t-lg">
+            <img 
+              src={profile.bannerImage} 
+              alt={`${profile.username}'s banner`} 
+              className="w-full h-full object-cover"
+            />
+          </div>
+        ) : (
+          <div className="w-full h-48 bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-lg film-grain" />
+        )}
+        
+        <div className="absolute -bottom-16 left-6">
+          <Avatar className="h-32 w-32 border-4 border-background">
+            <AvatarImage src={profile.avatar || undefined} />
+            <AvatarFallback className="text-4xl bg-gradient-to-br from-primary/10 to-primary/30 text-primary">
+              {profile.username.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </div>
+      
+      {/* Profile Content */}
+      <div className="mt-20 grid gap-6 md:grid-cols-3">
+        {/* Left Column - User Info */}
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle className="text-3xl">{profile.username}</CardTitle>
+                  <div className="text-muted-foreground mt-1 flex items-center space-x-2">
+                    <Badge variant={profile.isAdmin ? "destructive" : "secondary"}>
+                      {profile.isAdmin ? "Admin" : "Level " + profile.level}
+                    </Badge>
+                    {profile.gang && (
+                      <Badge variant="outline">
+                        <span className="mr-1">{profile.gang.tag}</span>
+                        {profile.gang.name}
+                      </Badge>
+                    )}
+                    <Badge variant={profile.isJailed ? "destructive" : "outline"}>
+                      {profile.isJailed ? "In Jail" : "Free"}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">Status</div>
+                  <div className="flex items-center">
+                    <span className={`h-2 w-2 rounded-full mr-2 ${
+                      profile.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                    }`}></span>
+                    <span>{profile.status === 'online' ? 'Online' : 'Offline'}</span>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {profile.bio && (
+                <div className="mb-4">
+                  <h3 className="text-sm text-muted-foreground mb-2">Bio</h3>
+                  <p>{profile.bio}</p>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Cash</div>
+                  <div className="text-xl font-semibold text-green-600 dark:text-green-400">
+                    ${profile.cash.toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground mb-1">Respect</div>
+                  <div className="text-xl font-semibold text-purple-600 dark:text-purple-400">
+                    {profile.respect.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-6 border-t">
+                <h3 className="text-sm text-muted-foreground mb-3">Account Details</h3>
+                <div className="grid grid-cols-2 gap-y-2 text-sm">
+                  <div className="flex items-center">
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>Member Since</span>
+                  </div>
+                  <div className="text-right">{memberSince}</div>
+                  
+                  <div className="flex items-center">
+                    <Star className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>XP</span>
+                  </div>
+                  <div className="text-right">{profile.xp.toLocaleString()}</div>
+                  
+                  <div className="flex items-center">
+                    <Users className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>Gang</span>
+                  </div>
+                  <div className="text-right">
+                    {profile.gang ? profile.gang.name : "None"}
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <span>Last Seen</span>
+                  </div>
+                  <div className="text-right">
+                    {dbUser.last_seen ? format(new Date(dbUser.last_seen), 'MMM d, yyyy HH:mm') : 'Unknown'}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
         
-        <div className="p-6 relative">
-          {/* Avatar positioned to overlap banner */}
-          <div className="absolute -top-16 left-1/2 transform -translate-x-1/2">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 border-4 border-gray-800 shadow-lg flex items-center justify-center text-3xl font-bold overflow-hidden">
-              {user.avatar ? (
-                <img src={user.avatar} alt={user.username} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-amber-500">{user.username ? user.username.charAt(0).toUpperCase() : "?"}</span>
-              )}
-            </div>
-          </div>
-          
-          {/* User identity */}
-          <div className="text-center mt-12 mb-6">
-            <h1 className="text-3xl font-bold text-white mb-1">{user.username}</h1>
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <span className="text-amber-500">ID: {user.id}</span>
-              <span className="text-gray-400">•</span>
-              <span className="text-amber-500">Level {user.level || 1}</span>
-              <span className="text-gray-400">•</span>
-              <span className={user.is_admin ? "text-red-400" : "text-gray-400"}>
-                {user.is_admin ? "Admin" : "Member"}
-              </span>
-            </div>
-          </div>
-          
-          {/* User stats grid */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gray-800/50 rounded-md border border-gray-700 p-4">
-              <div className="text-sm text-gray-400 mb-1">Cash</div>
-              <div className="text-xl font-semibold text-amber-500">${user.cash?.toLocaleString() || 0}</div>
-            </div>
-            <div className="bg-gray-800/50 rounded-md border border-gray-700 p-4">
-              <div className="text-sm text-gray-400 mb-1">Respect</div>
-              <div className="text-xl font-semibold text-amber-500">{user.respect || 0}</div>
-            </div>
-          </div>
-          
-          {user.bio && (
-            <div className="mb-6 bg-gray-800/50 rounded-md border border-gray-700 p-4">
-              <h2 className="text-lg font-semibold text-white mb-2">Bio</h2>
-              <p className="text-gray-300">{user.bio}</p>
-            </div>
-          )}
-          
-          {/* User details */}
-          <div className="bg-gray-800/50 rounded-md border border-gray-700 p-4">
-            <h2 className="text-lg font-semibold text-white mb-3">Account Details</h2>
-            <ul className="space-y-3">
-              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
-                <span className="text-gray-400">Member Since</span>
-                <span className="text-white">{new Date(user.created_at).toLocaleDateString()}</span>
-              </li>
-              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
-                <span className="text-gray-400">Status</span>
-                <span className={user.is_jailed ? "text-red-400" : "text-green-400"}>
-                  {user.is_jailed ? "In Jail" : "Free"}
-                </span>
-              </li>
-              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
-                <span className="text-gray-400">Gang</span>
-                <span className="text-white">{user.gang_id ? `ID: ${user.gang_id}` : "None"}</span>
-              </li>
-              <li className="flex justify-between items-center border-b border-gray-700 pb-2">
-                <span className="text-gray-400">Online Status</span>
-                <span className={user.status === 'online' ? "text-green-400" : "text-gray-400"}>
-                  {user.status || "Offline"}
-                </span>
-              </li>
-              <li className="flex justify-between items-center">
-                <span className="text-gray-400">Last Seen</span>
-                <span className="text-white">{user.last_seen ? new Date(user.last_seen).toLocaleString() : "Unknown"}</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-      
-      {/* Raw data section for debugging with improved styling */}
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-6">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold text-white">
-            <span className="text-amber-500 mr-2">{"{"}</span>
-            Raw JSON Data
-            <span className="text-amber-500 ml-2">{"}"}</span>
-          </h2>
-          <button 
-            className="flex items-center gap-1 text-xs bg-amber-500 hover:bg-amber-600 text-black px-3 py-1.5 rounded-md transition-colors"
-            onClick={() => {
-              navigator.clipboard.writeText(rawUserData || JSON.stringify(data, null, 2));
-              toast({
-                title: "Copied to clipboard",
-                description: "The raw JSON data has been copied to your clipboard.",
-                status: "success",
-              });
-            }}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-            </svg>
-            Copy JSON
-          </button>
-        </div>
-        <pre className="text-xs overflow-auto max-h-96 bg-gray-950 p-4 rounded-md border border-gray-800 text-amber-300 font-mono">
-          {rawUserData || JSON.stringify(data, null, 2)}
-        </pre>
-      </div>
-      
-      {/* Database field reference */}
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4">
-        <h2 className="text-lg font-semibold text-white mb-3">Database Field Reference</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {user && Object.entries(user).map(([key, value]) => (
-            <div key={key} className="flex items-start gap-2 bg-gray-800/50 rounded p-2 border border-gray-700">
-              <span className="text-amber-500 font-mono text-xs whitespace-nowrap">{key}:</span>
-              <span className="text-gray-300 text-xs break-all">
-                {value === null ? (
-                  <span className="text-gray-500">null</span>
-                ) : typeof value === 'object' ? (
-                  JSON.stringify(value)
-                ) : (
-                  String(value)
+        {/* Right Column - Raw Data & Debug */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center justify-between">
+                <span>Debug Data</span>
+                <button 
+                  className="text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2 py-1 rounded-md" 
+                  onClick={() => setShowRawData(!showRawData)}
+                >
+                  {showRawData ? 'Hide' : 'Show'} Raw JSON
+                </button>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm">
+                <p className="text-muted-foreground mb-2">
+                  This data is fetched directly from the database without going through the standard API.
+                </p>
+                <div className="grid grid-cols-2 gap-y-1 text-sm mb-2">
+                  <div className="text-muted-foreground">User ID:</div>
+                  <div>{profile.id}</div>
+                  <div className="text-muted-foreground">Email:</div>
+                  <div className="truncate">{dbUser.email}</div>
+                  <div className="text-muted-foreground">Admin:</div>
+                  <div>{dbUser.is_admin ? 'Yes' : 'No'}</div>
+                </div>
+                
+                {showRawData && (
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-sm font-medium">Raw Database Object</div>
+                      <button 
+                        className="text-xs bg-primary/20 hover:bg-primary/30 text-primary p-1 rounded"
+                        onClick={() => {
+                          navigator.clipboard.writeText(rawUserData || JSON.stringify(data, null, 2));
+                          toast({
+                            title: "Copied to clipboard",
+                            description: "The raw JSON data has been copied to your clipboard."
+                          });
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                    <pre className="text-xs overflow-auto max-h-80 bg-muted p-2 rounded-md border text-muted-foreground">
+                      {rawUserData || JSON.stringify(data, null, 2)}
+                    </pre>
+                  </div>
                 )}
-              </span>
-            </div>
-          ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
