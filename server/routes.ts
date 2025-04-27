@@ -858,9 +858,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const stats = await storage.getStatsByUserId(req.user.id);
+      console.log("[DEBUG] Returning stats for user", req.user.id, ":", stats);
       res.json(stats);
     } catch (error) {
+      console.error("Error fetching stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
+    }
+  });
+  
+  // Train a specific stat
+  app.post("/api/stats/train/:stat", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const userId = req.user.id;
+      const statType = req.params.stat;
+      
+      // Validate stat type
+      if (!["strength", "stealth", "charisma", "intelligence"].includes(statType)) {
+        return res.status(400).json({ message: "Invalid stat type" });
+      }
+      
+      // Get current user stats
+      const userStats = await storage.getStatsByUserId(userId);
+      if (!userStats) {
+        return res.status(404).json({ message: "User stats not found" });
+      }
+      
+      // Check if stat is already at max
+      if (userStats[statType] >= 100) {
+        return res.status(400).json({ message: `${statType} is already at maximum level` });
+      }
+      
+      // Check cooldown
+      const cooldownField = `${statType}TrainingCooldown`;
+      if (userStats[cooldownField] && new Date(userStats[cooldownField]) > new Date()) {
+        return res.status(400).json({ 
+          message: `${statType} training is on cooldown`, 
+          cooldownEnd: userStats[cooldownField] 
+        });
+      }
+      
+      // Calculate training result
+      const statIncrease = 1; // Base stat increase
+      const newStatValue = Math.min(100, userStats[statType] + statIncrease);
+      
+      // Calculate cooldown - this could be adjusted based on current stat level
+      const now = new Date();
+      const cooldownMinutes = 5; // 5 minute cooldown
+      const cooldownEnd = new Date(now.getTime() + cooldownMinutes * 60 * 1000);
+      
+      // Update user stats with new value and cooldown
+      const updateData = {
+        [statType]: newStatValue,
+        [cooldownField]: cooldownEnd
+      };
+      
+      const updatedStats = await storage.updateStats(userId, updateData);
+      
+      // Return the updated stat value and cooldown
+      res.json({
+        success: true,
+        increase: statIncrease,
+        newValue: newStatValue,
+        cooldownEnd: cooldownEnd,
+        message: `${statType.charAt(0).toUpperCase() + statType.slice(1)} increased by ${statIncrease}!`
+      });
+    } catch (error) {
+      console.error("Error training stat:", error);
+      res.status(500).json({ message: "Failed to train stat" });
     }
   });
   
