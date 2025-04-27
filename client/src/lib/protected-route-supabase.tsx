@@ -88,12 +88,10 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
               console.log('Setting reload flag and refreshing to update game user data');
               localStorage.setItem('auth_reload_done', 'true');
               localStorage.setItem('current_user_id', userData.id.toString());
-                
-              // Give a short delay to avoid interrupting any pending operations
-              setTimeout(() => {
-                // Navigate to the dashboard (home page) to avoid reload loops
-                navigate('/');
-              }, 100);
+              
+              // Instead of navigating/reloading, just set the local state to proceed
+              setIsChecking(false);
+              setHasDirectAuth(true);
               return;
             } else {
               console.error('Failed to prefetch game user profile:', res.status, res.statusText);

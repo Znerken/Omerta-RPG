@@ -153,12 +153,12 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       
       console.log('Login successful, preparing for reload with new session');
       
-      // Small delay to ensure session is registered and toast is shown
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Instead of forcing a full reload, just invalidate the queries
+      // This avoids the reload loops that were causing issues
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
-      // Force a full page reload to completely refresh auth state
-      // This is the most reliable way to ensure proper authentication flow
-      window.location.href = '/?reload=' + Date.now();
+      // Still wait a bit for the session to be registered
+      await new Promise(resolve => setTimeout(resolve, 500));
     },
     onError: (error: Error) => {
       toast({
@@ -203,12 +203,12 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       
       console.log('Registration successful, preparing for reload with new session');
       
-      // Give time for the Supabase session to be established and for the toast to be read
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Instead of forcing a full reload, just invalidate the queries
+      // This avoids the reload loops that were causing issues
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
-      // Force a full page reload to completely refresh auth state
-      // This is the most reliable way to ensure proper authentication flow
-      window.location.href = '/?reload=' + Date.now();
+      // Still wait a bit for the session to be registered and the toast to be read
+      await new Promise(resolve => setTimeout(resolve, 1000));
     },
     onError: (error: Error) => {
       toast({
