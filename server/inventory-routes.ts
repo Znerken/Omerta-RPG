@@ -1,7 +1,6 @@
 import { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { isAuthenticated } from "./middleware/auth";
-import { isAdmin } from "./middleware/admin";
+import { isAuthenticated, isAdmin } from "./middleware/auth";
 import { 
   insertItemSchema,
   insertUserInventorySchema,
