@@ -1,14 +1,14 @@
 import { supabase, db } from './db-supabase';
 import { 
   users, 
-  userStats, 
+  stats, 
   gangs, 
   gangMembers, 
   messages,
   items,
   userInventory,
   type User,
-  type UserStats
+  type Stat
 } from '@shared/schema';
 import { eq, and, or, desc, asc, sql } from 'drizzle-orm';
 
@@ -77,7 +77,7 @@ export class SupabaseStorage {
       }
 
       // Create initial stats for the user
-      await db.insert(userStats)
+      await db.insert(stats)
         .values({
           userId: user.id,
           strength: 10,
@@ -114,10 +114,33 @@ export class SupabaseStorage {
 
   async updateUserStatus(id: number, status: string): Promise<User> {
     try {
-      return await this.updateUser(id, {
-        status: status,
+      // First, update the user's last seen time
+      const user = await this.updateUser(id, {
         lastSeen: new Date()
       });
+      
+      // Then update/create a record in the userStatus table
+      const existingStatus = await db.query.userStatus.findFirst({
+        where: eq(userStatus.userId, id)
+      });
+      
+      if (existingStatus) {
+        await db.update(userStatus)
+          .set({
+            status: status,
+            lastActive: new Date()
+          })
+          .where(eq(userStatus.userId, id));
+      } else {
+        await db.insert(userStatus)
+          .values({
+            userId: id,
+            status: status,
+            lastActive: new Date()
+          });
+      }
+      
+      return user;
     } catch (error) {
       console.error('Error updating user status:', error);
       throw error;
@@ -175,25 +198,25 @@ export class SupabaseStorage {
   }
 
   // USER STATS METHODS
-  async getUserStats(userId: number): Promise<UserStats | undefined> {
+  async getUserStats(userId: number): Promise<Stat | undefined> {
     try {
-      const stats = await db.query.userStats.findFirst({
-        where: eq(userStats.userId, userId)
+      const userStats = await db.query.stats.findFirst({
+        where: eq(stats.userId, userId)
       });
       
-      return stats || undefined;
+      return userStats || undefined;
     } catch (error) {
       console.error('Error getting user stats:', error);
       throw error;
     }
   }
 
-  async updateUserStats(userId: number, updates: Partial<UserStats>): Promise<UserStats> {
+  async updateUserStats(userId: number, updates: Partial<Stat>): Promise<Stat> {
     try {
       const [updatedStats] = await db
-        .update(userStats)
+        .update(stats)
         .set(updates as any)
-        .where(eq(userStats.userId, userId))
+        .where(eq(stats.userId, userId))
         .returning();
       
       if (!updatedStats) {

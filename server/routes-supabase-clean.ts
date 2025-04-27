@@ -1,10 +1,10 @@
 import type { Express, Request, Response } from 'express';
 import { createServer, type Server } from 'http';
+import { WebSocketServer } from 'ws';
 import { setupAuthRoutes, authProtected, adminProtected, jailProtected } from './auth-supabase-clean';
 import { storage } from './storage-supabase-clean';
-import { registerWebSocketServer } from './websocket-supabase';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { users, userStats, crimes, locationChallenges as locations } from '@shared/schema';
+import { users, stats, crimes, locationChallenges as locations, userStatus } from '@shared/schema';
 import { db } from './db-supabase';
 import { extractAndValidateToken } from './supabase';
 
@@ -12,6 +12,19 @@ import { extractAndValidateToken } from './supabase';
  * Register all routes for the API
  */
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create HTTP server
+  const httpServer = createServer(app);
+  
+  // Register WebSocket server
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Set up WebSocket connection handler
+  import('./websocket-supabase-clean').then(({ registerWebSocketServer }) => {
+    registerWebSocketServer(httpServer);
+  }).catch(error => {
+    console.error('Failed to initialize WebSocket server:', error);
+  });
+  
   // Set up Supabase authentication routes
   setupAuthRoutes(app);
 
@@ -415,12 +428,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to send message' });
     }
   });
-
-  // Create HTTP server
-  const httpServer = createServer(app);
-  
-  // Set up WebSocket server
-  registerWebSocketServer(httpServer);
 
   return httpServer;
 }
