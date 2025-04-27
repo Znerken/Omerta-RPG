@@ -53,7 +53,7 @@ async function initializeInventoryTables() {
         VALUES 
           ('Brass Knuckles', 'Increases damage in hand-to-hand combat', 'weapon', 1000, 10, 0),
           ('Switchblade', 'A concealable blade for quick attacks', 'weapon', 1500, 5, 5),
-          ('Leather Jacket', 'Basic protection that looks stylish', 'armor', 2000, 3, 0),
+          ('Leather Jacket', 'Basic protection that looks stylish', 'protection', 2000, 3, 0),
           ('Ski Mask', 'Conceals your identity during crimes', 'tool', 800, 0, 8),
           ('Fake ID', 'Helps you talk your way out of situations', 'tool', 1200, 0, 0)
         ON CONFLICT (id) DO NOTHING
