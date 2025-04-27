@@ -119,10 +119,6 @@ export class DrugStorage {
     return recipe;
   }
   
-  async createRecipe(insertRecipe: InsertDrugRecipe): Promise<DrugRecipe> {
-    return this.createDrugRecipe(insertRecipe);
-  }
-  
   async getRecipeCount(): Promise<number> {
     const result = await db
       .select({ count: count() })

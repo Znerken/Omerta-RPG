@@ -2028,7 +2028,7 @@ function EffectsTab() {
                     
                     <div className="flex justify-between text-sm">
                       <span className="flex items-center">
-                        <Hourglass className="h-4 w-4 mr-1 text-blue-500" /> Duration
+                        <Timer className="h-4 w-4 mr-1 text-blue-500" /> Duration
                       </span>
                       <span className="font-medium">{addiction.drug.durationHours} hours</span>
                     </div>

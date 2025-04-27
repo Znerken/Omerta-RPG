@@ -193,6 +193,35 @@ export function registerDrugRoutes(app: Express) {
       }
     }
   });
+  
+  // Recipe creation endpoint for admins
+  app.post("/api/admin/drug-recipes", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const recipeData = insertDrugRecipeSchema.parse(req.body);
+      
+      // Check if drug exists
+      const drug = await drugStorage.getDrug(recipeData.drugId);
+      if (!drug) {
+        return res.status(404).json({ error: "Drug not found" });
+      }
+      
+      // Check if ingredient exists
+      const ingredient = await drugStorage.getDrugIngredient(recipeData.ingredientId);
+      if (!ingredient) {
+        return res.status(404).json({ error: "Ingredient not found" });
+      }
+      
+      const newRecipe = await drugStorage.createDrugRecipe(recipeData);
+      res.status(201).json(newRecipe);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        handleZodError(error, res);
+      } else {
+        console.error("Error creating recipe:", error);
+        res.status(500).json({ error: "Failed to create recipe" });
+      }
+    }
+  });
 
   // ========== User Inventory Routes ==========
   app.get("/api/user/drugs", isAuthenticated, async (req: Request, res: Response) => {
