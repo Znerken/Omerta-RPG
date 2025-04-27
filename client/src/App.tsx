@@ -40,6 +40,7 @@ import LocationsPage from "@/pages/locations-page";
 import ForgotPasswordPage from "@/pages/forgot-password-page";
 import ResetPasswordPage from "@/pages/reset-password-page";
 import ThrottleDemoPage from "@/pages/throttle-demo-page";
+import TestGangPage from "@/pages/test-gang-page";
 
 // Protected route with layout wrapper
 function ProtectedPage({ component: Component }: { component: React.ComponentType }) {

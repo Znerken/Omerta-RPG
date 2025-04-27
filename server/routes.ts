@@ -13,6 +13,7 @@ import { registerDevRoutes } from "./dev-routes";
 import challengeRoutes from "./challenge-routes";
 import gangRoutes from "./gang-routes";
 import newGangRoutes from "./new-gang-routes";
+import gangTestRoutes from "./gang-routes-test";
 import locationRoutes from "./location-routes";
 import { WebSocketServer } from "ws";
 import WebSocket from "ws";
@@ -89,6 +90,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register the new improved gang system
   app.use("/api/gangs", newGangRoutes);
+  
+  // Register test gang routes for debugging
+  app.use("/api/gangs-test", gangTestRoutes);
   
   // Register casino routes
   registerCasinoRoutes(app);
