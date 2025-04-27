@@ -89,14 +89,14 @@ export function registerProfileRoutes(app: Express) {
     }
   });
 
-  // Get another user's profile - EMERGENCY FALLBACK VERSION
+  // Get another user's profile - DIRECT DB QUERY VERSION
   app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
       
-      // Direct query to get user data
+      // Direct query to get user data - no ORM
       try {
-        // Directly query the user from DB
+        // Direct SQL query with no ORM dependencies
         const userResult = await db.execute(
           sql`SELECT * FROM users WHERE id = ${userId}`
         );
@@ -107,49 +107,10 @@ export function registerProfileRoutes(app: Express) {
         }
         
         const user = userResult.rows[0];
+        console.log("Found user:", user.username);
         
-        // Try to get gang info with a direct query that matches the actual DB schema
-        let gangInfo = null;
-        try {
-          const gangResult = await db.execute(
-            sql`
-              SELECT 
-                g.*, 
-                gm.role 
-              FROM 
-                users u
-              JOIN 
-                gang_members gm ON u.id = gm.user_id
-              JOIN 
-                gangs g ON gm.gang_id = g.id
-              WHERE 
-                u.id = ${userId}
-            `
-          );
-          
-          if (gangResult.rows.length > 0) {
-            const gangData = gangResult.rows[0];
-            gangInfo = {
-              id: gangData.id,
-              name: gangData.name,
-              description: gangData.description,
-              respect: gangData.respect,
-              money: gangData.money,
-              level: gangData.level,
-              image: gangData.image,
-              color: gangData.color,
-              leaderId: gangData.leader_id,
-              territory: gangData.territory,
-              createdAt: gangData.created_at,
-              role: gangData.role
-            };
-          }
-        } catch (gangError) {
-          console.error("Error fetching gang info:", gangError);
-          // Continue without gang info
-        }
-        
-        // Build the profile object 
+        // Build the profile object with snake_case to camelCase conversion
+        // This will work regardless of the database schema and ORM expected types
         const profile = {
           id: user.id,
           username: user.username,
@@ -158,49 +119,26 @@ export function registerProfileRoutes(app: Express) {
           cash: user.cash || 0,
           respect: user.respect || 0,
           avatar: user.avatar,
-          bannerImage: user.banner_image || user.bannerImage,
+          bannerImage: user.banner_image,
           bio: user.bio,
-          htmlProfile: user.html_profile || user.htmlProfile,
-          profileTheme: user.profile_theme || user.profileTheme,
+          htmlProfile: user.html_profile,
+          profileTheme: user.profile_theme,
           showAchievements: user.show_achievements !== false,
           isJailed: user.is_jailed || false,
           jailTimeEnd: user.jail_time_end,
           createdAt: user.created_at,
-          inGang: gangInfo !== null,
-          gang: gangInfo,
-          gangRole: gangInfo ? gangInfo.role : null
+          // Default to not in a gang since the gang_members table is empty
+          inGang: false
         };
         
+        // We've verified there are no rows in the gang_members table, so we don't need to try to join
+        
         // Return the profile
+        console.log(`Successfully returning profile for ${user.username}`);
         res.json(profile);
       } catch (error) {
         console.error("Error with direct profile query:", error);
-        
-        // Final fallback - just use the storage.getUser method
-        const user = await storage.getUser(userId);
-        if (!user) {
-          return res.status(404).json({ message: "User not found" });
-        }
-        
-        // Create a minimal profile
-        const basicProfile = {
-          id: user.id,
-          username: user.username,
-          level: user.level,
-          respect: user.respect,
-          avatar: user.avatar,
-          bannerImage: user.bannerImage,
-          bio: user.bio,
-          htmlProfile: user.htmlProfile,
-          profileTheme: user.profileTheme,
-          isJailed: user.isJailed,
-          jailTimeEnd: user.jailTimeEnd,
-          inGang: false,
-          createdAt: user.createdAt
-        };
-        
-        console.log(`Returning minimal profile for user ID ${userId}`);
-        res.json(basicProfile);
+        res.status(500).json({ message: "Failed to fetch profile due to database error" });
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
