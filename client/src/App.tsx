@@ -106,6 +106,12 @@ function AppRouter() {
         )}
       </Route>
       
+      <Route path="/gang-new">
+        {() => (
+          <ProtectedRoute path="/gang-new" component={() => <ProtectedPage component={NewGangPage} />} />
+        )}
+      </Route>
+      
       <Route path="/drugs">
         {() => (
           <ProtectedRoute path="/drugs" component={() => <ProtectedPage component={DrugsPage} />} />

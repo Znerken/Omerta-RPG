@@ -52,6 +52,7 @@ const activityItems = [
   { name: "Challenges", path: "/challenges", icon: <CheckCircle className="h-4.5 w-4.5 mr-2.5" /> },
   { name: "Training", path: "/training", icon: <Dumbbell className="h-4.5 w-4.5 mr-2.5" /> },
   { name: "Gang", path: "/gang", icon: <Users className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Gang 2.0", path: "/gang-new", icon: <Users className="h-4.5 w-4.5 mr-2.5 text-primary" /> },
   { name: "Drugs", path: "/drugs", icon: <Pill className="h-4.5 w-4.5 mr-2.5" /> },
 ];
 
