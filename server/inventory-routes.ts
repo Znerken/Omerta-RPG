@@ -423,6 +423,8 @@ export function registerInventoryRoutes(app: Express) {
     }
   });
 
+
+
   // Give item to user (admin only)
   app.post("/api/admin/users/:userId/give-item", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
