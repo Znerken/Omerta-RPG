@@ -9,9 +9,85 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  UserAvatar 
+} from "@/components/profile/UserAvatar";
+import { 
+  AVATAR_FRAMES, 
+  NAME_EFFECTS, 
+  PROFILE_THEMES, 
+  BACKGROUND_EFFECTS,
+  getNameEffectStyles,
+  AvatarFrame,
+  ProfileTheme,
+  NameEffect,
+  BackgroundEffect
+} from "@/components/profile/ProfileCustomization";
+import { cn } from "@/lib/utils";
 
 // Define a conversion function for the database fields
 function convertDbUserToProfile(dbUser: any) {
+  // Default avatar frame
+  const defaultFrame = AVATAR_FRAMES.find(frame => frame.id === 'classic') || AVATAR_FRAMES[0];
+  
+  // Default profile theme
+  const defaultTheme = PROFILE_THEMES.find(theme => theme.id === 'dark') || PROFILE_THEMES[0];
+  
+  // Default name effect
+  const defaultNameEffect = NAME_EFFECTS.find(effect => effect.id === 'none') || NAME_EFFECTS[0];
+  
+  // Default background effect
+  const defaultBgEffect = BACKGROUND_EFFECTS.find(effect => effect.id === 'none') || BACKGROUND_EFFECTS[0];
+  
+  // Get the profile theme from database or use default
+  const profileThemeId = dbUser.profile_theme || 'dark';
+  const profileTheme = PROFILE_THEMES.find(theme => theme.id === profileThemeId) || defaultTheme;
+  
+  // Get the avatar frame from database or use default (assuming stored as JSON or string)
+  let avatarFrameId = 'classic';
+  try {
+    if (dbUser.avatar_frame) {
+      if (typeof dbUser.avatar_frame === 'string') {
+        avatarFrameId = dbUser.avatar_frame;
+      } else if (typeof dbUser.avatar_frame === 'object' && dbUser.avatar_frame.id) {
+        avatarFrameId = dbUser.avatar_frame.id;
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing avatar frame:", e);
+  }
+  const avatarFrame = AVATAR_FRAMES.find(frame => frame.id === avatarFrameId) || defaultFrame;
+  
+  // Get the name effect from database or use default (assuming stored as JSON or string)
+  let nameEffectId = 'none';
+  try {
+    if (dbUser.name_effect) {
+      if (typeof dbUser.name_effect === 'string') {
+        nameEffectId = dbUser.name_effect;
+      } else if (typeof dbUser.name_effect === 'object' && dbUser.name_effect.id) {
+        nameEffectId = dbUser.name_effect.id;
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing name effect:", e);
+  }
+  const nameEffect = NAME_EFFECTS.find(effect => effect.id === nameEffectId) || defaultNameEffect;
+  
+  // Get the background effect from database or use default (assuming stored as JSON or string)
+  let bgEffectId = 'none';
+  try {
+    if (dbUser.background_effect) {
+      if (typeof dbUser.background_effect === 'string') {
+        bgEffectId = dbUser.background_effect;
+      } else if (typeof dbUser.background_effect === 'object' && dbUser.background_effect.id) {
+        bgEffectId = dbUser.background_effect.id;
+      }
+    }
+  } catch (e) {
+    console.error("Error parsing background effect:", e);
+  }
+  const backgroundEffect = BACKGROUND_EFFECTS.find(effect => effect.id === bgEffectId) || defaultBgEffect;
+  
   // Convert database field names to the expected profile object structure
   return {
     id: dbUser.id,
@@ -35,7 +111,12 @@ function convertDbUserToProfile(dbUser: any) {
     xp: dbUser.xp || 0,
     // Flag for special traits
     isAdmin: dbUser.is_admin === true,
-    isJailed: dbUser.is_jailed === true
+    isJailed: dbUser.is_jailed === true,
+    // Profile customization
+    avatarFrame: avatarFrame,
+    profileTheme: profileTheme,
+    nameEffect: nameEffect,
+    backgroundEffect: backgroundEffect
   };
 }
 
@@ -140,25 +221,45 @@ export default function EmergencyProfilePage() {
   // Format member since date
   const memberSince = profile.createdAt ? format(new Date(profile.createdAt), 'MMMM d, yyyy') : 'Unknown';
   
+  // Determine if any special background effects should be applied
+  const hasBackgroundEffect = profile.backgroundEffect && profile.backgroundEffect.id !== 'none';
+  
   return (
-    <div className="container mx-auto max-w-4xl py-6">
+    <div className={cn(
+      "container mx-auto max-w-4xl py-6",
+      hasBackgroundEffect && profile.backgroundEffect?.cssClass
+    )}>
       <div className="mb-6 flex items-center justify-between">
         <Link href="/" className="flex items-center text-muted-foreground hover:text-primary">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Dashboard
         </Link>
         <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="text-xs">Direct DB Access</Badge>
+          <Badge 
+            variant="outline" 
+            className={cn(
+              "text-xs",
+              profile.profileTheme?.border
+            )}
+          >
+            Direct DB Access
+          </Badge>
           <Link href={`/player/${profile.id}`} className="text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2 py-1 rounded-md transition-colors">
             Try Standard View
           </Link>
         </div>
       </div>
       
+      {/* Inject the CSS for name effects */}
+      {getNameEffectStyles()}
+      
       {/* Profile Header with Banner */}
       <div className="relative mb-6">
         {profile.bannerImage ? (
-          <div className="w-full h-48 overflow-hidden rounded-t-lg">
+          <div className={cn(
+            "w-full h-48 overflow-hidden rounded-t-lg",
+            profile.backgroundEffect?.cssClass
+          )}>
             <img 
               src={profile.bannerImage} 
               alt={`${profile.username}'s banner`} 
@@ -166,16 +267,21 @@ export default function EmergencyProfilePage() {
             />
           </div>
         ) : (
-          <div className="w-full h-48 bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-lg film-grain" />
+          <div className={cn(
+            "w-full h-48 rounded-t-lg",
+            profile.profileTheme?.background || "bg-gradient-to-r from-gray-800 to-gray-900",
+            profile.backgroundEffect?.cssClass || "film-grain"
+          )} />
         )}
         
         <div className="absolute -bottom-16 left-6">
-          <Avatar className="h-32 w-32 border-4 border-background">
-            <AvatarImage src={profile.avatar || undefined} />
-            <AvatarFallback className="text-4xl bg-gradient-to-br from-primary/10 to-primary/30 text-primary">
-              {profile.username.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar 
+            username={profile.username}
+            avatarUrl={profile.avatar}
+            size="xl"
+            linkToProfile={false}
+            frame={profile.avatarFrame}
+          />
         </div>
       </div>
       
@@ -183,11 +289,17 @@ export default function EmergencyProfilePage() {
       <div className="mt-20 grid gap-6 md:grid-cols-3">
         {/* Left Column - User Info */}
         <div className="md:col-span-2 space-y-6">
-          <Card>
+          <Card className={cn(
+            profile.profileTheme?.background,
+            profile.profileTheme?.border
+          )}>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle className="text-3xl">{profile.username}</CardTitle>
+                  <CardTitle className={cn(
+                    "text-3xl",
+                    profile.nameEffect?.cssClass
+                  )}>{profile.username}</CardTitle>
                   <div className="text-muted-foreground mt-1 flex items-center space-x-2">
                     <Badge variant={profile.isAdmin ? "destructive" : "secondary"}>
                       {profile.isAdmin ? "Admin" : "Level " + profile.level}
@@ -275,19 +387,40 @@ export default function EmergencyProfilePage() {
         
         {/* Right Column - Raw Data & Debug */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center justify-between">
+          <Card className={cn(
+            "relative overflow-hidden",
+            profile.profileTheme?.background,
+            profile.profileTheme?.border
+          )}>
+            {/* Add subtle background effect if one is selected */}
+            {profile.backgroundEffect && profile.backgroundEffect.id !== 'none' && (
+              <div className={cn(
+                "absolute inset-0 opacity-20 pointer-events-none z-0",
+                profile.backgroundEffect?.cssClass
+              )}></div>
+            )}
+          
+            <CardHeader className="pb-2 relative z-10">
+              <CardTitle className={cn(
+                "text-lg flex items-center justify-between"
+              )}>
                 <span>Debug Data</span>
                 <button 
-                  className="text-xs bg-primary/20 hover:bg-primary/30 text-primary px-2 py-1 rounded-md" 
+                  className={cn(
+                    "text-xs px-2 py-1 rounded-md transition-colors",
+                    profile.profileTheme?.id === 'gold' 
+                      ? "bg-amber-700/20 hover:bg-amber-700/30 text-amber-300" 
+                      : profile.profileTheme?.id === 'blood'
+                        ? "bg-red-800/20 hover:bg-red-800/30 text-red-300"
+                        : "bg-primary/20 hover:bg-primary/30 text-primary"
+                  )}
                   onClick={() => setShowRawData(!showRawData)}
                 >
                   {showRawData ? 'Hide' : 'Show'} Raw JSON
                 </button>
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative z-10">
               <div className="text-sm">
                 <p className="text-muted-foreground mb-2">
                   This data is fetched directly from the database without going through the standard API.
@@ -299,6 +432,12 @@ export default function EmergencyProfilePage() {
                   <div className="truncate">{dbUser.email}</div>
                   <div className="text-muted-foreground">Admin:</div>
                   <div>{dbUser.is_admin ? 'Yes' : 'No'}</div>
+                  <div className="text-muted-foreground">Avatar Frame:</div>
+                  <div className="truncate">{profile.avatarFrame?.name || 'None'}</div>
+                  <div className="text-muted-foreground">Profile Theme:</div>
+                  <div className="truncate">{profile.profileTheme?.name || 'None'}</div>
+                  <div className="text-muted-foreground">Name Effect:</div>
+                  <div className="truncate">{profile.nameEffect?.name || 'None'}</div>
                 </div>
                 
                 {showRawData && (
@@ -306,7 +445,14 @@ export default function EmergencyProfilePage() {
                     <div className="flex justify-between items-center mb-2">
                       <div className="text-sm font-medium">Raw Database Object</div>
                       <button 
-                        className="text-xs bg-primary/20 hover:bg-primary/30 text-primary p-1 rounded"
+                        className={cn(
+                          "text-xs p-1 rounded transition-colors",
+                          profile.profileTheme?.id === 'gold' 
+                            ? "bg-amber-700/20 hover:bg-amber-700/30 text-amber-300" 
+                            : profile.profileTheme?.id === 'blood'
+                              ? "bg-red-800/20 hover:bg-red-800/30 text-red-300"
+                              : "bg-primary/20 hover:bg-primary/30 text-primary"
+                        )}
                         onClick={() => {
                           navigator.clipboard.writeText(rawUserData || JSON.stringify(data, null, 2));
                           toast({
@@ -318,7 +464,12 @@ export default function EmergencyProfilePage() {
                         Copy
                       </button>
                     </div>
-                    <pre className="text-xs overflow-auto max-h-80 bg-muted p-2 rounded-md border text-muted-foreground">
+                    <pre className={cn(
+                      "text-xs overflow-auto max-h-80 p-2 rounded-md border",
+                      profile.profileTheme?.id === 'dark' 
+                        ? "bg-black/40 border-white/5 text-muted-foreground" 
+                        : "bg-muted/30 text-muted-foreground"
+                    )}>
                       {rawUserData || JSON.stringify(data, null, 2)}
                     </pre>
                   </div>
