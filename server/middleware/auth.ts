@@ -38,9 +38,29 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
     console.log('Token validated, fetching user with Supabase ID:', supabaseUser.sub);
     
     // Get user from database using Supabase ID
-    const user = await storage.getUserBySupabaseId(supabaseUser.sub);
+    console.log('Looking up user with Supabase ID:', supabaseUser.sub);
+    let user = await storage.getUserBySupabaseId(supabaseUser.sub);
+    
     if (!user) {
-      console.log('No user found with Supabase ID:', supabaseUser.sub);
+      console.log('No user found with Supabase ID. Trying to find by email...');
+      // As a fallback, try to find the user by email
+      if (supabaseUser.email) {
+        console.log('Trying to find user by email:', supabaseUser.email);
+        user = await storage.getUserByEmail(supabaseUser.email);
+        
+        if (user) {
+          console.log('Found user by email, updating their Supabase ID...');
+          // Update the user's Supabase ID for future logins
+          user = await storage.updateUser(user.id, { supabaseId: supabaseUser.sub });
+          console.log('User updated with Supabase ID');
+        } else {
+          console.log('No user found with email:', supabaseUser.email);
+        }
+      }
+    }
+    
+    if (!user) {
+      console.log('No user found with Supabase ID or email:', supabaseUser.sub);
       return res.status(401).json({ message: "Unauthorized - User not found" });
     }
     

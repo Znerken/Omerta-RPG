@@ -62,6 +62,20 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
             if (res.ok) {
               const gameUserData = await res.json();
               console.log('Successfully prefetched game user profile:', gameUserData ? 'Data found' : 'No data returned');
+              
+              // Reload the page to pick up the new game user data, but only once
+              // Set a flag in localStorage to avoid reload loops
+              const hasReloaded = localStorage.getItem('auth_reload_done');
+              if (!hasReloaded && !gameUser) {
+                console.log('Setting reload flag and refreshing to update game user data');
+                localStorage.setItem('auth_reload_done', 'true');
+                
+                // Give a short delay to avoid interrupting any pending operations
+                setTimeout(() => {
+                  window.location.reload();
+                }, 100);
+                return;
+              }
             } else {
               console.error('Failed to prefetch game user profile:', res.status, res.statusText);
               // Try to get the error message from the response
@@ -78,6 +92,9 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
         } else {
           console.log('No direct auth found - redirecting to login');
           setHasDirectAuth(false);
+          
+          // Clear any reload flags
+          localStorage.removeItem('auth_reload_done');
         }
         
         setIsChecking(false);
@@ -85,10 +102,18 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
         console.error('Error verifying auth:', error);
         setHasDirectAuth(false);
         setIsChecking(false);
+        
+        // Clear any reload flags on error
+        localStorage.removeItem('auth_reload_done');
       }
     }
     
     verifyAuth();
+    
+    // Clear reload flag when component unmounts
+    return () => {
+      localStorage.removeItem('auth_reload_done');
+    };
   }, [isAuthenticated, isLoading, gameUser]);
 
   if (isLoading || isChecking) {

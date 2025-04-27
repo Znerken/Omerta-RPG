@@ -81,8 +81,15 @@ export async function extractAndValidateToken(req: Request): Promise<any> {
         
         console.log('[extractAndValidateToken] Token verified with Supabase for user:', user.id);
         
-        // Return decoded token to maintain compatibility
-        return decoded;
+        // Add the email from the user data to the decoded token for convenience
+        const mergedData = { 
+          ...decoded, 
+          email: user.email 
+        };
+        console.log('[extractAndValidateToken] Enhancing token with email:', user.email);
+        
+        // Return the enhanced token
+        return mergedData;
       } catch (e) {
         console.error('[extractAndValidateToken] Error verifying with Supabase API:', e);
         return decoded; // Fall back to just the decoded token if API verification fails
