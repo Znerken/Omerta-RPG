@@ -20,6 +20,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Set up Supabase authentication routes
   setupAuthRoutes(app);
+  
+  // Debug route for auth testing
+  app.get('/api/debug/auth-check', async (req: Request, res: Response) => {
+    try {
+      console.log('Debug auth-check endpoint called');
+      console.log('Headers:', req.headers);
+      
+      // Extract token
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'No authorization header found' });
+      }
+      
+      const token = authHeader.split('Bearer ')[1];
+      if (!token) {
+        return res.status(401).json({ message: 'No bearer token found' });
+      }
+      
+      // Validate token
+      const user = await extractAndValidateToken(req);
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+      
+      // Check if game user exists
+      const gameUser = await db.query.users.findFirst({
+        where: eq(users.supabaseId, user.id)
+      });
+      
+      if (!gameUser) {
+        return res.status(401).json({ 
+          message: 'No game user linked to this Supabase account',
+          supabaseUser: user.id,
+          needsLinking: true
+        });
+      }
+      
+      // Success - valid token with linked game user
+      return res.json({
+        message: 'Valid token',
+        supabaseUser: user.id,
+        gameUser: gameUser.id,
+        username: gameUser.username,
+        isAdmin: gameUser.isAdmin
+      });
+    } catch (error) {
+      console.error('Error in auth-check endpoint:', error);
+      res.status(500).json({ message: 'Server error during auth check' });
+    }
+  });
 
   // User-related routes
   app.get('/api/user/stats', authProtected, async (req: Request, res: Response) => {
@@ -293,36 +343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // A simple route to check auth state
-  app.get('/api/debug/auth-check', async (req: Request, res: Response) => {
-    try {
-      const authHeader = req.headers.authorization;
-      const hasAuthHeader = !!authHeader;
-      
-      // Get Supabase user from token
-      const supabaseUser = hasAuthHeader ? await extractAndValidateToken(req) : null;
-      
-      // Return information about the request's auth state
-      res.json({
-        hasAuthHeader,
-        authHeaderValue: hasAuthHeader ? `${authHeader?.substring(0, 10)}...` : null,
-        isAuthenticated: !!req.user,
-        supabaseUser: supabaseUser ? {
-          id: supabaseUser.id,
-          email: supabaseUser.email
-        } : null,
-        user: req.user ? {
-          id: req.user.id,
-          username: req.user.username,
-          supabaseId: req.user.supabaseId,
-          hasSupabaseId: !!req.user.supabaseId
-        } : null
-      });
-    } catch (error) {
-      console.error('Error in auth check route:', error);
-      res.status(500).json({ message: 'Error checking auth state' });
-    }
-  });
+  // Our more detailed debug route has been defined above
 
   // Friends system
   app.get('/api/friends', authProtected, async (req: Request, res: Response) => {
