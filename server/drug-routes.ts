@@ -101,6 +101,7 @@ export function registerDrugRoutes(app: Express) {
         charismaBonus: req.body.charismaBonus || 0,
         intelligenceBonus: req.body.intelligenceBonus || 0,
         cashGainBonus: req.body.cashGainBonus || 0,
+        durationHours: req.body.durationHours || 1, // Add default duration if not provided
       };
 
       const validatedData = insertDrugSchema.parse(drugData);
