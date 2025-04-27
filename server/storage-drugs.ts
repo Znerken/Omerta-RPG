@@ -932,7 +932,7 @@ export class DrugStorage {
       ];
       
       for (const recipe of recipes) {
-        await this.createRecipe(recipe);
+        await this.createDrugRecipe(recipe);
       }
     }
   }
