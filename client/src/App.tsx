@@ -22,7 +22,7 @@ import EmergencyProfilePage from "@/pages/emergency-profile";
 import CrimesPage from "@/pages/crimes-page";
 import TrainingPage from "@/pages/training-page";
 import GangPage from "@/pages/gang-page";
-import NewGangPage from "@/pages/new-gang-page";
+// Gang 2.0 page removed in favor of enhancing the original gang page
 import JailPage from "@/pages/jail-page";
 import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";
@@ -107,9 +107,14 @@ function AppRouter() {
         )}
       </Route>
       
+      {/* Redirect Gang 2.0 URL to the main gang page */}
       <Route path="/gang-new">
         {() => (
-          <ProtectedRoute path="/gang-new" component={() => <ProtectedPage component={NewGangPage} />} />
+          <ProtectedRoute path="/gang-new" component={() => {
+            // Use window.location for immediate redirect
+            typeof window !== "undefined" && (window.location.href = "/gang");
+            return <div>Redirecting to gang page...</div>;
+          }} />
         )}
       </Route>
       
