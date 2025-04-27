@@ -506,6 +506,21 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     }
   }
   
+  // Update user cash method
+  async updateUserCash(id: number, newCash: number): Promise<User | undefined> {
+    try {
+      const [user] = await db
+        .update(users)
+        .set({ cash: newCash })
+        .where(eq(users.id, id))
+        .returning();
+      return user;
+    } catch (error) {
+      console.error("Error in updateUserCash:", error);
+      return undefined;
+    }
+  }
+  
   // Update user password method
   async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
     try {
