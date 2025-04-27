@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { useWebSocket, WebSocketMessage } from './use-websocket';
 import { useToast } from './use-toast';
 import { queryClient } from '@/lib/queryClient';
@@ -7,7 +7,9 @@ import { useAuth } from './use-auth';
 type WebSocketContextType = {
   isConnected: boolean;
   lastMessage: WebSocketMessage | null;
+  socket: WebSocket | null;
   sendMessage: (type: string, data: any) => boolean;
+  dispatchWebSocketEvent: (message: WebSocketMessage) => void;
 };
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -31,10 +33,22 @@ function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (..
 }
 
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { isConnected, lastMessage, sendMessage, addMessageHandler } = useWebSocket();
+  const { isConnected, lastMessage, sendMessage, addMessageHandler, socket } = useWebSocket();
   const { toast } = useToast();
   const { user } = useAuth();
-  const messageHandlerRef = useRef<() => void | null>(null);
+  const messageHandlerRef = useRef<(() => void) | null>(null);
+  
+  // Function to dispatch custom events for WebSocket messages
+  const dispatchWebSocketEvent = useCallback((message: WebSocketMessage) => {
+    // Create a custom event with the message data
+    const event = new CustomEvent('websocket-message', {
+      detail: message,
+      bubbles: true,
+    });
+    
+    // Dispatch the event so other components can listen for it
+    document.dispatchEvent(event);
+  }, []);
 
   // Create debounced versions of cache invalidation functions that won't cause page refreshes
   const debouncedInvalidateFriends = useCallback(
@@ -80,7 +94,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   // Handle WebSocket messages
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
     if (!message) return;
-
+    
+    // Dispatch the event for other components to listen for
+    dispatchWebSocketEvent(message);
+    
     // Handle different message types
     switch (message.type) {
       case 'friend_status':
@@ -152,6 +169,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
   }, [
     toast, 
+    dispatchWebSocketEvent,
     debouncedInvalidateFriends, 
     debouncedInvalidateOnline, 
     debouncedInvalidateRequests, 
@@ -189,7 +207,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [sendMessage, user]);
 
   return (
-    <WebSocketContext.Provider value={{ isConnected, lastMessage, sendMessage }}>
+    <WebSocketContext.Provider value={{ 
+      isConnected, 
+      lastMessage, 
+      socket, 
+      sendMessage, 
+      dispatchWebSocketEvent 
+    }}>
       {children}
     </WebSocketContext.Provider>
   );

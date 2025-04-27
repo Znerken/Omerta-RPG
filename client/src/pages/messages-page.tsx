@@ -157,15 +157,16 @@ export default function MessagesPage() {
     if (!user || !isConnected) return;
 
     // Setup message handler for WebSocket messages
-    const handleWebSocketMessage = (data: any) => {
+    const handleWebSocketMessage = (event: Event) => {
       try {
+        const data = (event as CustomEvent).detail;
         console.log('WebSocket message received in messages-page:', data);
 
         if (data.type === 'newMessage' || data.type === 'newGangMessage') {
           // Display notification for new message
           toast({
             title: 'New Message',
-            description: `From ${data.senderName}: ${data.content}`,
+            description: `From ${data.senderName || data.data?.senderName}: ${data.content || data.data?.content}`,
             variant: 'default'
           });
 
@@ -184,11 +185,11 @@ export default function MessagesPage() {
             }, 300);
           }
         } else if (data.type === 'unreadMessages') {
-          setUnreadCount(data.data.count);
+          setUnreadCount(data.data?.count);
         } else if (data.type === 'globalMessage') {
           toast({
             title: 'Global Announcement',
-            description: `${data.senderName}: ${data.content}`,
+            description: `${data.senderName || data.data?.senderName}: ${data.content || data.data?.content}`,
             variant: 'default'
           });
 
@@ -208,10 +209,8 @@ export default function MessagesPage() {
       }
     };
 
-    // Add event listener for messages in WebSocketContext
-    document.addEventListener('websocket-message', (e: any) => {
-      handleWebSocketMessage(e.detail);
-    });
+    // Add event listener for custom websocket events
+    document.addEventListener('websocket-message', handleWebSocketMessage);
 
     return () => {
       // Remove event listener when component unmounts
