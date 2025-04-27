@@ -35,6 +35,7 @@ export async function extractAndValidateToken(req: Request): Promise<any> {
     const authHeader = req.headers.authorization;
     
     if (!authHeader) {
+      console.log('[extractAndValidateToken] No authorization header present');
       return null;
     }
     
@@ -42,25 +43,56 @@ export async function extractAndValidateToken(req: Request): Promise<any> {
     const token = authHeader.split('Bearer ')[1];
     
     if (!token) {
+      console.log('[extractAndValidateToken] No Bearer token found in authorization header');
       return null;
     }
+    
+    // Log token details (first few chars for debugging)
+    console.log('[extractAndValidateToken] Token received (first 15 chars):', token.substring(0, 15) + '...');
     
     // Verify the token
-    const decoded = jwt.decode(token);
+    try {
+      const decoded = jwt.decode(token);
     
-    if (!decoded || typeof decoded !== 'object') {
+      if (!decoded || typeof decoded !== 'object') {
+        console.log('[extractAndValidateToken] Token could not be decoded');
+        return null;
+      }
+      
+      // Check if token is expired
+      const now = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp < now) {
+        console.log('[extractAndValidateToken] Token expired at:', new Date(decoded.exp * 1000).toLocaleString());
+        return null;
+      }
+      
+      // Log token data
+      console.log('[extractAndValidateToken] Valid token for user:', decoded.sub);
+      console.log('[extractAndValidateToken] Token expires at:', new Date(decoded.exp * 1000).toLocaleString());
+      
+      // Double verify with Supabase Auth API
+      try {
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+        
+        if (error || !user) {
+          console.log('[extractAndValidateToken] Supabase rejected token:', error?.message);
+          return null;
+        }
+        
+        console.log('[extractAndValidateToken] Token verified with Supabase for user:', user.id);
+        
+        // Return decoded token to maintain compatibility
+        return decoded;
+      } catch (e) {
+        console.error('[extractAndValidateToken] Error verifying with Supabase API:', e);
+        return decoded; // Fall back to just the decoded token if API verification fails
+      }
+    } catch (decodeError) {
+      console.error('[extractAndValidateToken] Error decoding token:', decodeError);
       return null;
     }
-    
-    // Check if token is expired
-    const now = Math.floor(Date.now() / 1000);
-    if (decoded.exp && decoded.exp < now) {
-      return null;
-    }
-    
-    return decoded;
   } catch (error) {
-    console.error('Error validating JWT token:', error);
+    console.error('[extractAndValidateToken] Error validating JWT token:', error);
     return null;
   }
 }
