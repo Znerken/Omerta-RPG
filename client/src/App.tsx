@@ -37,6 +37,7 @@ import FriendSystemTestPage from "@/pages/friend-system-test";
 import LocationsPage from "@/pages/locations-page";
 import ForgotPasswordPage from "@/pages/forgot-password-page";
 import ResetPasswordPage from "@/pages/reset-password-page";
+import ThrottleDemoPage from "@/pages/throttle-demo-page";
 
 // Protected route with layout wrapper
 function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
@@ -172,6 +173,12 @@ function AppRouter() {
       <Route path="/locations">
         {() => (
           <ProtectedRoute path="/locations" component={() => <ProtectedPage component={LocationsPage} />} />
+        )}
+      </Route>
+      
+      <Route path="/throttle-demo">
+        {() => (
+          <ProtectedRoute path="/throttle-demo" component={() => <ProtectedPage component={ThrottleDemoPage} />} />
         )}
       </Route>
       
