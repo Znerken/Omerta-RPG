@@ -381,10 +381,10 @@ export class GangStorage {
                u.id as user_id, u.username, u.level, u.avatar
         FROM gang_members gm
         JOIN users u ON gm.user_id = u.id
-        WHERE gm.gang_id = $1
+        WHERE gm.gang_id = ${gangId}
       `;
       
-      const result = await db.execute(sql.raw(rawQuery), [gangId]);
+      const result = await db.execute(sql.raw(rawQuery));
       
       // Format the results
       const membersWithDetails = result.rows.map(row => {
@@ -567,34 +567,45 @@ export class GangStorage {
    */
   async updateMemberContribution(userId: number, gangId: number, amount: number): Promise<GangMember | undefined> {
     try {
-      // Get current contribution
-      const [member] = await db
-        .select()
-        .from(gangMembers)
-        .where(
-          and(
-            eq(gangMembers.userId, userId),
-            eq(gangMembers.gangId, gangId)
-          )
-        );
+      // Get current contribution with raw SQL
+      const findQuery = `
+        SELECT * FROM gang_members 
+        WHERE user_id = ${userId} AND gang_id = ${gangId}
+      `;
+      
+      const findResult = await db.execute(sql.raw(findQuery));
+      const member = findResult.rows[0];
       
       if (!member) {
         return undefined;
       }
       
-      // Update contribution
-      const [updatedMember] = await db
-        .update(gangMembers)
-        .set({ contribution: member.contribution + amount })
-        .where(
-          and(
-            eq(gangMembers.userId, userId),
-            eq(gangMembers.gangId, gangId)
-          )
-        )
-        .returning();
+      const currentContribution = member.contribution || 0;
       
-      return updatedMember;
+      // Update contribution with raw SQL
+      const updateQuery = `
+        UPDATE gang_members 
+        SET contribution = ${currentContribution + amount}
+        WHERE user_id = ${userId} AND gang_id = ${gangId}
+        RETURNING *
+      `;
+      
+      const updateResult = await db.execute(sql.raw(updateQuery));
+      const updatedMember = updateResult.rows[0];
+      
+      if (!updatedMember) {
+        return undefined;
+      }
+      
+      // Convert snake_case to camelCase for consistency
+      return {
+        id: updatedMember.id,
+        gangId: updatedMember.gang_id,
+        userId: updatedMember.user_id,
+        role: updatedMember.role,
+        contribution: updatedMember.contribution || 0,
+        joinedAt: updatedMember.joined_at
+      };
     } catch (error) {
       console.error(`Error updating contribution for user ${userId} in gang ${gangId}:`, error);
       return undefined;

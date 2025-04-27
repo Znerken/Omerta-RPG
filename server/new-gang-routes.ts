@@ -61,12 +61,37 @@ gangRouter.get("/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid gang ID" });
     }
     
-    const gang = await gangStorage.getGangWithDetails(id);
+    // Get gang basic details first
+    const gang = await gangStorage.getGang(id);
+    
     if (!gang) {
       return res.status(404).json({ message: "Gang not found" });
     }
     
-    res.json(gang);
+    // Get members manually
+    console.log("Fetching members for gang with ID", id);
+    const members = await gangStorage.getGangMembers(id);
+    console.log("Retrieved members:", members);
+    
+    // Get active wars
+    const activeWars = await gangStorage.getGangActiveWars(id);
+    
+    // Get territories
+    const territories = await gangStorage.getGangTerritories(id);
+    
+    // Get active missions
+    const activeMissions = await gangStorage.getGangActiveMissions(id);
+    
+    // Combine everything
+    const gangWithDetails = {
+      ...gang,
+      members,
+      territories,
+      activeWars,
+      activeMissions
+    };
+    
+    res.json(gangWithDetails);
   } catch (error) {
     console.error("Error fetching gang details:", error);
     res.status(500).json({ message: "Failed to fetch gang details" });

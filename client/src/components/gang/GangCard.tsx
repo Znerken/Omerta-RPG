@@ -37,7 +37,7 @@ import { useNotification } from "@/hooks/use-notification";
 interface GangCardProps {
   gang: Gang & { members?: { id: number; username: string; role: string; user?: any; contribution?: number }[] };
   isUserInGang: boolean;
-  userRank?: string;
+  userRank?: string; // The user's role in the gang, keeping the name "userRank" for API compatibility
   userId: number;
 }
 
@@ -392,7 +392,7 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
                 <ActivityItem
                   time="1 day ago"
                   title="Gang Created"
-                  description={`${gang.members?.find(m => m.rank === "Boss")?.username || "Boss"} founded the gang`}
+                  description={`${gang.members?.find(m => m.role === "Boss")?.username || gang.members?.[0]?.username || "Boss"} founded the gang`}
                   icon={<Award className="h-4 w-4 text-amber-400" />}
                 />
               </div>
@@ -558,20 +558,23 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
   );
 }
 
-// Helper function to get rank colors
-function getRankColor(rank: string) {
-  switch (rank) {
+// Helper function to get role colors
+function getRankColor(role: string) {
+  switch (role) {
     case "Boss":
+    case "Leader":
       return {
         bg: "bg-gradient-to-br from-amber-500 to-amber-700",
         badge: "bg-amber-900/30 border-amber-700/30 text-amber-400"
       };
     case "Underboss":
+    case "Co-Leader":
       return {
         bg: "bg-gradient-to-br from-purple-500 to-purple-700", 
         badge: "bg-purple-900/30 border-purple-700/30 text-purple-400"
       };
     case "Capo":
+    case "Officer":
       return {
         bg: "bg-gradient-to-br from-blue-500 to-blue-700",
         badge: "bg-blue-900/30 border-blue-700/30 text-blue-400" 
@@ -584,14 +587,17 @@ function getRankColor(rank: string) {
   }
 }
 
-// Helper function to get rank icons
-function getRankIcon(rank: string) {
-  switch (rank) {
+// Helper function to get role icons
+function getRankIcon(role: string) {
+  switch (role) {
     case "Boss":
+    case "Leader":
       return <Crown className="h-3.5 w-3.5 mr-1.5" />;
     case "Underboss":
+    case "Co-Leader":
       return <Shield className="h-3.5 w-3.5 mr-1.5" />;
     case "Capo":
+    case "Officer":
       return <Award className="h-3.5 w-3.5 mr-1.5" />;
     default:
       return <Users className="h-3.5 w-3.5 mr-1.5" />;
