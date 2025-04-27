@@ -100,6 +100,9 @@ export function useWebSocket() {
   useEffect(() => {
     if (!user?.id) return; // Don't connect if user is not logged in
     
+    // Track if component is mounted to prevent state updates after unmount
+    let isMounted = true;
+    
     // Create the WebSocket connection
     const connectWebSocket = () => {
       try {
@@ -114,52 +117,131 @@ export function useWebSocket() {
         const wsUrl = `${protocol}//${window.location.host}/ws?userId=${user.id}`;
         
         console.log('Connecting to WebSocket:', wsUrl);
+        
+        // Set a connection timeout in case the WebSocket gets stuck connecting
+        const connectionTimeoutId = setTimeout(() => {
+          if (isMounted && newSocket && newSocket.readyState === WebSocket.CONNECTING) {
+            console.warn('WebSocket connection timeout - forcing reconnect');
+            try {
+              newSocket.close();
+            } catch (e) {
+              // Ignore
+            }
+            if (isMounted) {
+              setIsConnected(false);
+              reconnect();
+            }
+          }
+        }, 10000); // 10 second connection timeout
+        
         const newSocket = new WebSocket(wsUrl);
         
         // Set up event handlers
         newSocket.onopen = () => {
+          clearTimeout(connectionTimeoutId);
+          if (!isMounted) return;
+          
           console.log('WebSocket connection established');
           setIsConnected(true);
           setReconnectAttempt(0); // Reset reconnect attempts on successful connection
           
           // Send an initial message to identify the user
-          newSocket.send(JSON.stringify({ 
-            type: 'identify', 
-            data: { userId: user.id } 
-          }));
+          try {
+            newSocket.send(JSON.stringify({ 
+              type: 'identify', 
+              data: { userId: user.id } 
+            }));
+          } catch (e) {
+            console.error('Error sending identify message:', e);
+          }
+          
+          // Send a heartbeat immediately to verify the connection
+          try {
+            newSocket.send(JSON.stringify({ 
+              type: 'heartbeat', 
+              data: { userId: user.id, timestamp: Date.now() } 
+            }));
+          } catch (e) {
+            console.error('Error sending initial heartbeat:', e);
+          }
         };
         
-        newSocket.onmessage = handleMessage;
+        newSocket.onmessage = (event) => {
+          if (!isMounted) return;
+          try {
+            handleMessage(event);
+          } catch (e) {
+            console.error('Error handling WebSocket message:', e);
+          }
+        };
         
         newSocket.onclose = (event) => {
+          clearTimeout(connectionTimeoutId);
+          if (!isMounted) return;
+          
           console.log('WebSocket disconnected', event.code, event.reason);
           setIsConnected(false);
+          setSocket(null);
           
           // Don't attempt to reconnect if the socket was closed due to logout
-          if (user?.id) {
+          // or if it was a clean closure from the server (code 1000)
+          if (user?.id && event.code !== 1000) {
             reconnect();
           }
         };
         
         newSocket.onerror = (error) => {
+          if (!isMounted) return;
           console.error('WebSocket error:', error);
           // The socket will also emit a close event after an error
         };
         
-        // Store the socket
-        setSocket(newSocket);
+        // Store the socket if component is still mounted
+        if (isMounted) {
+          setSocket(newSocket);
+        }
         
         // Clean up on unmount
         return () => {
-          console.log('Closing WebSocket connection');
-          if (newSocket.readyState === WebSocket.OPEN ||
-              newSocket.readyState === WebSocket.CONNECTING) {
-            newSocket.close();
+          clearTimeout(connectionTimeoutId);
+          
+          if (newSocket) {
+            try {
+              // Only close if it's not already closing or closed
+              if (newSocket.readyState === WebSocket.OPEN ||
+                  newSocket.readyState === WebSocket.CONNECTING) {
+                
+                // First remove event handlers to prevent any callbacks during closing
+                newSocket.onopen = null;
+                newSocket.onmessage = null;
+                newSocket.onclose = null;
+                newSocket.onerror = null;
+                
+                // Send a clean disconnect message if possible
+                if (newSocket.readyState === WebSocket.OPEN) {
+                  try {
+                    newSocket.send(JSON.stringify({
+                      type: 'disconnect',
+                      data: { userId: user.id, reason: 'user_action' }
+                    }));
+                  } catch (e) {
+                    // Ignore errors when sending disconnect message
+                  }
+                }
+                
+                // Then close the connection
+                newSocket.close();
+              }
+            } catch (error) {
+              console.error('Error closing WebSocket:', error);
+            }
           }
         };
       } catch (error) {
         console.error('Error setting up WebSocket:', error);
-        reconnect();
+        if (isMounted) {
+          reconnect();
+        }
         return () => {}; // Empty cleanup function
       }
     };
@@ -169,7 +251,11 @@ export function useWebSocket() {
     
     // Clean up on unmount
     return () => {
-      cleanup();
+      isMounted = false;
+      
+      if (cleanup) {
+        cleanup();
+      }
       
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);

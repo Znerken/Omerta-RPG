@@ -25,6 +25,11 @@ import { sql } from "drizzle-orm";
 import { gangMembers } from "@shared/schema";
 import { getUserStatus, updateUserStatus, createUserStatus } from './social-database';
 
+// Add isAlive property to WebSocket type
+interface ExtendedWebSocket extends WebSocket {
+  isAlive: boolean;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // EMERGENCY TEST ENDPOINT - needs to be registered before any other middleware
   app.get("/api/debug/user/:id", async (req, res) => {
@@ -177,6 +182,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   wss.on('connection', (ws, req) => {
     console.log('WebSocket connection established');
     
+    // Set ping pong tracking
+    const pingTimeout = 30000; // 30 seconds
+    ws.isAlive = true;
+    
+    // Ping handler
+    ws.on('pong', () => {
+      ws.isAlive = true;
+    });
+    
     // Parse user ID from query string
     const url = new URL(req.url || '', `http://${req.headers.host}`);
     const userId = parseInt(url.searchParams.get('userId') || '0', 10);
@@ -186,13 +200,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return ws.close(1008, 'Invalid userId');
     }
     
+    // Check if we already have an active connection from this user
     // Add this client to the map for this user
     if (!clients.has(userId)) {
       clients.set(userId, new Set());
     }
+    
+    // First cleanup any potentially stale connections
+    const existingConnections = clients.get(userId);
+    existingConnections?.forEach(conn => {
+      // If we find any connection that's not OPEN, remove it
+      if (conn.readyState !== WebSocket.OPEN) {
+        existingConnections.delete(conn);
+        try {
+          conn.terminate();
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+      }
+    });
+    
+    // Add the new connection
     clients.get(userId)?.add(ws);
     
     console.log(`User ${userId} connected via WebSocket. Active connections: ${clients.get(userId)?.size}`);
+    
+    // Periodic ping to keep connection alive and detect stale connections
+    const pingInterval = setInterval(() => {
+      if (ws.isAlive === false) {
+        clearInterval(pingInterval);
+        console.log(`Terminating inactive WebSocket for user ${userId}`);
+        return ws.terminate();
+      }
+      
+      ws.isAlive = false;
+      try {
+        ws.ping();
+      } catch (e) {
+        clearInterval(pingInterval);
+        console.error(`Error pinging WebSocket for user ${userId}:`, e);
+        ws.terminate();
+      }
+    }, pingTimeout);
     
     // Send initial notification of unread messages count
     storage.getUnreadMessages(userId).then(messages => {
@@ -316,6 +365,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Handle disconnection
     ws.on('close', () => {
       console.log(`WebSocket connection closed for user ${userId}`);
+      
+      // Clear the ping interval to prevent memory leaks
+      if (pingInterval) {
+        clearInterval(pingInterval);
+      }
+      
+      // Remove this connection from the clients map
       clients.get(userId)?.delete(ws);
       
       // Clean up empty user entries
@@ -331,39 +387,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           try {
-            // Try-catch the getUserStatus call
-            let status = null;
-            try {
-              status = await getUserStatus(userId);
-            } catch (statusErr) {
-              console.error('Error getting user status for offline update:', statusErr);
-            }
-            
-            if (status) {
-              try {
-                await updateUserStatus(userId, {
-                  status: "offline",
-                  lastActive: new Date()
-                });
-              } catch (updateErr) {
-                console.error('Error updating user offline status:', updateErr);
+            // Delay the offline status update briefly in case this is just a reconnect
+            setTimeout(async () => {
+              // Check again if the user has connections before setting offline
+              if (clients.has(userId) && clients.get(userId)?.size > 0) {
+                console.log(`User ${userId} reconnected, not setting offline status`);
+                return;
               }
               
-              // Get friends and notify them about status change
+              // Try-catch the getUserStatus call
+              let status = null;
               try {
-                const friends = await storage.getUserFriends(userId);
-                friends.forEach(friend => {
-                  notifyUser(friend.id, "friend_status", {
-                    userId,
-                    username: userInfo.username,
-                    avatar: userInfo.avatar || null,
-                    status: "offline"
-                  });
-                });
-              } catch (friendsErr) {
-                console.error('Error notifying friends of offline status change:', friendsErr);
+                status = await getUserStatus(userId);
+              } catch (statusErr) {
+                console.error('Error getting user status for offline update:', statusErr);
               }
-            }
+              
+              if (status) {
+                try {
+                  await updateUserStatus(userId, {
+                    status: "offline",
+                    lastActive: new Date()
+                  });
+                } catch (updateErr) {
+                  console.error('Error updating user offline status:', updateErr);
+                }
+                
+                // Get friends and notify them about status change
+                try {
+                  const friends = await storage.getUserFriends(userId);
+                  friends.forEach(friend => {
+                    notifyUser(friend.id, "friend_status", {
+                      userId,
+                      username: userInfo.username,
+                      avatar: userInfo.avatar || null,
+                      status: "offline"
+                    });
+                  });
+                } catch (friendsErr) {
+                  console.error('Error notifying friends of offline status change:', friendsErr);
+                }
+              }
+            }, 5000); // 5-second delay to account for page refreshes and quick reconnects
           } catch (err) {
             console.error('Error in offline status update workflow:', err);
           }

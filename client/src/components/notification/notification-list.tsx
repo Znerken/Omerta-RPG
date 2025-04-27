@@ -100,24 +100,34 @@ export function NotificationList() {
           <div className="flex space-x-1">
             {notifications.length > 0 && (
               <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
                   onClick={() => markAllAsRead()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      markAllAsRead();
+                    }
+                  }}
                 >
                   <Check className="h-4 w-4" />
                   <span className="sr-only">Mark all as read</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
+                </div>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="inline-flex items-center justify-center h-7 w-7 rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer"
                   onClick={() => clearNotifications()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      clearNotifications();
+                    }
+                  }}
                 >
                   <Trash className="h-4 w-4" />
                   <span className="sr-only">Clear all</span>
-                </Button>
+                </div>
               </>
             )}
           </div>
