@@ -410,6 +410,13 @@ export default function BankingPage() {
 
   return (
     <div className="container mx-auto py-6">
+      {/* Link to ATM Banking */}
+      <div className="flex justify-end mb-4">
+        <a href="/banking" className="text-blue-500 hover:text-blue-700 underline">
+          Switch to ATM Banking Interface
+        </a>
+      </div>
+      
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Banking</h1>
         <div className="flex items-center gap-2">
