@@ -385,11 +385,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      console.log(`Ready to link game user ID ${gameUser.id} with Supabase ID ${supabaseUser.id}`);
+      
       // Update the user with the Supabase ID
       const updatedUser = await storage.updateUser(gameUser.id, {
-        supabaseId: supabaseUser.sub,
+        supabaseId: supabaseUser.id, // Use the id property, not sub
         email: supabaseUser.email || gameUser.email // Use Supabase email if available
       });
+      
+      console.log(`Successfully linked game user ID ${gameUser.id} with Supabase ID ${supabaseUser.id}`);
       
       res.json({
         success: true,
@@ -427,28 +431,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Invalid token' });
       }
       
-      console.log('Debug route - token validated for Supabase user:', supabaseUser.sub);
+      console.log('Debug route - token validated for Supabase user:', supabaseUser.id);
       
       // Try to find the user in the game database by Supabase ID
-      let gameUser = await storage.getUserBySupabaseId(supabaseUser.sub);
+      let gameUser = await storage.getUserBySupabaseId(supabaseUser.id);
       let source = 'supabaseId';
       
       // If not found, try email
       if (!gameUser && supabaseUser.email) {
+        console.log(`Debug route - user not found by Supabase ID, trying email: ${supabaseUser.email}`);
         gameUser = await storage.getUserByEmail(supabaseUser.email);
         source = 'email';
         
         // If found by email, update their Supabase ID for future logins
         if (gameUser) {
-          await storage.updateUser(gameUser.id, { supabaseId: supabaseUser.sub });
-          console.log('Updated Supabase ID for user found by email');
+          console.log(`Debug route - user found by email, updating Supabase ID from ${gameUser.supabaseId} to ${supabaseUser.id}`);
+          await storage.updateUser(gameUser.id, { supabaseId: supabaseUser.id });
+          console.log('Debug route - updated Supabase ID for user found by email');
         }
       }
       
       if (!gameUser) {
         return res.status(404).json({
           message: 'No game user found for the authenticated Supabase user',
-          supabaseUserId: supabaseUser.sub,
+          supabaseUserId: supabaseUser.id,
           email: supabaseUser.email || 'unknown'
         });
       }
@@ -458,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         foundBy: source,
         supabaseUser: {
-          id: supabaseUser.sub,
+          id: supabaseUser.id,
           email: supabaseUser.email
         },
         gameUser: {

@@ -21,8 +21,10 @@ export function AccountLinkingForm() {
     if (!supabaseUser) return false;
     
     try {
+      console.log('Checking if Supabase ID is already linked:', supabaseUser.id);
       const response = await apiRequest('GET', `/api/debug/check-supabase-id/${supabaseUser.id}`);
       const data = await response.json();
+      console.log('Link check result:', data);
       return data.linked;
     } catch (error) {
       console.error('Error checking link status:', error);
