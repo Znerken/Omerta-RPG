@@ -6,11 +6,10 @@ import { UserAvatar } from "./UserAvatar";
 import { StatDisplay } from "./StatDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Medal, Shield, ChevronDown, ChevronUp, DollarSign, Banknote, Briefcase } from "lucide-react";
+import { ChevronRight, Medal, Shield, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { MoneyBriefcaseIcon } from "@/components/ui/mafia-icons";
 
 interface MiniProfileProps {
   variant?: "sidebar" | "navbar";
@@ -105,8 +104,7 @@ export function MiniProfile({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center text-xs text-emerald-400">
-                    <DollarSign className="h-3.5 w-3.5 mr-0.5" />
+                  <div className="text-xs text-emerald-400">
                     {formatCurrency(cash)}
                   </div>
                 </TooltipTrigger>
@@ -116,11 +114,12 @@ export function MiniProfile({
               </Tooltip>
             </TooltipProvider>
             
+            <span className="text-muted-foreground text-xs">•</span>
+            
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center text-xs text-blue-400">
-                    <MoneyBriefcaseIcon size="sm" className="mr-0.5 h-3.5 w-3.5" />
+                  <div className="text-xs text-blue-400">
                     {formatCurrency(totalBankBalance)}
                   </div>
                 </TooltipTrigger>
@@ -213,20 +212,14 @@ export function MiniProfile({
       
       {/* Money Info */}
       <div className="mt-2 bg-black/20 rounded-md p-2 grid grid-cols-2 gap-2">
-        <div className="flex items-center">
-          <DollarSign className="h-4 w-4 mr-1 text-emerald-400" />
-          <div>
-            <div className="text-xs text-muted-foreground">Cash</div>
-            <div className="text-sm font-medium text-emerald-400">{formatCurrency(cash)}</div>
-          </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Cash</div>
+          <div className="text-sm font-medium text-emerald-400">{formatCurrency(cash)}</div>
         </div>
         
-        <div className="flex items-center">
-          <MoneyBriefcaseIcon size="sm" className="mr-1 text-blue-400" />
-          <div>
-            <div className="text-xs text-muted-foreground">Bank</div>
-            <div className="text-sm font-medium text-blue-400">{formatCurrency(totalBankBalance)}</div>
-          </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Bank</div>
+          <div className="text-sm font-medium text-blue-400">{formatCurrency(totalBankBalance)}</div>
         </div>
       </div>
       
