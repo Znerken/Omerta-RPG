@@ -216,10 +216,7 @@ export class GangStorage {
         gangData.ownerId
       ];
       
-      const result = await db.execute({
-        text: query,
-        args: params
-      });
+      const result = await db.execute(sql.raw(query, params));
       
       if (result.rows.length === 0) {
         throw new Error("Gang creation failed - no gang returned");
