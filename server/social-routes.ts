@@ -347,7 +347,13 @@ export function registerSocialRoutes(app: Express) {
       
       // Check for reverse friend request (they already sent a request to current user)
       const reverseRequest = await getFriendRequest(validatedData.receiverId, validatedData.senderId);
-      if (reverseRequest && reverseRequest.status === "pending") {
+      
+      // Use the appropriate property based on database structure
+      const isReverseRequestPending = reverseRequest && 
+        (reverseRequest.status === "pending" || 
+         (typeof reverseRequest.status === "undefined" && reverseRequest.sender_id && reverseRequest.receiver_id));
+      
+      if (isReverseRequestPending) {
         // Auto-accept by using our new acceptFriendRequest function
         const result = await acceptFriendRequest(reverseRequest.id);
         

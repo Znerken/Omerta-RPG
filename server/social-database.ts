@@ -337,7 +337,11 @@ export async function getUserWithStatus(
     friendStatus = "friends";
   } else if (friendRequest) {
     // If there's a friend request, use its status
-    if (friendRequest.senderId === currentUserId) {
+    // Handle both column name conventions (senderId vs sender_id)
+    const senderIdValue = friendRequest.sender_id !== undefined ? 
+                           friendRequest.sender_id : friendRequest.senderId;
+    
+    if (senderIdValue === currentUserId) {
       friendStatus = "sent";
     } else {
       friendStatus = "received";
