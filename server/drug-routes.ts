@@ -1402,4 +1402,112 @@ export function registerDrugRoutes(app: Express) {
       res.status(500).json({ error: "Failed to deactivate expired drug effects" });
     }
   });
+  
+  // ========== Debug Endpoints ==========
+  
+  // Debug endpoint to check production readiness
+  app.get("/api/debug/check-production-readiness", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const drugId = req.query.drugId ? parseInt(req.query.drugId as string) : null;
+      
+      if (!drugId) {
+        return res.status(400).json({ error: "Missing drugId parameter" });
+      }
+      
+      console.log(`[DEBUG] Checking production readiness for user ${userId} and drug ${drugId}`);
+      
+      // Get the drug
+      const drug = await drugStorage.getDrug(drugId);
+      if (!drug) {
+        return res.status(404).json({ 
+          error: "Drug not found", 
+          drugId 
+        });
+      }
+      
+      console.log(`[DEBUG] Found drug: ${drug.name}`);
+      
+      // Check if the drug has a recipe
+      const drugWithRecipe = await drugStorage.getDrugWithRecipe(drugId);
+      if (!drugWithRecipe || drugWithRecipe.recipes.length === 0) {
+        console.log(`[DEBUG] No recipes found for drug: ${drug.name}`);
+        return res.status(400).json({ 
+          error: "This drug doesn't have a recipe",
+          drug,
+          debug: "Admin needs to create a recipe connecting this drug with ingredients before production can begin."
+        });
+      }
+      
+      console.log(`[DEBUG] Found ${drugWithRecipe.recipes.length} recipes for drug ${drug.name}`);
+      
+      // Check user's ingredients
+      const ingredientCheck = [];
+      for (const recipe of drugWithRecipe.recipes) {
+        const userIngredient = await drugStorage.getUserIngredient(userId, recipe.ingredientId);
+        const requiredQuantity = recipe.quantity;
+        
+        console.log(`[DEBUG] Checking ingredient: ${recipe.ingredient.name}`);
+        console.log(`[DEBUG] Required quantity: ${requiredQuantity}`);
+        console.log(`[DEBUG] User has: ${userIngredient?.quantity || 0}`);
+        
+        ingredientCheck.push({
+          ingredientId: recipe.ingredientId,
+          ingredientName: recipe.ingredient.name,
+          required: requiredQuantity,
+          available: userIngredient?.quantity || 0,
+          sufficient: userIngredient && userIngredient.quantity >= requiredQuantity
+        });
+      }
+      
+      // Check user's labs
+      const labs = await drugStorage.getUserLabs(userId);
+      
+      res.json({
+        drug,
+        recipes: drugWithRecipe.recipes,
+        ingredientCheck,
+        labs,
+        canProduce: ingredientCheck.every(check => check.sufficient) && labs.length > 0,
+        debug: {
+          userId,
+          drugId,
+          recipeCount: drugWithRecipe.recipes.length,
+          labCount: labs.length
+        }
+      });
+    } catch (error) {
+      console.error("Error checking production readiness:", error);
+      res.status(500).json({ error: "Failed to check production readiness" });
+    }
+  });
+  
+  // Seed ingredients for the current user (for testing purposes)
+  app.post("/api/dev/seed-my-ingredients", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get all ingredients
+      const allIngredients = await drugStorage.getAllIngredients();
+      
+      // Add a significant amount of each ingredient to the user
+      const results = [];
+      for (const ingredient of allIngredients) {
+        const userIngredient = await drugStorage.addIngredientToUser({
+          userId,
+          ingredientId: ingredient.id,
+          quantity: 100 // Give a large quantity for testing
+        });
+        results.push(userIngredient);
+      }
+      
+      res.json({
+        message: `Successfully added ${results.length} ingredient types to your inventory`,
+        ingredients: results
+      });
+    } catch (error) {
+      console.error("Error seeding ingredients:", error);
+      res.status(500).json({ error: "Failed to seed ingredients" });
+    }
+  });
 }
