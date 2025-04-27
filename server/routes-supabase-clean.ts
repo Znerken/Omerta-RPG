@@ -1,12 +1,12 @@
 import type { Express, Request, Response } from 'express';
 import { createServer, type Server } from 'http';
-import { WebSocketServer } from 'ws';
 import { setupAuthRoutes, authProtected, adminProtected, jailProtected } from './auth-supabase-clean';
 import { storage } from './storage-supabase-clean';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { users, stats, crimes, locationChallenges as locations, userStatus } from '@shared/schema';
 import { db } from './db-supabase';
 import { extractAndValidateToken } from './supabase';
+import { registerWebSocketServer } from './websocket-supabase-clean';
 
 /**
  * Register all routes for the API
@@ -16,7 +16,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
   // Register WebSocket server
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  registerWebSocketServer(httpServer);
   
   // Set up WebSocket connection handler
   import('./websocket-supabase-clean').then(({ registerWebSocketServer }) => {

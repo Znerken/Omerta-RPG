@@ -3,7 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { initializeDatabase, createTables, syncSupabaseUsers } from './db-supabase';
 import { registerRoutes } from './routes-supabase-clean';
-import { setupViteServer } from './vite';
+import { setupVite } from './vite';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -37,13 +37,13 @@ async function startServer() {
     // Sync Supabase users to game database
     await syncSupabaseUsers();
 
+    // Register API routes and get HTTP server
+    const server = await registerRoutes(app);
+    
     // Set up development environment if needed
     if (process.env.NODE_ENV === 'development') {
-      await setupViteServer(app);
+      await setupVite(app, server);
     }
-
-    // Register API routes
-    const server = await registerRoutes(app);
 
     // Start server
     server.listen(PORT, () => {
