@@ -10,6 +10,7 @@ import { ZodError } from "zod";
 import { storage } from "./storage";
 import { isAuthenticated, isAdmin } from "./middleware/auth";
 import { sql } from "drizzle-orm";
+import { db } from "./db";
 
 // Initialize router
 const gangRouter = Router();
@@ -588,8 +589,47 @@ gangRouter.post("/:id/bank/withdraw", isAuthenticated, async (req: Request, res:
 gangRouter.get("/territories", async (req: Request, res: Response) => {
   try {
     console.log("Fetching all territories");
-    const territories = await gangStorage.getAllTerritories();
-    console.log("Retrieved territories:", territories);
+    
+    // Add user context for better debugging
+    if (req.user) {
+      console.log("User requesting territories:", req.user.id, req.user.username);
+      console.log("User gangId:", req.user.gangId);
+    } else {
+      console.log("No authenticated user for territories request");
+    }
+    
+    // Make sure we have valid data even if the storage method fails
+    let territories;
+    try {
+      territories = await gangStorage.getAllTerritories();
+      console.log("Retrieved territories from storage:", territories);
+    } catch (storageError) {
+      console.error("Error using storage method for territories:", storageError);
+      
+      // Fallback to direct SQL query if storage method fails
+      try {
+        const result = await db.execute(sql`
+          SELECT * FROM gang_territories
+        `);
+        territories = result.rows.map(row => ({
+          id: row.id,
+          name: row.name || "Unknown Territory",
+          description: row.description,
+          controlledBy: row.controlled_by || row.controlledBy,
+          income: row.income || 0,
+          defenseBonus: row.defense_bonus || row.defenseBonus || 0,
+          image: row.image,
+          attackCooldown: row.attack_cooldown || row.attackCooldown
+        }));
+        console.log("Retrieved territories from direct SQL:", territories);
+      } catch (sqlError) {
+        console.error("Error with direct SQL for territories:", sqlError);
+        territories = []; // Empty array as last resort
+      }
+    }
+    
+    // Default to empty array if we still don't have valid data
+    territories = territories || [];
     
     // Modify the response to include the gang name for each controlled territory
     const territoriesWithGangData = await Promise.all(
@@ -632,7 +672,68 @@ gangRouter.get("/territories/:id", async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid territory ID" });
     }
     
-    const territory = await gangStorage.getTerritoryWithDetails(id);
+    console.log(`Fetching specific territory with ID ${id}`);
+    
+    // Add user context for better debugging
+    if (req.user) {
+      console.log(`User requesting territory ${id}:`, req.user.id, req.user.username);
+      console.log("User gangId:", req.user.gangId);
+    }
+    
+    // Try to get the territory details - use fallbacks if the main method fails
+    let territory;
+    try {
+      territory = await gangStorage.getTerritoryWithDetails(id);
+      console.log(`Retrieved territory ${id} from storage:`, territory);
+    } catch (storageError) {
+      console.error(`Error using storage method for territory ${id}:`, storageError);
+      
+      // Fallback to direct SQL query if storage method fails
+      try {
+        const result = await db.execute(sql`
+          SELECT * FROM gang_territories WHERE id = ${id}
+        `);
+        
+        if (result.rows.length > 0) {
+          const row = result.rows[0];
+          territory = {
+            id: row.id,
+            name: row.name || "Unknown Territory",
+            description: row.description,
+            controlledBy: row.controlled_by || row.controlledBy,
+            income: row.income || 0,
+            defenseBonus: row.defense_bonus || row.defenseBonus || 0,
+            image: row.image,
+            attackCooldown: row.attack_cooldown || row.attackCooldown
+          };
+          
+          // If the territory is controlled by a gang, get the gang details
+          if (territory.controlledBy) {
+            try {
+              const gangResult = await db.execute(sql`
+                SELECT * FROM gangs WHERE id = ${territory.controlledBy}
+              `);
+              
+              if (gangResult.rows.length > 0) {
+                const gang = gangResult.rows[0];
+                territory.controllingGang = {
+                  id: gang.id,
+                  name: gang.name,
+                  tag: gang.tag || gang.name.substring(0, 3).toUpperCase()
+                };
+              }
+            } catch (gangError) {
+              console.error(`Error fetching controlling gang for territory ${id}:`, gangError);
+            }
+          }
+          
+          console.log(`Retrieved territory ${id} from direct SQL:`, territory);
+        }
+      } catch (sqlError) {
+        console.error(`Error with direct SQL for territory ${id}:`, sqlError);
+      }
+    }
+    
     if (!territory) {
       return res.status(404).json({ message: "Territory not found" });
     }
