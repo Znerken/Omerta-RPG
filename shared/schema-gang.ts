@@ -25,7 +25,7 @@ export const gangMembers = pgTable("gang_members", {
   id: serial("id").primaryKey(),
   gangId: integer("gang_id").notNull().references(() => gangs.id),
   userId: integer("user_id").notNull().references(() => users.id),
-  rank: text("rank").notNull().default("Soldier"), // Leader, Underboss, Capo, Soldier
+  role: text("role").notNull().default("Soldier"), // Leader, Underboss, Capo, Soldier
   contribution: integer("contribution").notNull().default(0),
   joinedAt: timestamp("joined_at").defaultNow(),
 }, (table) => {
@@ -111,7 +111,7 @@ export const insertGangSchema = createInsertSchema(gangs).pick({
 export const insertGangMemberSchema = createInsertSchema(gangMembers).pick({
   gangId: true,
   userId: true,
-  rank: true,
+  role: true,
 });
 
 export const insertGangTerritorySchema = createInsertSchema(gangTerritories).pick({
