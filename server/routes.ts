@@ -12,7 +12,7 @@ import { registerAchievementRoutes } from './achievement-routes';
 import { registerAdminRoutes } from './admin-routes';
 import { registerSocialRoutes } from './social-routes';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { users, userStats, crimes, locations } from '@shared/schema';
+import { users, userStats, crimes, locationChallenges as locations } from '@shared/schema';
 import { db } from './db-supabase';
 import { extractAndValidateToken } from './supabase';
 
@@ -119,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Also add some XP to the user
       await storage.updateUser(userId, {
-        experience: req.user.experience + 10
+        xp: req.user.xp + 10
       });
       
       res.json(updatedStats);
@@ -132,7 +132,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Crime routes
   app.get('/api/crimes', async (req: Request, res: Response) => {
     try {
-      const crimesList = await db.select().from(crimes).orderBy(crimes.difficulty);
+      // Order by difficulty (if defined) or fall back to ID
+      const crimesList = await db.select().from(crimes);
       res.json(crimesList);
     } catch (error) {
       console.error('Error fetching crimes:', error);
@@ -156,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User stats not found' });
       }
       
-      // Calculate success probability based on user stats and crime difficulty
+      // Calculate success probability based on user stats and crime weight
       let successProbability = 0.5; // Base probability
       
       // Adjust based on stats
@@ -166,8 +167,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       successProbability += statWeight * (userStats.charisma / 100);
       successProbability += statWeight * (userStats.intelligence / 100);
       
-      // Adjust based on crime difficulty
-      successProbability -= (crimeData.difficulty * 0.1);
+      // Adjust based on crime difficulty (using average of all weights as indicator)
+      const difficultyFactor = (crimeData.strengthWeight + crimeData.stealthWeight + 
+                               crimeData.charismaWeight + crimeData.intelligenceWeight) / 4 * 0.01;
+      successProbability -= difficultyFactor;
       
       // Ensure probability is between 0.1 and 0.9
       successProbability = Math.min(0.9, Math.max(0.1, successProbability));
@@ -177,32 +180,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (success) {
         // Crime was successful
-        // Reward the player with cash and XP
-        const cashReward = crimeData.reward * (1 + Math.random() * 0.2); // Random bonus up to 20%
-        const xpReward = crimeData.xp * (1 + Math.random() * 0.2);
+        // Reward the player with cash and XP from crime min/max ranges
+        const cashReward = Math.floor(
+          crimeData.minCashReward + 
+          Math.random() * (crimeData.maxCashReward - crimeData.minCashReward)
+        );
+        const xpReward = Math.floor(
+          crimeData.minXpReward + 
+          Math.random() * (crimeData.maxXpReward - crimeData.minXpReward)
+        );
         
         await storage.updateUser(req.user.id, {
-          cash: req.user.cash + Math.round(cashReward),
-          experience: req.user.experience + Math.round(xpReward)
+          cash: req.user.cash + cashReward,
+          xp: req.user.xp + xpReward
         });
         
         return res.json({
           success: true,
           caught: false,
-          cashReward: Math.round(cashReward),
-          xpReward: Math.round(xpReward),
-          message: `You successfully completed the ${crimeData.name} and earned $${Math.round(cashReward)} and ${Math.round(xpReward)} XP.`
+          cashReward: cashReward,
+          xpReward: xpReward,
+          message: `You successfully completed the ${crimeData.name} and earned $${cashReward} and ${xpReward} XP.`
         });
       } else {
         // Crime failed - determine if player was caught
-        const catchProbability = 0.7; // 70% chance of being caught if failed
+        const catchProbability = crimeData.jailRisk / 100; // Use configured jail risk
         const caught = Math.random() < catchProbability;
         
         if (caught) {
           // Player was caught and goes to jail
           const now = new Date();
           const jailTime = new Date(now);
-          jailTime.setMinutes(jailTime.getMinutes() + crimeData.difficulty * 5); // 5 minutes per difficulty level
+          jailTime.setMinutes(jailTime.getMinutes() + crimeData.jailTime); // Use configured jail time
           
           await storage.updateUser(req.user.id, {
             isJailed: true,
