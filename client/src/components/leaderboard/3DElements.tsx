@@ -282,39 +282,39 @@ export function FallbackLeaderboard({ players, activeTab }: { players: any[], ac
                     />
                   ) : player.id === 1 ? (
                     // Show extortionist avatar for player id 1
-                    <img 
-                      src="/images/avatars/mobster1.jpg" 
-                      alt={`${player.username}'s avatar`} 
-                      className="h-full w-full object-cover"
-                    />
+                    <div className="h-full w-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                      <div className="text-2xl font-bold text-amber-500">
+                        {player.username.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
                   ) : player.id === 7 ? (
                     // Show tester avatar for player id 7
-                    <img 
-                      src="/images/avatars/mobster2.jpg" 
-                      alt={`${player.username}'s avatar`} 
-                      className="h-full w-full object-cover"
-                    />
+                    <div className="h-full w-full bg-gradient-to-br from-red-900 to-gray-900 flex items-center justify-center">
+                      <div className="text-2xl font-bold text-red-400">
+                        {player.username.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
                   ) : player.id === 9 ? (
                     // Show Toffe avatar for player id 9
-                    <img 
-                      src="/images/avatars/mobster3.jpg" 
-                      alt={`${player.username}'s avatar`} 
-                      className="h-full w-full object-cover"
-                    />
+                    <div className="h-full w-full bg-gradient-to-br from-blue-900 to-gray-900 flex items-center justify-center">
+                      <div className="text-2xl font-bold text-blue-400">
+                        {player.username.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
                   ) : player.id === 10 ? (
                     // Show yaboi avatar for player id 10
-                    <img 
-                      src="/images/avatars/mobster4.jpg" 
-                      alt={`${player.username}'s avatar`} 
-                      className="h-full w-full object-cover"
-                    />
+                    <div className="h-full w-full bg-gradient-to-br from-purple-900 to-gray-900 flex items-center justify-center">
+                      <div className="text-2xl font-bold text-purple-400">
+                        {player.username.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
                   ) : player.id === 11 ? (
                     // Show TEST123 avatar for player id 11
-                    <img 
-                      src="/images/avatars/mobster5.jpg" 
-                      alt={`${player.username}'s avatar`} 
-                      className="h-full w-full object-cover"
-                    />
+                    <div className="h-full w-full bg-gradient-to-br from-green-900 to-gray-900 flex items-center justify-center">
+                      <div className="text-2xl font-bold text-green-400">
+                        {player.username.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
                   ) : (
                     // Default placeholder for other players
                     <div className={`text-3xl font-bold ${
