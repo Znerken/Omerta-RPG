@@ -174,14 +174,17 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         description: "Welcome back to OMERTÀ",
       });
       
-      console.log('Login successful, preparing for reload with new session');
+      console.log('Login successful, preparing navigation');
       
-      // Instead of forcing a full reload, just invalidate the queries
-      // This avoids the reload loops that were causing issues
+      // Invalidate the user query to fetch fresh data
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
-      // Still wait a bit for the session to be registered
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Wait for the session to be registered and toast to be shown
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Explicitly navigate to the dashboard
+      console.log('Navigating to dashboard');
+      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({
@@ -224,14 +227,17 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         description: "Welcome to OMERTÀ! Please check your email to confirm your account.",
       });
       
-      console.log('Registration successful, preparing for reload with new session');
+      console.log('Registration successful, preparing navigation');
       
-      // Instead of forcing a full reload, just invalidate the queries
-      // This avoids the reload loops that were causing issues
+      // Invalidate the user query to fetch fresh data
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
       
-      // Still wait a bit for the session to be registered and the toast to be read
+      // Wait for the session to be registered and toast to be shown
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Explicitly navigate to the dashboard
+      console.log('Navigating to dashboard');
+      window.location.href = '/';
     },
     onError: (error: Error) => {
       toast({
