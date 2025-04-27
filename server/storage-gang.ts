@@ -36,12 +36,33 @@ export class GangStorage {
    */
   async getAllGangs(): Promise<Gang[]> {
     try {
-      // Get all gangs
-      const allGangs = await db.select().from(gangs);
+      console.log("Getting all gangs - handling potential schema issues");
+      
+      // Use a direct SQL query to avoid ORM schema issues
+      const result = await db.execute(sql.raw(`
+        SELECT * FROM gangs
+      `));
+      
+      // Map the results to our expected Gang type format
+      const gangs = result.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        tag: row.tag || "",
+        description: row.description,
+        logo: row.logo,
+        bankBalance: row.bank_balance || 0,
+        level: row.level || 1,
+        experience: row.experience || 0,
+        respect: row.respect || 0,
+        strength: row.strength || 10,
+        defense: row.defense || 10,
+        ownerId: row.leader_id || row.owner_id, // Handle both column names
+        createdAt: row.created_at
+      }));
       
       // For each gang, get the member count
       const results = await Promise.all(
-        allGangs.map(async (gang) => {
+        gangs.map(async (gang) => {
           const memberCount = await this.getGangMemberCount(gang.id);
           return {
             ...gang,
@@ -62,8 +83,33 @@ export class GangStorage {
    */
   async getGang(id: number): Promise<Gang | undefined> {
     try {
-      const [gang] = await db.select().from(gangs).where(eq(gangs.id, id));
-      return gang;
+      // Use direct SQL to avoid schema issues
+      const result = await db.execute(sql.raw(`
+        SELECT * FROM gangs WHERE id = ${id}
+      `));
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map to our expected Gang interface
+      return {
+        id: row.id,
+        name: row.name,
+        tag: row.tag || "",
+        description: row.description,
+        logo: row.logo,
+        bankBalance: row.bank_balance || 0,
+        level: row.level || 1,
+        experience: row.experience || 0,
+        respect: row.respect || 0,
+        strength: row.strength || 10,
+        defense: row.defense || 10,
+        ownerId: row.leader_id || row.owner_id, // Handle both column names
+        createdAt: row.created_at
+      };
     } catch (error) {
       console.error(`Error getting gang with ID ${id}:`, error);
       return undefined;
@@ -75,8 +121,33 @@ export class GangStorage {
    */
   async getGangByName(name: string): Promise<Gang | undefined> {
     try {
-      const [gang] = await db.select().from(gangs).where(eq(gangs.name, name));
-      return gang;
+      // Use direct SQL to avoid schema issues
+      const result = await db.execute(sql.raw(`
+        SELECT * FROM gangs WHERE name = '${name}'
+      `));
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map to our expected Gang interface
+      return {
+        id: row.id,
+        name: row.name,
+        tag: row.tag || "",
+        description: row.description,
+        logo: row.logo,
+        bankBalance: row.bank_balance || 0,
+        level: row.level || 1,
+        experience: row.experience || 0,
+        respect: row.respect || 0,
+        strength: row.strength || 10,
+        defense: row.defense || 10,
+        ownerId: row.leader_id || row.owner_id, // Handle both column names
+        createdAt: row.created_at
+      };
     } catch (error) {
       console.error(`Error getting gang with name ${name}:`, error);
       return undefined;
@@ -88,8 +159,33 @@ export class GangStorage {
    */
   async getGangByTag(tag: string): Promise<Gang | undefined> {
     try {
-      const [gang] = await db.select().from(gangs).where(eq(gangs.tag, tag));
-      return gang;
+      // Use direct SQL to avoid schema issues
+      const result = await db.execute(sql.raw(`
+        SELECT * FROM gangs WHERE tag = '${tag}'
+      `));
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      const row = result.rows[0];
+      
+      // Map to our expected Gang interface
+      return {
+        id: row.id,
+        name: row.name,
+        tag: row.tag || "",
+        description: row.description,
+        logo: row.logo,
+        bankBalance: row.bank_balance || 0,
+        level: row.level || 1,
+        experience: row.experience || 0,
+        respect: row.respect || 0,
+        strength: row.strength || 10,
+        defense: row.defense || 10,
+        ownerId: row.leader_id || row.owner_id, // Handle both column names
+        createdAt: row.created_at
+      };
     } catch (error) {
       console.error(`Error getting gang with tag ${tag}:`, error);
       return undefined;
@@ -101,7 +197,44 @@ export class GangStorage {
    */
   async createGang(gangData: InsertGang): Promise<Gang> {
     try {
-      const [newGang] = await db.insert(gangs).values(gangData).returning();
+      console.log("[Gang Storage] Creating gang with data:", gangData);
+      
+      // Use direct SQL to avoid schema issues and handle different column names
+      const sql = `
+        INSERT INTO gangs 
+        (name, tag, description, logo, ${gangData.ownerId ? 'owner_id' : ''}) 
+        VALUES 
+        ('${gangData.name}', '${gangData.tag}', '${gangData.description || ""}', '${gangData.logo || ""}', ${gangData.ownerId || 'NULL'})
+        RETURNING *
+      `;
+      
+      const result = await db.execute(sql.raw(sql));
+      
+      if (result.rows.length === 0) {
+        throw new Error("Gang creation failed - no gang returned");
+      }
+      
+      const row = result.rows[0];
+      
+      // Map to Gang interface
+      const newGang: Gang = {
+        id: row.id,
+        name: row.name,
+        tag: row.tag || "",
+        description: row.description,
+        logo: row.logo,
+        bankBalance: row.bank_balance || 0,
+        level: row.level || 1, 
+        experience: row.experience || 0,
+        respect: row.respect || 0,
+        strength: row.strength || 10,
+        defense: row.defense || 10,
+        ownerId: row.leader_id || row.owner_id,
+        createdAt: row.created_at
+      };
+      
+      console.log("[Gang Storage] Gang created successfully:", newGang);
+      
       return newGang;
     } catch (error) {
       console.error("Error creating gang:", error);
