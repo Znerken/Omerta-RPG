@@ -208,33 +208,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // Auto-update user status to online when they connect
     
-    // Update the user's status to online
-    getUserStatus(userId).then(async (status) => {
-      if (status) {
-        // Update existing status to online
-        await updateUserStatus(userId, {
-          status: "online",
-          lastActive: new Date()
-        });
-      } else {
-        // Create new status as online
-        await createUserStatus({
-          userId,
-          status: "online",
-          lastActive: new Date(),
-          lastLocation: null
-        });
+    // First check if user exists before attempting to update status
+    storage.getUser(userId).then(async (userInfo) => {
+      if (!userInfo) {
+        console.error('Could not find user info for status update, userId:', userId);
+        return; // Skip if user doesn't exist
       }
       
-      // Notify friends about this user coming online
-      // First get the complete user info to ensure we have accurate data
-      storage.getUser(userId).then(userInfo => {
-        if (!userInfo) {
-          console.error('Could not find user info for status update, userId:', userId);
-          return;
+      try {
+        // Update the user's status to online
+        const status = await getUserStatus(userId);
+        if (status) {
+          // Update existing status to online
+          await updateUserStatus(userId, {
+            status: "online",
+            lastActive: new Date()
+          });
+        } else {
+          // Create new status as online
+          await createUserStatus({
+            userId,
+            status: "online",
+            lastActive: new Date(),
+            lastLocation: null
+          });
         }
         
-        // Then get and notify all friends
+        // Notify friends about this user coming online
         storage.getUserFriends(userId).then(friends => {
           friends.forEach(friend => {
             notifyUser(friend.id, "friend_status", {
@@ -247,9 +247,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }).catch(err => {
           console.error('Error notifying friends of status change:', err);
         });
-      }).catch(err => {
-        console.error('Error getting user info for status update:', err);
-      });
+      } catch (err) {
+        console.error('Error updating user status:', err);
+      }
     }).catch(err => {
       console.error('Error updating user status to online:', err);
     });
@@ -295,40 +295,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clients.delete(userId);
         
         // Update user status to offline if they have no more connections
-        getUserStatus(userId).then(async (status) => {
-          if (status) {
-            await updateUserStatus(userId, {
-              status: "offline",
-              lastActive: new Date()
-            });
-            
-            // Notify friends about status change
-            // First get the user info to ensure accurate data
-            storage.getUser(userId).then(userInfo => {
-              if (!userInfo) {
-                console.error('Could not find user info for offline status update, userId:', userId);
-                return;
-              }
-              
-              // Then notify friends
-              storage.getUserFriends(userId).then(friends => {
-                friends.forEach(friend => {
-                  notifyUser(friend.id, "friend_status", {
-                    userId,
-                    username: userInfo.username,
-                    avatar: userInfo.avatar || null,
-                    status: "offline"
-                  });
-                });
-              }).catch(err => {
-                console.error('Error notifying friends of offline status:', err);
+        // First check if user exists before proceeding
+        storage.getUser(userId).then(async (userInfo) => {
+          if (!userInfo) {
+            console.error('Could not find user info for offline status update, userId:', userId);
+            return; // Skip if user doesn't exist
+          }
+          
+          try {
+            const status = await getUserStatus(userId);
+            if (status) {
+              await updateUserStatus(userId, {
+                status: "offline",
+                lastActive: new Date()
               });
-            }).catch(err => {
-              console.error('Error getting user info for offline status update:', err);
-            });
+              
+              // Get friends and notify them about status change
+              const friends = await storage.getUserFriends(userId);
+              friends.forEach(friend => {
+                notifyUser(friend.id, "friend_status", {
+                  userId,
+                  username: userInfo.username,
+                  avatar: userInfo.avatar || null,
+                  status: "offline"
+                });
+              });
+            }
+          } catch (err) {
+            console.error('Error updating user offline status:', err);
           }
         }).catch(err => {
-          console.error('Error updating user status to offline:', err);
+          console.error('Error getting user info for offline status update:', err);
         });
       }
     });
