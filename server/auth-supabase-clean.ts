@@ -21,10 +21,11 @@ export function setupAuthRoutes(app: Express) {
   // Authentication middleware for all API routes
   app.use(async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Skip auth for non-API routes and auth-related routes
+      // Skip auth for non-API routes and public API routes
       if (!req.path.startsWith('/api') || 
           req.path === '/api/register' || 
-          req.path === '/api/check-username-email') {
+          req.path === '/api/check-username-email' ||
+          req.path === '/api/config') { // Add config endpoint to public routes
         return next();
       }
 

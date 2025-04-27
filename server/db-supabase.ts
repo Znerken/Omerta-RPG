@@ -250,7 +250,11 @@ export async function syncSupabaseUsers(): Promise<void> {
           // Link existing user to Supabase
           await db
             .update(users)
-            .set({ supabaseId: supabaseUser.id, lastSeen: new Date() })
+            .set({ 
+              supabaseId: supabaseUser.id,
+              // Update last_seen field using native column name
+              last_seen: new Date() 
+            })
             .where(eq(users.id, gameUser.id));
           
           console.log(`Linked existing user ${gameUser.username} to Supabase ID ${supabaseUser.id}`);
@@ -260,29 +264,47 @@ export async function syncSupabaseUsers(): Promise<void> {
           const username = supabaseUser.user_metadata?.username || 
             `user_${Math.random().toString(36).substring(2, 8)}`;
           
-          const [newUser] = await db
-            .insert(users)
-            .values({
-              username,
-              email: supabaseUser.email,
-              password: 'SUPABASE_AUTH', // Placeholder as auth is handled by Supabase
-              supabaseId: supabaseUser.id,
-              level: 1,
-              xp: 0,
-              cash: 1000,
-              respect: 0,
-              isAdmin: false,
-              isJailed: false,
-              status: 'offline',
-              lastSeen: new Date(),
-              createdAt: new Date()
-            })
-            .returning();
+          // Use raw SQL to avoid field mapping issues
+          const insertResult = await db.execute(sql`
+            INSERT INTO users (
+              username, 
+              email, 
+              password, 
+              supabase_id, 
+              level, 
+              xp, 
+              cash, 
+              respect, 
+              is_admin, 
+              is_jailed, 
+              status, 
+              last_seen, 
+              created_at
+            ) 
+            VALUES (
+              ${username}, 
+              ${supabaseUser.email}, 
+              'SUPABASE_AUTH', 
+              ${supabaseUser.id}, 
+              1, 
+              0, 
+              1000, 
+              0, 
+              false, 
+              false, 
+              'offline', 
+              ${new Date()}, 
+              ${new Date()}
+            )
+            RETURNING *
+          `);
+          
+          const newUser = insertResult.rows[0];
           
           // Create stats for new user
           if (newUser) {
             await db.execute(sql`
-              INSERT INTO user_stats (user_id, strength, stealth, charisma, intelligence)
+              INSERT INTO stats (user_id, strength, stealth, charisma, intelligence)
               VALUES (${newUser.id}, 10, 10, 10, 10)
             `);
             

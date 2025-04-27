@@ -1,82 +1,33 @@
 import type { Express, Request, Response } from 'express';
 import { createServer, type Server } from 'http';
-import { setupAuthRoutes, authProtected, adminProtected, jailProtected } from './auth-supabase-clean';
-import { storage } from './storage-supabase-clean';
+import { setupAuthRoutes, authProtected, adminProtected, jailProtected, checkUsernameEmail } from './auth-supabase';
+import { storage } from './storage-supabase';
+import { createWebSocketServer } from './websocket-supabase';
+import { registerProfileRoutes } from './profile-routes';
+import { registerCasinoRoutes } from './casino-routes';
+import { registerDrugRoutes } from './drug-routes';
+import { registerBankingRoutes } from './banking-routes';
+import { registerGangRoutes } from './gang-routes';
+import { registerAchievementRoutes } from './achievement-routes';
+import { registerAdminRoutes } from './admin-routes';
+import { registerSocialRoutes } from './social-routes';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { users, stats, crimes, locationChallenges as locations, userStatus } from '@shared/schema';
+import { users, stats, crimes } from '@shared/schema';
 import { db } from './db-supabase';
-import { extractAndValidateToken } from './supabase';
-import { registerWebSocketServer } from './websocket-supabase-clean';
 
 /**
  * Register all routes for the API
  */
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Create HTTP server
-  const httpServer = createServer(app);
-  
-  // Register WebSocket server
-  registerWebSocketServer(httpServer);
-  
-  // Set up Supabase authentication routes
+  // Authenticate all requests with Supabase
   setupAuthRoutes(app);
   
-  // Config route to provide Supabase credentials to the client
+  // Provide Supabase credentials to the client
   app.get('/api/config', (req: Request, res: Response) => {
     res.json({
       VITE_SUPABASE_URL: process.env.SUPABASE_URL,
       VITE_SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
     });
-  });
-  
-  // Debug route for auth testing
-  app.get('/api/debug/auth-check', async (req: Request, res: Response) => {
-    try {
-      console.log('Debug auth-check endpoint called');
-      console.log('Headers:', req.headers);
-      
-      // Extract token
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        return res.status(401).json({ message: 'No authorization header found' });
-      }
-      
-      const token = authHeader.split('Bearer ')[1];
-      if (!token) {
-        return res.status(401).json({ message: 'No bearer token found' });
-      }
-      
-      // Validate token
-      const user = await extractAndValidateToken(req);
-      if (!user) {
-        return res.status(401).json({ message: 'Invalid token' });
-      }
-      
-      // Check if game user exists
-      const gameUser = await db.query.users.findFirst({
-        where: eq(users.supabaseId, user.id)
-      });
-      
-      if (!gameUser) {
-        return res.status(401).json({ 
-          message: 'No game user linked to this Supabase account',
-          supabaseUser: user.id,
-          needsLinking: true
-        });
-      }
-      
-      // Success - valid token with linked game user
-      return res.json({
-        message: 'Valid token',
-        supabaseUser: user.id,
-        gameUser: gameUser.id,
-        username: gameUser.username,
-        isAdmin: gameUser.isAdmin
-      });
-    } catch (error) {
-      console.error('Error in auth-check endpoint:', error);
-      res.status(500).json({ message: 'Server error during auth check' });
-    }
   });
 
   // User-related routes
@@ -91,6 +42,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching user stats:', error);
       res.status(500).json({ message: 'Failed to fetch user stats' });
+    }
+  });
+
+  app.post('/api/check-username-email', async (req: Request, res: Response) => {
+    try {
+      const { username, email } = req.body;
+      
+      if (!username || !email) {
+        return res.status(400).json({ message: 'Username and email are required' });
+      }
+      
+      const isAvailable = await checkUsernameEmail(username, email);
+      
+      if (isAvailable) {
+        return res.json({ available: true });
+      } else {
+        return res.status(400).json({ message: 'Username or email is already taken' });
+      }
+    } catch (error) {
+      console.error('Error checking username/email:', error);
+      res.status(500).json({ message: 'Failed to check username/email availability' });
+    }
+  });
+  
+  // Get email by username (for dual login functionality)
+  app.post('/api/get-email-by-username', async (req: Request, res: Response) => {
+    try {
+      console.log('Got request for email by username:', req.body);
+      const { username } = req.body;
+      
+      if (!username) {
+        console.log('Username is missing in request');
+        return res.status(400).json({ message: 'Username is required' });
+      }
+      
+      console.log('Looking up user with username:', username);
+      
+      // Look up the user by username
+      const user = await db.select({ email: users.email })
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+      
+      console.log('Query result:', user);
+      
+      if (!user.length) {
+        console.log('No user found with username:', username);
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      console.log('Found email for username:', username, user[0].email);
+      
+      // Return the email
+      res.json({ email: user[0].email });
+    } catch (error) {
+      console.error('Error retrieving email by username:', error);
+      res.status(500).json({ message: 'Failed to retrieve email' });
     }
   });
 
@@ -154,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Also add some XP to the user
       await storage.updateUser(userId, {
-        xp: req.user.xp + 10
+        experience: req.user.experience + 10
       });
       
       res.json(updatedStats);
@@ -167,7 +175,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Crime routes
   app.get('/api/crimes', async (req: Request, res: Response) => {
     try {
-      const crimesList = await db.select().from(crimes);
+      const crimesList = await db.select().from(crimes).orderBy(crimes.difficulty);
       res.json(crimesList);
     } catch (error) {
       console.error('Error fetching crimes:', error);
@@ -191,7 +199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User stats not found' });
       }
       
-      // Calculate success probability based on user stats and crime weight
+      // Calculate success probability based on user stats and crime difficulty
       let successProbability = 0.5; // Base probability
       
       // Adjust based on stats
@@ -201,10 +209,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       successProbability += statWeight * (userStats.charisma / 100);
       successProbability += statWeight * (userStats.intelligence / 100);
       
-      // Adjust based on crime difficulty (using average of all weights as indicator)
-      const difficultyFactor = (crimeData.strengthWeight + crimeData.stealthWeight + 
-                               crimeData.charismaWeight + crimeData.intelligenceWeight) / 4 * 0.01;
-      successProbability -= difficultyFactor;
+      // Adjust based on crime difficulty
+      successProbability -= (crimeData.difficulty * 0.1);
       
       // Ensure probability is between 0.1 and 0.9
       successProbability = Math.min(0.9, Math.max(0.1, successProbability));
@@ -214,38 +220,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (success) {
         // Crime was successful
-        // Reward the player with cash and XP from crime min/max ranges
-        const cashReward = Math.floor(
-          crimeData.minCashReward + 
-          Math.random() * (crimeData.maxCashReward - crimeData.minCashReward)
-        );
-        const xpReward = Math.floor(
-          crimeData.minXpReward + 
-          Math.random() * (crimeData.maxXpReward - crimeData.minXpReward)
-        );
+        // Reward the player with cash and XP
+        const cashReward = crimeData.reward * (1 + Math.random() * 0.2); // Random bonus up to 20%
+        const xpReward = crimeData.xp * (1 + Math.random() * 0.2);
         
         await storage.updateUser(req.user.id, {
-          cash: req.user.cash + cashReward,
-          xp: req.user.xp + xpReward
+          cash: req.user.cash + Math.round(cashReward),
+          experience: req.user.experience + Math.round(xpReward)
         });
         
         return res.json({
           success: true,
           caught: false,
-          cashReward: cashReward,
-          xpReward: xpReward,
-          message: `You successfully completed the ${crimeData.name} and earned $${cashReward} and ${xpReward} XP.`
+          cashReward: Math.round(cashReward),
+          xpReward: Math.round(xpReward),
+          message: `You successfully completed the ${crimeData.name} and earned $${Math.round(cashReward)} and ${Math.round(xpReward)} XP.`
         });
       } else {
         // Crime failed - determine if player was caught
-        const catchProbability = crimeData.jailRisk / 100; // Use configured jail risk
+        const catchProbability = 0.7; // 70% chance of being caught if failed
         const caught = Math.random() < catchProbability;
         
         if (caught) {
           // Player was caught and goes to jail
           const now = new Date();
           const jailTime = new Date(now);
-          jailTime.setMinutes(jailTime.getMinutes() + crimeData.jailTime); // Use configured jail time
+          jailTime.setMinutes(jailTime.getMinutes() + crimeData.difficulty * 5); // 5 minutes per difficulty level
           
           await storage.updateUser(req.user.id, {
             isJailed: true,
@@ -275,21 +275,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Location routes
+  // Location routes - placeholder until locations table is created
   app.get('/api/locations', async (req: Request, res: Response) => {
-    try {
-      const locationsList = await db.select().from(locations);
-      res.json(locationsList);
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-      res.status(500).json({ message: 'Failed to fetch locations' });
-    }
+    res.json([
+      { id: 1, name: 'Downtown', description: 'The heart of the city', image: '/locations/downtown.jpg' },
+      { id: 2, name: 'Slums', description: 'The rough part of town', image: '/locations/slums.jpg' },
+      { id: 3, name: 'Business District', description: 'Where the money is made', image: '/locations/business.jpg' },
+      { id: 4, name: 'Harbor', description: 'Shipping and smuggling central', image: '/locations/harbor.jpg' },
+      { id: 5, name: 'Suburbs', description: 'Quiet and unassuming', image: '/locations/suburbs.jpg' }
+    ]);
   });
 
   app.get('/api/locations/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const [location] = await db.select().from(locations).where(eq(locations.id, parseInt(id)));
+      const locationId = parseInt(id);
+      
+      const locations = [
+        { id: 1, name: 'Downtown', description: 'The heart of the city', image: '/locations/downtown.jpg' },
+        { id: 2, name: 'Slums', description: 'The rough part of town', image: '/locations/slums.jpg' },
+        { id: 3, name: 'Business District', description: 'Where the money is made', image: '/locations/business.jpg' },
+        { id: 4, name: 'Harbor', description: 'Shipping and smuggling central', image: '/locations/harbor.jpg' },
+        { id: 5, name: 'Suburbs', description: 'Quiet and unassuming', image: '/locations/suburbs.jpg' }
+      ];
+      
+      const location = locations.find(l => l.id === locationId);
       
       if (!location) {
         return res.status(404).json({ message: 'Location not found' });
@@ -351,105 +361,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Our more detailed debug route has been defined above
+  // Register feature-specific routes
+  registerProfileRoutes(app);
+  registerCasinoRoutes(app);
+  registerDrugRoutes(app);
+  registerBankingRoutes(app);
+  registerGangRoutes(app);
+  registerAchievementRoutes(app);
+  registerAdminRoutes(app);
+  registerSocialRoutes(app);
 
-  // Friends system
-  app.get('/api/friends', authProtected, async (req: Request, res: Response) => {
-    try {
-      const friends = await storage.getFriends(req.user.id);
-      res.json(friends);
-    } catch (error) {
-      console.error('Error fetching friends:', error);
-      res.status(500).json({ message: 'Failed to fetch friends' });
-    }
-  });
-
-  app.post('/api/friends/add/:id', authProtected, async (req: Request, res: Response) => {
-    try {
-      const friendId = parseInt(req.params.id);
-      
-      if (isNaN(friendId)) {
-        return res.status(400).json({ message: 'Invalid friend ID' });
-      }
-      
-      // Check if friend exists
-      const friend = await storage.getUser(friendId);
-      if (!friend) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-      
-      // Add friend
-      const success = await storage.addFriend(req.user.id, friendId);
-      
-      if (success) {
-        res.json({ message: `${friend.username} added to your friends list` });
-      } else {
-        res.status(400).json({ message: 'User is already in your friends list' });
-      }
-    } catch (error) {
-      console.error('Error adding friend:', error);
-      res.status(500).json({ message: 'Failed to add friend' });
-    }
-  });
-
-  app.delete('/api/friends/remove/:id', authProtected, async (req: Request, res: Response) => {
-    try {
-      const friendId = parseInt(req.params.id);
-      
-      if (isNaN(friendId)) {
-        return res.status(400).json({ message: 'Invalid friend ID' });
-      }
-      
-      // Remove friend
-      await storage.removeFriend(req.user.id, friendId);
-      
-      res.json({ message: 'Friend removed' });
-    } catch (error) {
-      console.error('Error removing friend:', error);
-      res.status(500).json({ message: 'Failed to remove friend' });
-    }
-  });
-
-  // Messages system
-  app.get('/api/messages', authProtected, async (req: Request, res: Response) => {
-    try {
-      const type = req.query.type as string;
-      const limit = parseInt(req.query.limit as string) || 50;
-      const offset = parseInt(req.query.offset as string) || 0;
-      
-      const messages = await storage.getUserMessages(req.user.id, {
-        type,
-        limit,
-        offset
-      });
-      
-      res.json(messages);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-      res.status(500).json({ message: 'Failed to fetch messages' });
-    }
-  });
-
-  app.post('/api/messages/send', authProtected, async (req: Request, res: Response) => {
-    try {
-      const { receiverId, gangId, content, type = 'direct' } = req.body;
-      
-      if (!content || content.trim() === '') {
-        return res.status(400).json({ message: 'Message content is required' });
-      }
-      
-      const message = await storage.sendMessage(req.user.id, content, {
-        receiverId,
-        gangId,
-        type
-      });
-      
-      res.json(message);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      res.status(500).json({ message: 'Failed to send message' });
-    }
-  });
+  // Create HTTP server
+  const httpServer = createServer(app);
+  
+  // Register WebSocket server
+  createWebSocketServer(httpServer);
 
   return httpServer;
 }
