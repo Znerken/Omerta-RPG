@@ -6,9 +6,11 @@ import { UserAvatar } from "./UserAvatar";
 import { StatDisplay } from "./StatDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Medal, Shield, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronRight, Medal, Shield, ChevronDown, ChevronUp, DollarSign, Banknote, Briefcase } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { MoneyBriefcaseIcon } from "@/components/ui/mafia-icons";
 
 interface MiniProfileProps {
   variant?: "sidebar" | "navbar";
@@ -23,13 +25,24 @@ export function MiniProfile({
   const [showStats, setShowStats] = useState(false);
   
   // Fetch user profile data
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["/api/user/profile"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/user/profile");
       return await response.json();
     }
   });
+  
+  // Fetch bank accounts data
+  const { data: accounts, isLoading: accountsLoading } = useQuery({
+    queryKey: ["/api/banking/accounts"],
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/banking/accounts");
+      return await response.json();
+    }
+  });
+  
+  const isLoading = profileLoading || accountsLoading;
 
   if (isLoading) {
     return (
@@ -46,8 +59,16 @@ export function MiniProfile({
   if (!profile) {
     return null;
   }
+  
+  // Calculate total bank balance across all accounts
+  const totalBankBalance = accounts?.reduce((total: number, account: { balance: number }) => total + account.balance, 0) || 0;
 
   const { username, level, cash, respect, isAdmin, avatar } = profile;
+  
+  // Format currency helper function
+  const formatCurrency = (amount: number) => {
+    return `$${amount.toLocaleString()}`;
+  };
   
   // Navbar variant is horizontal, sidebar variant is more compact
   if (variant === "navbar") {
@@ -73,11 +94,41 @@ export function MiniProfile({
               </Badge>
             )}
           </div>
+          
           <div className="flex items-center text-xs text-muted-foreground">
             <Medal className="h-3.5 w-3.5 mr-1 text-gold" />
             Level {level}
-            <span className="mx-1.5">•</span>
-            ${cash?.toLocaleString()}
+          </div>
+          
+          {/* Money info */}
+          <div className="flex items-center mt-1 gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-xs text-emerald-400">
+                    <DollarSign className="h-3.5 w-3.5 mr-0.5" />
+                    {formatCurrency(cash)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Cash on hand</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center text-xs text-blue-400">
+                    <MoneyBriefcaseIcon size="sm" className="mr-0.5 h-3.5 w-3.5" />
+                    {formatCurrency(totalBankBalance)}
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Total bank balance</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           {/* Stats accordion */}
@@ -140,9 +191,10 @@ export function MiniProfile({
             )}
           </div>
           <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Level {level}
-            </p>
+            <div className="flex items-center">
+              <Medal className="h-3 w-3 mr-1 text-gold" />
+              <span className="text-xs text-muted-foreground">Level {level}</span>
+            </div>
             <Button 
               variant="ghost" 
               size="icon" 
@@ -155,6 +207,25 @@ export function MiniProfile({
                 <ChevronDown className="h-3 w-3" />
               )}
             </Button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Money Info */}
+      <div className="mt-2 bg-black/20 rounded-md p-2 grid grid-cols-2 gap-2">
+        <div className="flex items-center">
+          <DollarSign className="h-4 w-4 mr-1 text-emerald-400" />
+          <div>
+            <div className="text-xs text-muted-foreground">Cash</div>
+            <div className="text-sm font-medium text-emerald-400">{formatCurrency(cash)}</div>
+          </div>
+        </div>
+        
+        <div className="flex items-center">
+          <MoneyBriefcaseIcon size="sm" className="mr-1 text-blue-400" />
+          <div>
+            <div className="text-xs text-muted-foreground">Bank</div>
+            <div className="text-sm font-medium text-blue-400">{formatCurrency(totalBankBalance)}</div>
           </div>
         </div>
       </div>
