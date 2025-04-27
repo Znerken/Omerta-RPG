@@ -317,8 +317,8 @@ gangRouter.post("/:id/members/:userId/promote", isAuthenticated, async (req: Req
         newRank = "Soldier";
     }
     
-    // Update role
-    const updatedMember = await gangStorage.updateMemberRole(targetUserId, gangId, newRank);
+    // Update rank
+    const updatedMember = await gangStorage.updateMemberRank(targetUserId, gangId, newRank);
     if (!updatedMember) {
       return res.status(500).json({ message: "Failed to promote member" });
     }
@@ -371,8 +371,8 @@ gangRouter.post("/:id/members/:userId/demote", isAuthenticated, async (req: Requ
         newRank = "Soldier";
     }
     
-    // Update role
-    const updatedMember = await gangStorage.updateMemberRole(targetUserId, gangId, newRank);
+    // Update rank
+    const updatedMember = await gangStorage.updateMemberRank(targetUserId, gangId, newRank);
     if (!updatedMember) {
       return res.status(500).json({ message: "Failed to demote member" });
     }
@@ -409,16 +409,16 @@ gangRouter.post("/:id/transfer-leadership/:userId", isAuthenticated, async (req:
       return res.status(404).json({ message: "Target user is not a member of this gang" });
     }
     
-    // Update roles in a transaction
+    // Update ranks in a transaction
     try {
       // Begin transaction
       await storage.db.execute(sql`BEGIN`);
       
       // Demote current leader to Underboss
-      await gangStorage.updateMemberRole(req.user.id, gangId, "Underboss");
+      await gangStorage.updateMemberRank(req.user.id, gangId, "Underboss");
       
       // Promote target to Leader
-      await gangStorage.updateMemberRole(targetUserId, gangId, "Leader");
+      await gangStorage.updateMemberRank(targetUserId, gangId, "Leader");
       
       // Update gang owner
       await gangStorage.updateGang(gangId, { ownerId: targetUserId });
