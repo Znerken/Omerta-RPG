@@ -55,9 +55,9 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         
         // Invalidate user data query when auth state changes
         if (session?.user) {
-          queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/user'] });
         } else {
-          queryClient.setQueryData(['/api/user/profile'], null);
+          queryClient.setQueryData(['/api/user'], null);
         }
       }
     );
@@ -72,16 +72,25 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     isLoading: isUserLoading,
     error: userError
   } = useQuery({
-    queryKey: ['/api/user/profile'],
+    queryKey: ['/api/user'],
     queryFn: async () => {
       if (!supabaseUser) return null;
       
       try {
-        const res = await apiRequest('GET', '/api/user/profile');
+        const res = await apiRequest('GET', '/api/user');
         if (!res.ok) {
-          throw new Error(`Failed to fetch user profile: ${res.status}`);
+          throw new Error(`Failed to fetch user: ${res.status}`);
         }
-        return await res.json();
+        
+        const userData = await res.json();
+        
+        // Check if we got a "needs linking" response
+        if (userData.needsLinking) {
+          console.log('User needs to link account. Email:', userData.email);
+          return null; // Return null to indicate no game user yet
+        }
+        
+        return userData; // Otherwise return the game user data
       } catch (error) {
         console.error('Error fetching game user:', error);
         return null;
