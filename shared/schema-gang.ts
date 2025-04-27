@@ -17,7 +17,7 @@ export const gangs = pgTable("gangs", {
   strength: integer("strength").notNull().default(10),
   defense: integer("defense").notNull().default(10),
   createdAt: timestamp("created_at").defaultNow(),
-  ownerId: integer("owner_id").notNull(),
+  ownerId: integer("leader_id").notNull(),
 });
 
 // Gang Members Schema

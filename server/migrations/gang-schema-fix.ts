@@ -79,7 +79,7 @@ export async function fixGangSchema(): Promise<boolean> {
           respect INTEGER DEFAULT 0, 
           strength INTEGER DEFAULT 10,
           defense INTEGER DEFAULT 10,
-          owner_id INTEGER NOT NULL,
+          leader_id INTEGER NOT NULL,
           created_at TIMESTAMP DEFAULT NOW()
         )
       `));
