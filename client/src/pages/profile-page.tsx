@@ -122,6 +122,7 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [isPhotoGalleryOpen, setIsPhotoGalleryOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -270,6 +271,18 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
     toast({
       title: "Billie Eilish theme applied",
       description: "You should see me in a crown...",
+      variant: "default"
+    });
+  };
+  
+  // Function to apply generated photo gallery template
+  const handlePhotoGalleryGenerate = (htmlTemplate: string) => {
+    setHtmlProfile(htmlTemplate);
+    setProfileTheme("dark");
+    setIsPhotoGalleryOpen(false);
+    toast({
+      title: "Photo Gallery template applied",
+      description: "Your custom photo gallery has been set as your profile",
       variant: "default"
     });
   };
@@ -1209,13 +1222,35 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
             </CardHeader>
             <CardContent className="p-0">
               {isEditing ? (
-                <div className="p-4">
+                <div className="p-4 space-y-4">
                   <RichTextEditor 
                     value={htmlProfile} 
                     onChange={setHtmlProfile}
                     placeholder="Create your custom profile showcase here..."
                     className="bg-dark-surface"
                   />
+                  
+                  {/* Template generator options */}
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border/30 mt-2">
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={() => setIsPhotoGalleryOpen(true)}
+                      className="flex items-center gap-1.5"
+                    >
+                      <Image className="h-4 w-4" />
+                      <MusicIcon className="h-4 w-4" />
+                      Photo Gallery Generator
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={applyBillieEilishTheme}
+                    >
+                      Billie Eilish Theme
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 htmlProfile ? (
@@ -1427,6 +1462,16 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       
       {/* Apply name effect styles */}
       {getNameEffectStyles()}
+      
+      {/* Photo Gallery Generator */}
+      {isViewingOwnProfile && (
+        <PhotoGalleryGenerator
+          isOpen={isPhotoGalleryOpen}
+          onClose={() => setIsPhotoGalleryOpen(false)}
+          onGenerateTemplate={handlePhotoGalleryGenerate}
+          username={username}
+        />
+      )}
     </div>
   );
 }
