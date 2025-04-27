@@ -2740,6 +2740,193 @@ function AdminTab() {
                 </div>
               </div>
             )}
+            
+            {/* Admin Tools Section */}
+            {activeSection === 'admin-tools' && (
+              <div className="space-y-6">
+                <Card className="border border-primary/20">
+                  <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-lg">Give Ingredients to User</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.currentTarget);
+                        const userId = formData.get('userId');
+                        const ingredientId = formData.get('ingredientId');
+                        const quantity = formData.get('quantity');
+                        
+                        fetch(`/api/admin/users/${userId}/give-ingredient`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            ingredientId: parseInt(ingredientId as string),
+                            quantity: parseInt(quantity as string),
+                          }),
+                        })
+                          .then(res => res.json())
+                          .then(data => {
+                            toast({
+                              title: "Success",
+                              description: `Added ${quantity} of ingredient to user's inventory`,
+                              variant: "default",
+                            });
+                          })
+                          .catch(err => {
+                            toast({
+                              title: "Error",
+                              description: "Failed to add ingredient to user",
+                              variant: "destructive",
+                            });
+                          });
+                      }}
+                      className="space-y-4"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">User ID</label>
+                          <input 
+                            type="number" 
+                            name="userId"
+                            defaultValue={1} // Current user ID
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Select Ingredient</label>
+                          <select 
+                            name="ingredientId"
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          >
+                            {ingredients?.map(ingredient => (
+                              <option key={ingredient.id} value={ingredient.id}>{ingredient.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Quantity</label>
+                          <input 
+                            type="number" 
+                            name="quantity"
+                            defaultValue={10}
+                            required
+                            min={1}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4">
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-primary to-primary/80"
+                        >
+                          <Plus className="mr-2 h-4 w-4" /> Give Ingredients to User
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border border-primary/20">
+                  <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-lg">Give Drugs to User</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <form 
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.currentTarget);
+                        const userId = formData.get('userId');
+                        const drugId = formData.get('drugId');
+                        const quantity = formData.get('quantity');
+                        
+                        fetch(`/api/admin/users/${userId}/give-drug`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            drugId: parseInt(drugId as string),
+                            quantity: parseInt(quantity as string),
+                          }),
+                        })
+                          .then(res => res.json())
+                          .then(data => {
+                            toast({
+                              title: "Success",
+                              description: `Added ${quantity} of drug to user's inventory`,
+                              variant: "default",
+                            });
+                          })
+                          .catch(err => {
+                            toast({
+                              title: "Error",
+                              description: "Failed to add drug to user",
+                              variant: "destructive",
+                            });
+                          });
+                      }}
+                      className="space-y-4"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">User ID</label>
+                          <input 
+                            type="number" 
+                            name="userId"
+                            defaultValue={1} // Current user ID
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Select Drug</label>
+                          <select 
+                            name="drugId"
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          >
+                            {drugs?.map(drug => (
+                              <option key={drug.id} value={drug.id}>{drug.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Quantity</label>
+                          <input 
+                            type="number" 
+                            name="quantity"
+                            defaultValue={5}
+                            required
+                            min={1}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4">
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-primary to-primary/80"
+                        >
+                          <Plus className="mr-2 h-4 w-4" /> Give Drugs to User
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

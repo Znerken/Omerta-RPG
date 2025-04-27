@@ -614,11 +614,25 @@ export function registerDrugRoutes(app: Express) {
         return res.status(403).json({ error: "You don't have permission to use this lab" });
       }
       
+      // Log request body for debugging
+      console.log("[DEBUG] Production request body:", req.body);
+      
       // Validate production data
-      const productionData = insertDrugProductionSchema.parse({
-        ...req.body,
-        labId,
-      });
+      let productionData;
+      try {
+        productionData = insertDrugProductionSchema.parse({
+          ...req.body,
+          labId,
+        });
+      } catch (validationError) {
+        console.error("[DEBUG] Validation error:", validationError);
+        if (validationError instanceof ZodError) {
+          handleZodError(validationError, res);
+        } else {
+          res.status(400).json({ error: "Invalid production data. Make sure drugId and quantity are provided." });
+        }
+        return;
+      }
       
       // Get drug details
       const drug = await drugStorage.getDrug(productionData.drugId);
