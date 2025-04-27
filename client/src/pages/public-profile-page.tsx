@@ -2,10 +2,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Loader2, Users, Star, Award, ArrowLeft, CalendarIcon, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { UserAvatar } from "@/components/profile/UserAvatar";
+import { 
+  AVATAR_FRAMES,
+  NAME_EFFECTS, 
+  PROFILE_THEMES, 
+  BACKGROUND_EFFECTS,
+  getNameEffectStyles 
+} from "@/components/profile/ProfileCustomization";
 
 // Define types for profile data
 interface UserAchievement {
@@ -34,6 +42,11 @@ interface UserProfile {
   createdAt: string;
   status?: string;
   gang?: UserGang;
+  // Visual customization
+  avatarFrame?: any;
+  nameEffect?: any;
+  profileTheme?: any;
+  backgroundEffect?: any;
 }
 
 interface PublicProfilePageProps {
@@ -103,6 +116,40 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
     console.error("Server reports error in profile data:", rawData);
   }
   
+  // Generate random visual effects for profiles if needed
+  const generateRandomVisualEffects = () => {
+    // Use a random frame for testing
+    const frames = ['rare-gold', 'epic-neon', 'legendary-fire', 'uncommon-silver'];
+    const randomFrameId = frames[Math.floor(Math.random() * frames.length)];
+    const randomFrame = AVATAR_FRAMES.find(frame => frame.id === randomFrameId) 
+      || AVATAR_FRAMES.find(frame => frame.id === 'default');
+    
+    // Use a random name effect for testing
+    const nameEffects = ['gradient-red', 'gradient-gold', 'rainbow', 'neon-blue', 'shadow'];
+    const randomNameEffectId = nameEffects[Math.floor(Math.random() * nameEffects.length)];
+    const randomNameEffect = NAME_EFFECTS.find(effect => effect.id === randomNameEffectId)
+      || NAME_EFFECTS.find(effect => effect.id === 'default');
+    
+    // Use a random profile theme for testing
+    const themes = ['neon-crime', 'classic-noir', 'modern-minimal', 'luxury-gold'];
+    const randomThemeId = themes[Math.floor(Math.random() * themes.length)];
+    const randomTheme = PROFILE_THEMES.find(theme => theme.id === randomThemeId)
+      || PROFILE_THEMES.find(theme => theme.id === 'default');
+    
+    // Use a random background effect for testing
+    const bgEffects = ['noise', 'matrix', 'rain', 'particles', 'money-rain', 'cigar-smoke'];
+    const randomBgEffectId = bgEffects[Math.floor(Math.random() * bgEffects.length)];
+    const randomBgEffect = BACKGROUND_EFFECTS.find(effect => effect.id === randomBgEffectId)
+      || BACKGROUND_EFFECTS.find(effect => effect.id === 'default');
+    
+    return {
+      avatarFrame: randomFrame,
+      nameEffect: randomNameEffect,
+      profileTheme: randomTheme,
+      backgroundEffect: randomBgEffect
+    };
+  };
+
   // Convert the raw DB data to the expected profile format with improved null handling
   const profile = rawData?.success && rawData?.user ? {
     id: rawData.user.id,
@@ -116,6 +163,9 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
     createdAt: rawData.user.created_at,
     status: rawData.user.status || 'offline',
     // No gang info for now
+    
+    // Add visual effects - either from database or generate random ones for testing
+    ...generateRandomVisualEffects()
   } as UserProfile : undefined;
 
   // Fetch user achievements if visible
@@ -188,61 +238,134 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
         </Link>
       </div>
 
-      {/* Profile Header with Banner */}
-      <div className="relative mb-6">
-        {profile.bannerImage ? (
-          <div className="w-full h-48 overflow-hidden rounded-t-lg">
+      {/* Profile Header with Banner and Background Effect */}
+      <div className={cn(
+        "relative mb-6", 
+        profile.backgroundEffect?.className
+      )}>
+        {/* Background effect container */}
+        <div className="w-full h-60 overflow-hidden rounded-t-lg relative">
+          {/* Banner image */}
+          {profile.bannerImage && (
             <img 
               src={profile.bannerImage} 
               alt={`${profile.username}'s banner`} 
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover absolute inset-0 z-0"
             />
+          )}
+          
+          {/* Background effect overlay */}
+          <div className={cn(
+            "absolute inset-0 z-10",
+            !profile.bannerImage ? "bg-gradient-to-r from-gray-800 to-gray-900" : "bg-black/30",
+            profile.profileTheme?.bgClassName
+          )}>
+            {/* Apply any animated background effects */}
+            {profile.backgroundEffect?.element && (
+              <div className="absolute inset-0 z-10 overflow-hidden">
+                {profile.backgroundEffect.element}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="w-full h-48 bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-lg" />
-        )}
+          
+          {/* User status indicator - top right */}
+          <div className="absolute top-4 right-4 z-20">
+            <Badge 
+              variant={profile.status === 'online' ? 'default' : 'secondary'}
+              className={cn(
+                "h-8 px-3 py-1.5 font-semibold text-sm",
+                profile.status === 'online' 
+                  ? "bg-green-500/80 text-white animate-pulse" 
+                  : "bg-gray-500/80 text-white"
+              )}
+            >
+              {profile.status === 'online' ? 'Online' : 'Offline'}
+            </Badge>
+          </div>
+        </div>
         
-        <div className="absolute -bottom-16 left-6">
-          <Avatar className="h-32 w-32 border-4 border-background">
-            <AvatarImage src={profile.avatar || undefined} />
-            <AvatarFallback className="text-4xl">{profile.username.charAt(0).toUpperCase()}</AvatarFallback>
-          </Avatar>
+        {/* Avatar with frame */}
+        <div className="absolute -bottom-16 left-6 z-30">
+          <UserAvatar 
+            user={profile} 
+            size={128} 
+            frame={profile.avatarFrame} 
+          />
         </div>
       </div>
 
       {/* Profile Info */}
-      <Card className="mt-16 mb-6">
-        <CardContent className="pt-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{profile.username}</h1>
-                <Badge variant={profile.status === 'online' ? 'default' : 'outline'}>
-                  {profile.status === 'online' ? 'Online' : 'Offline'}
+      <Card className={cn(
+        "mt-16 mb-6 overflow-hidden", 
+        profile.profileTheme?.cardClassName
+      )}>
+        <CardContent className="pt-6 relative">
+          {/* Theme overlay effects */}
+          {profile.profileTheme?.overlayElement && (
+            <div className="absolute inset-0 pointer-events-none">
+              {profile.profileTheme.overlayElement}
+            </div>
+          )}
+          
+          <div className="flex justify-between items-start z-10 relative">
+            <div className="w-full">
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Username with effect */}
+                <h1 
+                  className={cn(
+                    "text-3xl font-bold", 
+                    profile.nameEffect?.className
+                  )}
+                  style={getNameEffectStyles(profile.nameEffect)}
+                >
+                  {profile.username}
+                </h1>
+                
+                {/* Level badge with glow effect */}
+                <Badge 
+                  className={cn(
+                    "px-3 py-1.5 bg-amber-500/90 text-white shadow-lg",
+                    "border border-amber-400/30",
+                    "flex items-center gap-1.5",
+                    "animate-[pulse_3s_ease-in-out_infinite]"
+                  )}
+                >
+                  <Star className="h-4 w-4 fill-white" /> 
+                  <span className="font-semibold">Level {profile.level || 1}</span>
                 </Badge>
+                
+                {/* Member since info */}
+                <div className="ml-auto flex items-center text-sm text-muted-foreground">
+                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" /> 
+                  <span>Member since {memberSince}</span>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Star className="h-3 w-3" /> 
-                  Level {profile.level || 1}
-                </Badge>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <CalendarIcon className="h-3 w-3" /> 
-                  Member since {memberSince}
-                </Badge>
+              
+              {/* Additional badges */}
+              <div className="flex flex-wrap gap-2 mt-3">
                 {profile.gang && (
-                  <Badge className="bg-purple-500 text-white flex items-center gap-1">
-                    <Users className="h-3 w-3" /> 
-                    {profile.gang.name} [{profile.gang.tag}]
+                  <Badge className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1.5 px-3 py-1.5 shadow-lg">
+                    <Users className="h-3.5 w-3.5" /> 
+                    <span className="font-medium">{profile.gang.name}</span>
+                    <span className="bg-purple-800 text-purple-100 px-1.5 py-0.5 rounded-sm text-xs ml-1">
+                      {profile.gang.tag}
+                    </span>
                   </Badge>
                 )}
               </div>
             </div>
           </div>
           
+          {/* Bio with styled container */}
           {profile.bio && (
-            <div className="mt-6">
-              <h2 className="text-lg font-semibold mb-2">Bio</h2>
+            <div className={cn(
+              "mt-6 p-4 rounded-lg",
+              profile.profileTheme?.bioClassName || "bg-secondary/20"
+            )}>
+              <h2 className="text-lg font-semibold mb-2 flex items-center">
+                <span className="mr-2">Bio</span>
+                <div className="h-px flex-grow bg-border/50"></div>
+              </h2>
               <p className="text-muted-foreground">{profile.bio}</p>
             </div>
           )}
@@ -250,25 +373,50 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
       </Card>
 
       {/* Profile Tabs */}
-      <Tabs defaultValue="custom">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="custom">Custom Profile</TabsTrigger>
-          <TabsTrigger value="achievements">Achievements</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="custom" className="mt-8">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-2xl font-bold flex items-center gap-2">
+            <span className="bg-primary/10 p-1.5 rounded text-primary">
+              <Users className="h-5 w-5" />
+            </span>
+            {profile.username}'s Profile
+          </h2>
+          <TabsList className="grid grid-cols-2 w-fit">
+            <TabsTrigger value="custom">Custom Profile</TabsTrigger>
+            <TabsTrigger value="achievements">Achievements</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Custom HTML Profile */}
         <TabsContent value="custom">
-          <Card>
-            <CardContent className="pt-6">
+          <Card className={cn(
+            "overflow-hidden shadow-xl", 
+            profile.profileTheme?.cardClassName
+          )}>
+            <CardContent className="p-0 relative">
+              {/* Theme overlay effects */}
+              {profile.profileTheme?.overlayElement && (
+                <div className="absolute inset-0 pointer-events-none">
+                  {profile.profileTheme.overlayElement}
+                </div>
+              )}
+              
               {profile.htmlProfile ? (
                 <div 
-                  className="custom-profile"
+                  className="custom-profile relative z-10"
                   dangerouslySetInnerHTML={{ __html: profile.htmlProfile }}
                 />
               ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  <Award className="mx-auto h-12 w-12 mb-2 opacity-20" />
-                  <p>{profile.username} hasn't created a custom profile yet.</p>
+                <div className="py-16 px-4 text-center text-muted-foreground relative z-10">
+                  <div className="bg-secondary/10 inline-block p-6 rounded-full mb-3">
+                    <Users className="h-16 w-16 opacity-30" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">No Custom Profile Yet</h3>
+                  <p className="max-w-md mx-auto">
+                    {profile.username} hasn't created a custom profile yet. 
+                    Custom profiles can include photo galleries, music preferences, 
+                    favorite quotes, and more personalized content.
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -277,36 +425,81 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
 
         {/* Achievements */}
         <TabsContent value="achievements">
-          <Card>
-            <CardHeader>
-              <CardTitle>Achievements</CardTitle>
+          <Card className={cn(
+            "overflow-hidden", 
+            profile.profileTheme?.cardClassName
+          )}>
+            <CardHeader className="relative">
+              <CardTitle className="flex items-center gap-2 text-2xl">
+                <Award className="h-6 w-6 text-amber-500" />
+                Achievements & Honors
+              </CardTitle>
+              {profile.profileTheme?.dividerElement && (
+                <div className="absolute bottom-0 left-0 right-0">
+                  {profile.profileTheme.dividerElement}
+                </div>
+              )}
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
+              {/* Theme overlay effects */}
+              {profile.profileTheme?.overlayElement && (
+                <div className="absolute inset-0 pointer-events-none">
+                  {profile.profileTheme.overlayElement}
+                </div>
+              )}
+              
               {achievements && 'hidden' in achievements ? (
                 <div className="py-8 text-center text-muted-foreground">
-                  <Award className="mx-auto h-12 w-12 mb-2 opacity-20" />
-                  <p>{profile.username} has chosen to hide their achievements.</p>
+                  <div className="relative inline-block">
+                    <Award className="mx-auto h-20 w-20 mb-2 opacity-30 text-amber-800/20" />
+                    <div className="absolute inset-0 flex items-center justify-center text-3xl">🔒</div>
+                  </div>
+                  <p className="text-lg">{profile.username} has chosen to hide their achievements.</p>
                 </div>
               ) : !achievements || achievements.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground">
-                  <Award className="mx-auto h-12 w-12 mb-2 opacity-20" />
-                  <p>No achievements unlocked yet.</p>
+                  <div className="bg-secondary/10 inline-block p-6 rounded-full mb-3">
+                    <Award className="mx-auto h-16 w-16 opacity-30 text-amber-500/30" />
+                  </div>
+                  <p className="text-lg">No achievements unlocked yet.</p>
+                  <p className="text-sm mt-1 max-w-md mx-auto">
+                    As {profile.username} completes criminal activities and challenges, 
+                    achievements will appear here.
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 mt-2">
                   {Array.isArray(achievements) && achievements
                     .filter(ach => ach.unlocked)
                     .map((achievement: UserAchievement) => (
-                      <div key={achievement.id} className="flex items-start space-x-4">
-                        <div className="bg-primary/10 p-3 rounded-lg">
-                          <Award className="h-6 w-6 text-primary" />
+                      <div 
+                        key={achievement.id} 
+                        className={cn(
+                          "flex items-start gap-3 p-4 rounded-lg transition-all",
+                          "bg-gradient-to-br from-secondary/30 to-secondary/5",
+                          "border border-border/40 hover:border-primary/20",
+                          "relative overflow-hidden group"
+                        )}
+                      >
+                        {/* Glow effect on hover */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-1000"></div>
+                        
+                        {/* Achievement icon */}
+                        <div className="relative">
+                          <div className="bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-3 rounded-lg">
+                            <Award className="h-8 w-8 text-amber-500" />
+                          </div>
+                          {/* Shine effect */}
+                          <div className="absolute top-0 right-0 h-full w-1/3 bg-white/10 skew-x-12 transform -translate-x-full group-hover:translate-x-full transition-all duration-1000"></div>
                         </div>
-                        <div>
-                          <h3 className="font-medium">{achievement.name}</h3>
+                        
+                        {/* Achievement content */}
+                        <div className="flex-1 z-10">
+                          <h3 className="font-bold text-lg">{achievement.name}</h3>
                           <p className="text-sm text-muted-foreground">{achievement.description}</p>
                           {achievement.unlockedAt && (
-                            <div className="flex items-center mt-1 text-xs text-muted-foreground">
-                              <Clock className="mr-1 h-3 w-3" />
+                            <div className="flex items-center mt-2 text-xs bg-background/50 px-2 py-1 rounded w-fit">
+                              <Clock className="mr-1.5 h-3 w-3 text-amber-500" />
                               Unlocked on {format(new Date(achievement.unlockedAt), 'MMM d, yyyy')}
                             </div>
                           )}

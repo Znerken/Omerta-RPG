@@ -5,9 +5,9 @@ import { AvatarFrame } from "@/components/profile/ProfileCustomization";
 import { cn } from "@/lib/utils";
 
 interface UserAvatarProps {
-  username: string;
+  username?: string;
   avatarUrl?: string | null;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | number;
   linkToProfile?: boolean;
   withBorder?: boolean;
   withRing?: boolean;
@@ -15,6 +15,7 @@ interface UserAvatarProps {
   ringColor?: string;
   className?: string;
   frame?: AvatarFrame;
+  user?: any; // For passing a user object directly
 }
 
 // Get user initials for the avatar fallback
@@ -37,8 +38,13 @@ export function UserAvatar({
   borderColor = "border-background",
   ringColor = "ring-primary/20",
   className = "",
-  frame
+  frame,
+  user
 }: UserAvatarProps) {
+  // If user object is provided, extract username and avatarUrl from it
+  const actualUsername = user?.username || username || "User";
+  const actualAvatarUrl = user?.avatar || avatarUrl || null;
+
   // Define size classes
   const sizeClasses = {
     sm: "h-10 w-10 text-sm",
@@ -47,9 +53,17 @@ export function UserAvatar({
     xl: "h-32 w-32 text-4xl",
   };
 
+  // Create custom size class if size is a number
+  let sizeClass = "";
+  if (typeof size === "number") {
+    sizeClass = `h-[${size}px] w-[${size}px] text-[${Math.max(16, size / 3)}px]`;
+  } else {
+    sizeClass = sizeClasses[size] || sizeClasses.md;
+  }
+
   // Compose class names based on if we have a frame or default styling
   const avatarClasses = cn(
-    sizeClasses[size],
+    sizeClass,
     frame 
       ? "" // When using a frame, let the frame control the border
       : cn(
