@@ -30,12 +30,12 @@ export function GameCard({
   active,
   onSelect
 }: GameCardProps) {
-  // Default background images based on game type
+  // Enhanced background gradients based on game type with noir mafia aesthetic
   const defaultBackgrounds = {
-    dice: "radial-gradient(circle at top right, rgba(76, 29, 149, 0.3), rgba(0, 0, 0, 0)), linear-gradient(to bottom, #1a1a29, #0f0f1a)",
-    slots: "radial-gradient(circle at top right, rgba(185, 28, 28, 0.3), rgba(0, 0, 0, 0)), linear-gradient(to bottom, #291a1a, #1a0f0f)",
-    roulette: "radial-gradient(circle at top right, rgba(5, 102, 54, 0.3), rgba(0, 0, 0, 0)), linear-gradient(to bottom, #1a291e, #0f1a13)",
-    blackjack: "radial-gradient(circle at top right, rgba(120, 53, 15, 0.3), rgba(0, 0, 0, 0)), linear-gradient(to bottom, #291f1a, #1a130f)",
+    dice: "radial-gradient(circle at top right, rgba(76, 29, 149, 0.4), rgba(0, 0, 0, 0)), linear-gradient(165deg, #1a1a29, #0d0d14), repeating-linear-gradient(90deg, rgba(20, 20, 40, 0.05) 0px, rgba(20, 20, 40, 0.05) 1px, transparent 1px, transparent 60px), repeating-linear-gradient(0deg, rgba(20, 20, 40, 0.05) 0px, rgba(20, 20, 40, 0.05) 1px, transparent 1px, transparent 60px), linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4))",
+    slots: "radial-gradient(circle at top right, rgba(185, 28, 28, 0.4), rgba(0, 0, 0, 0)), linear-gradient(165deg, #291a1a, #140d0d), repeating-linear-gradient(90deg, rgba(40, 20, 20, 0.05) 0px, rgba(40, 20, 20, 0.05) 1px, transparent 1px, transparent 60px), repeating-linear-gradient(0deg, rgba(40, 20, 20, 0.05) 0px, rgba(40, 20, 20, 0.05) 1px, transparent 1px, transparent 60px), linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4))",
+    roulette: "radial-gradient(circle at top right, rgba(5, 102, 54, 0.4), rgba(0, 0, 0, 0)), linear-gradient(165deg, #1a291e, #0d1409), repeating-linear-gradient(90deg, rgba(20, 40, 30, 0.05) 0px, rgba(20, 40, 30, 0.05) 1px, transparent 1px, transparent 60px), repeating-linear-gradient(0deg, rgba(20, 40, 30, 0.05) 0px, rgba(20, 40, 30, 0.05) 1px, transparent 1px, transparent 60px), linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4))",
+    blackjack: "radial-gradient(circle at top right, rgba(120, 53, 15, 0.4), rgba(0, 0, 0, 0)), linear-gradient(165deg, #291f1a, #140f0a), repeating-linear-gradient(90deg, rgba(40, 30, 20, 0.05) 0px, rgba(40, 30, 20, 0.05) 1px, transparent 1px, transparent 60px), repeating-linear-gradient(0deg, rgba(40, 30, 20, 0.05) 0px, rgba(40, 30, 20, 0.05) 1px, transparent 1px, transparent 60px), linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4))",
   };
 
   // Game icons

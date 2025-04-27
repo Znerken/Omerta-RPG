@@ -85,7 +85,7 @@ export default function NewCasinoPage() {
       maxBet: 10000,
       houseEdge: 0.05,
       isActive: true,
-      imageUrl: "https://i.imgur.com/jYCFwkP.png"
+      imageUrl: ""
     },
     {
       id: 2,
@@ -96,7 +96,7 @@ export default function NewCasinoPage() {
       maxBet: 5000,
       houseEdge: 0.08,
       isActive: true,
-      imageUrl: "https://i.imgur.com/S1JbRQ1.png"
+      imageUrl: ""
     },
     {
       id: 3,
@@ -107,7 +107,7 @@ export default function NewCasinoPage() {
       maxBet: 20000,
       houseEdge: 0.053,
       isActive: true,
-      imageUrl: "https://i.imgur.com/PZTJnhY.png"
+      imageUrl: ""
     },
     {
       id: 4,
@@ -118,7 +118,7 @@ export default function NewCasinoPage() {
       maxBet: 50000,
       houseEdge: 0.02,
       isActive: true,
-      imageUrl: "https://i.imgur.com/Q2pXfDY.png"
+      imageUrl: ""
     }
   ];
   
