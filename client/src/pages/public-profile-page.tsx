@@ -55,29 +55,38 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
   console.log("PublicProfilePage - urlUserId:", urlUserId);
   console.log("PublicProfilePage - final userId:", userId);
 
-  // Fetch public profile data - DEBUGGING APPROACH
+  // Fetch public profile data - Use our emergency debug endpoint
   const { 
     data: rawData, 
     isLoading, 
     error 
   } = useQuery({
-    queryKey: ['/api/users', userId, 'simple-profile'],
+    queryKey: ['/api/debug/user', userId],
     queryFn: async () => {
-      console.log(`Requesting profile for user ID ${userId}`);
-      // Log complete fetch details for debugging
+      console.log(`Requesting profile for user ID ${userId} using debug endpoint`);
+      
       try {
-        const res = await fetch(`/api/users/${userId}/simple-profile`);
+        const res = await fetch(`/api/debug/user/${userId}`);
         console.log("Response status:", res.status);
         console.log("Response headers:", Object.fromEntries([...res.headers.entries()]));
         
+        // First check if the response is proper JSON
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error("Non-JSON response received:", contentType);
+          const text = await res.text();
+          console.error("Response body:", text.substring(0, 500) + (text.length > 500 ? '...' : ''));
+          throw new Error(`Non-JSON response: ${contentType}`);
+        }
+        
         if (!res.ok) {
-          const errorText = await res.text();
-          console.error("Error response body:", errorText);
+          const errorData = await res.json();
+          console.error("Error response:", errorData);
           throw new Error(`Failed to fetch profile: ${res.status} ${res.statusText}`);
         }
         
         const data = await res.json();
-        console.log("Profile data:", JSON.stringify(data, null, 2));
+        console.log("Profile data from debug endpoint:", JSON.stringify(data, null, 2));
         return data;
       } catch (err) {
         console.error("Fetch error:", err);
@@ -85,7 +94,6 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
       }
     },
     enabled: !!userId && !isNaN(userId),
-    // Enable retry on error
     retry: 3,
     retryDelay: 1000
   });

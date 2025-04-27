@@ -19,10 +19,49 @@ import { z } from "zod";
 import { calculateRequiredXP } from "../shared/gameUtils";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+import { sql } from "drizzle-orm";
 import { gangMembers } from "@shared/schema";
 import { getUserStatus, updateUserStatus, createUserStatus } from './social-database';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // EMERGENCY TEST ENDPOINT - needs to be registered before any other middleware
+  app.get("/api/debug/user/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      console.log(`[EMERGENCY] Direct DB query for user ID ${userId}`);
+      
+      // Direct SQL query to bypass all issues
+      const result = await db.execute(sql`
+        SELECT * FROM users WHERE id = ${userId}
+      `);
+      
+      console.log("[EMERGENCY] Query result:", JSON.stringify(result.rows, null, 2));
+      
+      // Explicitly set content type to JSON
+      res.setHeader('Content-Type', 'application/json');
+      
+      // Return the raw result
+      if (result.rows.length === 0) {
+        return res.status(404).json({ 
+          error: "User not found",
+          userId
+        });
+      }
+      
+      return res.json({
+        success: true,
+        user: result.rows[0],
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("[EMERGENCY] Error:", error);
+      return res.status(500).json({ 
+        success: false,
+        error: String(error)
+      });
+    }
+  });
+  
   // sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
   
