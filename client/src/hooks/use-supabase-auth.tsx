@@ -142,38 +142,14 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         description: "Welcome back to OMERTÀ",
       });
       
-      // Invalidate user profile data after login
-      queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+      console.log('Login successful, preparing for reload with new session');
       
-      // Ensure Supabase session is properly set
-      console.log('Login successful, validating session before redirect');
+      // Small delay to ensure session is registered and toast is shown
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Small delay to ensure session is registered
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Fetch the game user profile directly to ensure it's available
-      try {
-        const res = await apiRequest('GET', '/api/user/profile');
-        if (res.ok) {
-          const gameUserData = await res.json();
-          console.log('Successfully fetched game user profile, redirecting to dashboard');
-          
-          // Set the data directly in the cache to ensure it's available immediately
-          queryClient.setQueryData(['/api/user/profile'], gameUserData);
-          
-          // Redirect to dashboard
-          window.location.href = '/';
-        } else {
-          console.error('Failed to fetch game user profile:', await res.text());
-          toast({
-            title: "Authentication issue",
-            description: "Logged in but couldn't get your profile. Please try again.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching game user profile:', error);
-      }
+      // Force a full page reload to completely refresh auth state
+      // This is the most reliable way to ensure proper authentication flow
+      window.location.href = '/?reload=' + Date.now();
     },
     onError: (error: Error) => {
       toast({

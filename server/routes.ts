@@ -14,6 +14,7 @@ import { registerSocialRoutes } from './social-routes';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { users, userStats, crimes, locations } from '@shared/schema';
 import { db } from './db-supabase';
+import { extractAndValidateToken } from './supabase';
 
 /**
  * Register all routes for the API
@@ -307,6 +308,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug route to check Supabase auth and game database link
+  app.get('/api/debug/auth-link', async (req: Request, res: Response) => {
+    try {
+      // Extract the token
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'No auth header present' });
+      }
+      
+      const token = authHeader.split('Bearer ')[1];
+      if (!token) {
+        return res.status(401).json({ message: 'No token in auth header' });
+      }
+      
+      // Get the Supabase user from the token
+      const supabaseUser = await extractAndValidateToken(req);
+      if (!supabaseUser) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+      
+      console.log('Debug route - token validated for Supabase user:', supabaseUser.sub);
+      
+      // Try to find the user in the game database by Supabase ID
+      let gameUser = await storage.getUserBySupabaseId(supabaseUser.sub);
+      let source = 'supabaseId';
+      
+      // If not found, try email
+      if (!gameUser && supabaseUser.email) {
+        gameUser = await storage.getUserByEmail(supabaseUser.email);
+        source = 'email';
+        
+        // If found by email, update their Supabase ID for future logins
+        if (gameUser) {
+          await storage.updateUser(gameUser.id, { supabaseId: supabaseUser.sub });
+          console.log('Updated Supabase ID for user found by email');
+        }
+      }
+      
+      if (!gameUser) {
+        return res.status(404).json({
+          message: 'No game user found for the authenticated Supabase user',
+          supabaseUserId: supabaseUser.sub,
+          email: supabaseUser.email || 'unknown'
+        });
+      }
+      
+      // Return debug information
+      res.json({
+        success: true,
+        foundBy: source,
+        supabaseUser: {
+          id: supabaseUser.sub,
+          email: supabaseUser.email
+        },
+        gameUser: {
+          id: gameUser.id,
+          username: gameUser.username,
+          email: gameUser.email,
+          supabaseId: gameUser.supabaseId
+        }
+      });
+    } catch (error) {
+      console.error('Error in auth link debug route:', error);
+      res.status(500).json({ message: 'Server error in auth link debug' });
+    }
+  });
+  
+  // Route to force update a user's Supabase ID based on email
+  app.post('/api/debug/update-supabase-id', async (req: Request, res: Response) => {
+    try {
+      const { email, supabaseId } = req.body;
+      
+      if (!email || !supabaseId) {
+        return res.status(400).json({ message: 'Email and Supabase ID are required' });
+      }
+      
+      // Find the user by email
+      const user = await storage.getUserByEmail(email);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found with the provided email' });
+      }
+      
+      // Update the user's Supabase ID
+      const updatedUser = await storage.updateUser(user.id, { supabaseId });
+      
+      res.json({
+        success: true,
+        message: 'User Supabase ID updated successfully',
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          supabaseId: updatedUser.supabaseId
+        }
+      });
+    } catch (error) {
+      console.error('Error updating Supabase ID:', error);
+      res.status(500).json({ message: 'Server error updating Supabase ID' });
+    }
+  });
+  
   // Register feature-specific routes
   registerProfileRoutes(app);
   registerCasinoRoutes(app);
