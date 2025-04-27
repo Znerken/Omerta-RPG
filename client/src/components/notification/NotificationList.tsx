@@ -20,7 +20,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export const NotificationList: React.FC = () => {
-  const { notifications, markAsRead, markAllAsRead, clearNotifications } = useNotification();
+  const { 
+    notifications, 
+    markAsRead, 
+    markAllAsRead, 
+    clearNotifications, 
+    notificationsEnabled,
+    toggleNotifications 
+  } = useNotification();
 
   const getIcon = (type: NotificationType) => {
     switch (type) {
@@ -227,8 +234,41 @@ export const NotificationList: React.FC = () => {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="flex justify-between mb-4 items-center">
-        <h2 className="text-xl font-bold">Notifications</h2>
+        <div className="flex items-center">
+          <h2 className="text-xl font-bold">Notifications</h2>
+          <Badge className="ml-2" variant={notificationsEnabled ? "default" : "outline"}>
+            {notificationsEnabled ? (
+              <><Bell className="h-3 w-3 mr-1" /> On</>
+            ) : (
+              <><BellOff className="h-3 w-3 mr-1" /> Off</>
+            )}
+          </Badge>
+        </div>
         <div className="flex space-x-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Settings</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={toggleNotifications}>
+                {notificationsEnabled ? (
+                  <>
+                    <BellOff className="h-4 w-4 mr-2 text-red-500" />
+                    Disable Notifications
+                  </>
+                ) : (
+                  <>
+                    <Bell className="h-4 w-4 mr-2 text-green-500" />
+                    Enable Notifications
+                  </>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="outline" size="sm" onClick={markAllAsRead}>
             Mark all as read
           </Button>
