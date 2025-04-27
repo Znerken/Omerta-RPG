@@ -37,6 +37,42 @@ function generateRandomString(length: number) {
 
 // Register development routes
 export function registerDevRoutes(app: Express) {
+  // Reset a user's password (development only)
+  app.post("/api/dev/reset-password", developmentOnly, async (req, res) => {
+    try {
+      const { username, newPassword } = req.body;
+      
+      if (!username || !newPassword) {
+        return res.status(400).json({ message: "Username and new password are required" });
+      }
+      
+      // Find the user
+      const user = await storage.getUserByUsername(username);
+      if (!user) {
+        return res.status(404).json({ message: `User '${username}' not found` });
+      }
+      
+      // Hash the new password
+      const hashedPassword = await hashPassword(newPassword);
+      
+      // Update the user's password
+      const updatedUser = await db.update(users)
+        .set({
+          password: hashedPassword
+        })
+        .where(eq(users.id, user.id))
+        .returning();
+      
+      if (!updatedUser || updatedUser.length === 0) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+      
+      res.json({ message: `Password for user '${username}' has been reset successfully` });
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
   // Check if necessary tables exist
   app.get("/api/dev/check-social-tables", developmentOnly, async (req, res) => {
     try {
