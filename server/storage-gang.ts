@@ -199,16 +199,27 @@ export class GangStorage {
     try {
       console.log("[Gang Storage] Creating gang with data:", gangData);
       
-      // Use direct SQL to avoid schema issues and handle different column names
-      const sql = `
+      // Fixed SQL injection vulnerabilities and properly handling parameters
+      const query = `
         INSERT INTO gangs 
-        (name, tag, description, logo, ${gangData.ownerId ? 'owner_id' : ''}) 
+        (name, tag, description, logo, leader_id) 
         VALUES 
-        ('${gangData.name}', '${gangData.tag}', '${gangData.description || ""}', '${gangData.logo || ""}', ${gangData.ownerId || 'NULL'})
+        ($1, $2, $3, $4, $5)
         RETURNING *
       `;
       
-      const result = await db.execute(sql.raw(sql));
+      const params = [
+        gangData.name,
+        gangData.tag,
+        gangData.description || null,
+        gangData.logo || null,
+        gangData.ownerId
+      ];
+      
+      const result = await db.execute({
+        text: query,
+        args: params
+      });
       
       if (result.rows.length === 0) {
         throw new Error("Gang creation failed - no gang returned");
@@ -417,13 +428,16 @@ export class GangStorage {
     try {
       console.log('[DEBUG] getGangMember called for userId:', userId);
       
-      // Use raw SQL to avoid schema issues
-      const rawQuery = `
-        SELECT * FROM gang_members 
-        WHERE user_id = ${userId}
-      `;
+      // Use parameterized query to avoid SQL injection
+      const query = {
+        text: `
+          SELECT * FROM gang_members 
+          WHERE user_id = $1
+        `,
+        args: [userId]
+      };
       
-      const result = await db.execute(sql.raw(rawQuery));
+      const result = await db.execute(query);
       const member = result.rows[0];
       
       if (!member) {
@@ -460,14 +474,17 @@ export class GangStorage {
       // Begin transaction
       await db.execute(sql`BEGIN`);
       
-      // Add member to gang using raw SQL to avoid schema issues
-      const insertQuery = `
-        INSERT INTO gang_members (gang_id, user_id, role)
-        VALUES (${data.gangId}, ${data.userId}, '${data.role}')
-        RETURNING *
-      `;
+      // Add member to gang using parameterized query to avoid SQL injection
+      const insertQuery = {
+        text: `
+          INSERT INTO gang_members (gang_id, user_id, role)
+          VALUES ($1, $2, $3)
+          RETURNING *
+        `,
+        args: [data.gangId, data.userId, data.role]
+      };
       
-      const result = await db.execute(sql.raw(insertQuery));
+      const result = await db.execute(insertQuery);
       const member = result.rows[0];
       
       // Update user's gang_id
@@ -567,13 +584,16 @@ export class GangStorage {
    */
   async updateMemberContribution(userId: number, gangId: number, amount: number): Promise<GangMember | undefined> {
     try {
-      // Get current contribution with raw SQL
-      const findQuery = `
-        SELECT * FROM gang_members 
-        WHERE user_id = ${userId} AND gang_id = ${gangId}
-      `;
+      // Get current contribution with parameterized query
+      const findQuery = {
+        text: `
+          SELECT * FROM gang_members 
+          WHERE user_id = $1 AND gang_id = $2
+        `,
+        args: [userId, gangId]
+      };
       
-      const findResult = await db.execute(sql.raw(findQuery));
+      const findResult = await db.execute(findQuery);
       const member = findResult.rows[0];
       
       if (!member) {
@@ -581,16 +601,20 @@ export class GangStorage {
       }
       
       const currentContribution = member.contribution || 0;
+      const newContribution = currentContribution + amount;
       
-      // Update contribution with raw SQL
-      const updateQuery = `
-        UPDATE gang_members 
-        SET contribution = ${currentContribution + amount}
-        WHERE user_id = ${userId} AND gang_id = ${gangId}
-        RETURNING *
-      `;
+      // Update contribution with parameterized query
+      const updateQuery = {
+        text: `
+          UPDATE gang_members 
+          SET contribution = $1
+          WHERE user_id = $2 AND gang_id = $3
+          RETURNING *
+        `,
+        args: [newContribution, userId, gangId]
+      };
       
-      const updateResult = await db.execute(sql.raw(updateQuery));
+      const updateResult = await db.execute(updateQuery);
       const updatedMember = updateResult.rows[0];
       
       if (!updatedMember) {
