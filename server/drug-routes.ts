@@ -1017,57 +1017,8 @@ export function registerDrugRoutes(app: Express) {
     }
   });
   
-  // Seed test ingredients to the current user (for quick testing)
-  app.post("/api/dev/seed-my-ingredients", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
-    try {
-      const userId = req.user!.id;
-      const allIngredients = await drugStorage.getAllIngredients();
-      
-      if (allIngredients.length === 0) {
-        return res.status(400).json({ error: "No ingredients found. Seed drugs first." });
-      }
-      
-      // Give the user 10 of each ingredient
-      const results = [];
-      for (const ingredient of allIngredients) {
-        const userIngredient = await drugStorage.getUserIngredient(userId, ingredient.id);
-        
-        if (userIngredient) {
-          // Update existing ingredient quantity
-          const updatedIngredient = await drugStorage.updateUserIngredientQuantity(
-            userIngredient.id,
-            userIngredient.quantity + 10
-          );
-          results.push({
-            ingredient: ingredient.name,
-            quantity: updatedIngredient.quantity,
-            updated: true
-          });
-        } else {
-          // Add new ingredient to user
-          const newUserIngredient = await drugStorage.addIngredientToUser({
-            userId,
-            ingredientId: ingredient.id,
-            quantity: 10
-          });
-          results.push({
-            ingredient: ingredient.name,
-            quantity: newUserIngredient.quantity,
-            new: true
-          });
-        }
-      }
-      
-      res.json({
-        message: `Added ingredients to user ${userId}`,
-        userId,
-        results
-      });
-    } catch (error) {
-      console.error("Error seeding user ingredients:", error);
-      res.status(500).json({ error: "Failed to seed user ingredients" });
-    }
-  });
+  // This endpoint is now replaced by a version that doesn't require admin privileges
+  // That endpoint is defined at the end of this file
   
   // New endpoint to create recipes only
   // Delete all productions for a lab (admin tool)
@@ -1226,7 +1177,7 @@ export function registerDrugRoutes(app: Express) {
       }
       
       // Get updated ingredients with IDs
-      const allIngredients = await drugStorage.getAllIngredients();
+      const allIngredients = await drugStorage.getAllDrugIngredients();
       
       // Return early if no drugs or ingredients
       if (allDrugs.length === 0 || allIngredients.length === 0) {

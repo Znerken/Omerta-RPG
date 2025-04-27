@@ -903,7 +903,7 @@ export class DrugStorage {
 
     // Create drug recipes
     const allDrugs = await this.getAllDrugs();
-    const allIngredients = await this.getAllIngredients();
+    const allIngredients = await this.getAllDrugIngredients();
     
     if (allDrugs.length > 0 && allIngredients.length > 0) {
       // Define recipes for each drug
