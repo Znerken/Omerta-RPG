@@ -443,5 +443,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email lookup by username - needed for Supabase authentication
+  app.post('/api/get-email-by-username', async (req: Request, res: Response) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ message: 'Username is required' });
+      }
+      
+      // Find user by username
+      const user = await db.query.users.findFirst({
+        where: eq(users.username, username)
+      });
+      
+      if (!user || !user.email) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return just the email
+      res.json({ email: user.email });
+    } catch (error) {
+      console.error('Error looking up email by username:', error);
+      res.status(500).json({ message: 'Failed to lookup email' });
+    }
+  });
+
   return httpServer;
 }

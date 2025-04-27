@@ -25,7 +25,8 @@ export function setupAuthRoutes(app: Express) {
       if (!req.path.startsWith('/api') || 
           req.path === '/api/register' || 
           req.path === '/api/check-username-email' ||
-          req.path === '/api/config') { // Add config endpoint to public routes
+          req.path === '/api/config' ||
+          req.path === '/api/get-email-by-username') { // Add necessary public routes
         return next();
       }
 
