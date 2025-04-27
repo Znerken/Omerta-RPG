@@ -54,7 +54,7 @@ export function AddFriend() {
   // Mutation for sending friend request
   const sendFriendRequestMutation = useMutation({
     mutationFn: async (userId: number) => {
-      return apiRequest("POST", "/api/social/friends/request", { friendId: userId });
+      return apiRequest("POST", "/api/social/friends/request", { receiverId: userId });
     },
     onSuccess: () => {
       toast({
