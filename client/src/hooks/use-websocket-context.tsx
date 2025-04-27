@@ -3,6 +3,7 @@ import { useWebSocket, WebSocketMessage } from './use-websocket';
 import { useToast } from './use-toast';
 import { queryClient } from '@/lib/queryClient';
 import { useAuth } from './use-auth';
+import { UserStats } from './use-global-stats';
 
 type WebSocketContextType = {
   isConnected: boolean;
