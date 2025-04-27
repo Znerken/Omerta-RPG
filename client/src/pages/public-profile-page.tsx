@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { Loader2, Users, Star, Award, ArrowLeft, CalendarIcon, Clock } from "lucide-react";
+import { Loader2, Users, Star, Award, ArrowLeft, CalendarIcon, Clock, Dumbbell, Shield, CircleDollarSign, MoveRight, SettingsIcon, Music, Image } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/profile/UserAvatar";
@@ -34,6 +35,8 @@ interface UserProfile {
   id: number;
   username: string;
   level: number;
+  cash?: number;
+  respect?: number;
   avatar: string | null;
   bannerImage: string | null;
   bio: string | null;
@@ -42,11 +45,17 @@ interface UserProfile {
   createdAt: string;
   status?: string;
   gang?: UserGang;
+  gangRank?: string;
   // Visual customization
   avatarFrame?: any;
   nameEffect?: any;
   profileTheme?: any;
   backgroundEffect?: any;
+  // Stats
+  strength?: number;
+  stealth?: number;
+  charisma?: number;
+  intelligence?: number;
 }
 
 interface PublicProfilePageProps {
@@ -150,11 +159,73 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
     };
   };
 
+  // Load profile customization settings from localStorage based on user ID
+  const loadUserCustomizationSettings = (userId: number) => {
+    if (typeof window === 'undefined') return null;
+    
+    try {
+      // First try to load from localStorage by user ID
+      const savedCustomization = localStorage.getItem(`userCustomization_${userId}`);
+      if (savedCustomization) {
+        try {
+          const customization = JSON.parse(savedCustomization);
+          
+          const frame = customization.frameId 
+            ? AVATAR_FRAMES.find(f => f.id === customization.frameId) 
+            : AVATAR_FRAMES.find(f => f.id === 'classic');
+            
+          const theme = customization.themeId 
+            ? PROFILE_THEMES.find(t => t.id === customization.themeId) 
+            : PROFILE_THEMES.find(t => t.id === 'dark');
+            
+          const nameEffect = customization.nameEffectId 
+            ? NAME_EFFECTS.find(e => e.id === customization.nameEffectId) 
+            : NAME_EFFECTS.find(e => e.id === 'none');
+            
+          const bgEffect = customization.backgroundEffectId 
+            ? BACKGROUND_EFFECTS.find(e => e.id === customization.backgroundEffectId) 
+            : BACKGROUND_EFFECTS.find(e => e.id === 'none');
+            
+          return {
+            avatarFrame: frame || AVATAR_FRAMES.find(f => f.id === 'classic'),
+            nameEffect: nameEffect || NAME_EFFECTS.find(e => e.id === 'none'),
+            profileTheme: theme || PROFILE_THEMES.find(t => t.id === 'dark'),
+            backgroundEffect: bgEffect || BACKGROUND_EFFECTS.find(e => e.id === 'none')
+          };
+        } catch (e) {
+          console.error("Error parsing user customization:", e);
+        }
+      }
+      
+      // Fallback to generic localStorage items
+      const frameId = localStorage.getItem('profile-frame') || 'neon';
+      const themeId = localStorage.getItem('profile-theme') || 'neon-crime';
+      const nameEffectId = localStorage.getItem('profile-name-effect') || 'gradient-gold';
+      const bgEffectId = localStorage.getItem('profile-bg-effect') || 'noise';
+      
+      return {
+        avatarFrame: AVATAR_FRAMES.find(frame => frame.id === frameId) || AVATAR_FRAMES[0],
+        nameEffect: NAME_EFFECTS.find(effect => effect.id === nameEffectId) || NAME_EFFECTS[0],
+        profileTheme: PROFILE_THEMES.find(theme => theme.id === themeId) || PROFILE_THEMES[0],
+        backgroundEffect: BACKGROUND_EFFECTS.find(effect => effect.id === bgEffectId) || BACKGROUND_EFFECTS[0]
+      };
+    } catch (error) {
+      console.error("Error loading customization settings:", error);
+      return null;
+    }
+  };
+
+  // Get the user's customization or fallback to generated effects
+  const userCustomization = userId ? loadUserCustomizationSettings(userId) : null;
+  const visualEffects = userCustomization || generateRandomVisualEffects();
+
   // Convert the raw DB data to the expected profile format with improved null handling
   const profile = rawData?.success && rawData?.user ? {
     id: rawData.user.id,
     username: rawData.user.username || "Unknown User",
     level: rawData.user.level || 1,
+    cash: rawData.user.cash || 0,
+    respect: rawData.user.respect || 0,
     avatar: rawData.user.avatar,
     bannerImage: rawData.user.banner_image,
     bio: rawData.user.bio,
@@ -162,10 +233,14 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
     showAchievements: rawData.user.show_achievements !== false,
     createdAt: rawData.user.created_at,
     status: rawData.user.status || 'offline',
-    // No gang info for now
+    // Stats - would normally come from stats table
+    strength: 100,
+    stealth: 100,
+    charisma: 100,
+    intelligence: 100,
     
-    // Add visual effects - either from database or generate random ones for testing
-    ...generateRandomVisualEffects()
+    // Add visual effects from the user's customization or fallback to random effects
+    ...visualEffects
   } as UserProfile : undefined;
 
   // Fetch user achievements if visible
@@ -229,8 +304,12 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
   // Calculate member since date in readable format
   const memberSince = profile.createdAt ? format(new Date(profile.createdAt), 'MMMM d, yyyy') : 'Unknown';
 
+  // Format cash with $ and commas
+  const formattedCash = profile.cash ? `$${profile.cash.toLocaleString()}` : "$0";
+  const formattedRespect = profile.respect ? profile.respect.toLocaleString() : "0";
+
   return (
-    <div className="container mx-auto max-w-4xl py-6">
+    <div className="container mx-auto max-w-4xl py-6 bg-black/60">
       <div className="mb-6">
         <Link href="/" className="flex items-center text-muted-foreground hover:text-primary">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -238,139 +317,296 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
         </Link>
       </div>
 
-      {/* Profile Header with Banner and Background Effect */}
-      <div className={cn(
-        "relative mb-6", 
-        profile.backgroundEffect?.className
-      )}>
-        {/* Background effect container */}
-        <div className="w-full h-60 overflow-hidden rounded-t-lg relative">
-          {/* Banner image */}
-          {profile.bannerImage && (
-            <img 
-              src={profile.bannerImage} 
-              alt={`${profile.username}'s banner`} 
-              className="w-full h-full object-cover absolute inset-0 z-0"
-            />
-          )}
+      {/* Profile Header with Banner and Background Effect - New Design */}
+      <div className="relative border border-amber-800/60 rounded-md overflow-hidden mb-6">
+        {/* Background Image with Pattern Overlay */}
+        <div className="relative h-72 w-full">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/80">
+            <div className="w-full h-full bg-[url('https://i.imgur.com/UUmCPLs.png')] opacity-30"></div>
+          </div>
           
-          {/* Background effect overlay */}
-          <div className={cn(
-            "absolute inset-0 z-10",
-            !profile.bannerImage ? "bg-gradient-to-r from-gray-800 to-gray-900" : "bg-black/30",
-            profile.profileTheme?.bgClassName
-          )}>
-            {/* Apply any animated background effects */}
-            {profile.backgroundEffect?.element && (
-              <div className="absolute inset-0 z-10 overflow-hidden">
-                {profile.backgroundEffect.element}
+          {/* Circular Avatar in Center */}
+          <div className="absolute left-1/2 top-1/3 transform -translate-x-1/2 -translate-y-1/2 z-10">
+            <div className="relative">
+              <UserAvatar 
+                user={profile} 
+                size={100} 
+                frame={profile.avatarFrame} 
+              />
+              {/* Settings icon on the avatar - Only shown when it's the user's own profile */}
+              <div className="absolute -right-1 -top-1 bg-gray-800/80 p-1 rounded-full cursor-pointer hover:bg-gray-700/80 transition-colors">
+                <SettingsIcon className="h-4 w-4 text-gray-300" />
               </div>
-            )}
+            </div>
           </div>
           
-          {/* User status indicator - top right */}
-          <div className="absolute top-4 right-4 z-20">
-            <Badge 
-              variant={profile.status === 'online' ? 'default' : 'secondary'}
+          {/* Username Below Avatar - Large and centered with text effect */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 top-1/2 z-10 text-center">
+            <h1 
               className={cn(
-                "h-8 px-3 py-1.5 font-semibold text-sm",
-                profile.status === 'online' 
-                  ? "bg-green-500/80 text-white animate-pulse" 
-                  : "bg-gray-500/80 text-white"
+                "text-4xl uppercase tracking-wider font-bold text-white", 
+                profile.nameEffect?.className || "text-shadow-lg"
               )}
+              style={getNameEffectStyles(profile.nameEffect) || {
+                textShadow: '0 0 15px rgba(255, 255, 255, 0.7)'
+              }}
             >
-              {profile.status === 'online' ? 'Online' : 'Offline'}
-            </Badge>
+              {profile.username}
+            </h1>
+            
+            {/* Level Badge */}
+            <div className="mt-2 flex justify-center">
+              <Badge 
+                className={cn(
+                  "px-3 py-1 bg-amber-500/90 text-white shadow-md",
+                  "flex items-center gap-1.5"
+                )}
+              >
+                <Star className="h-4 w-4 fill-white" /> 
+                <span className="font-semibold">Level {profile.level || 1}</span>
+              </Badge>
+            </div>
           </div>
-        </div>
-        
-        {/* Avatar with frame */}
-        <div className="absolute -bottom-16 left-6 z-30">
-          <UserAvatar 
-            user={profile} 
-            size={128} 
-            frame={profile.avatarFrame} 
-          />
         </div>
       </div>
 
-      {/* Profile Info */}
-      <Card className={cn(
-        "mt-16 mb-6 overflow-hidden", 
-        profile.profileTheme?.cardClassName
-      )}>
-        <CardContent className="pt-6 relative">
-          {/* Theme overlay effects */}
-          {profile.profileTheme?.overlayElement && (
-            <div className="absolute inset-0 pointer-events-none">
-              {profile.profileTheme.overlayElement}
+      {/* Profile Stats and Actions Row */}
+      <div className="flex flex-wrap gap-2 justify-center mb-6">
+        {/* Cash Badge */}
+        <Badge variant="outline" className="bg-black/50 text-green-400 border-green-800/50 px-4 py-2 h-auto flex items-center gap-2">
+          <CircleDollarSign className="h-5 w-5" />
+          <span className="text-sm font-medium">{formattedCash}</span>
+        </Badge>
+        
+        {/* Respect Badge */}
+        <Badge variant="outline" className="bg-black/50 text-red-400 border-red-800/50 px-4 py-2 h-auto flex items-center gap-2">
+          <Award className="h-5 w-5" />
+          <span className="text-sm font-medium">{formattedRespect} Respect</span>
+        </Badge>
+        
+        {/* Gang Badge */}
+        {profile.gang ? (
+          <Badge variant="outline" className="bg-black/50 text-purple-400 border-purple-800/50 px-4 py-2 h-auto flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <span className="text-sm font-medium">{profile.gang.name}</span>
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="bg-black/50 text-blue-400 border-blue-800/50 px-4 py-2 h-auto flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <span className="text-sm font-medium">Mafia Boss</span>
+          </Badge>
+        )}
+        
+        {/* Crew Badge - Placeholder */}
+        <Badge variant="outline" className="bg-black/50 text-cyan-400 border-cyan-800/50 px-4 py-2 h-auto flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          <span className="text-sm font-medium">Crew: 6 Members</span>
+        </Badge>
+        
+        {/* Customize Button */}
+        <Badge variant="outline" className="bg-indigo-600/80 text-indigo-100 border-indigo-500 px-4 py-2 h-auto flex items-center gap-2 cursor-pointer hover:bg-indigo-500/80 transition-colors">
+          <SettingsIcon className="h-5 w-5" />
+          <span className="text-sm font-medium">Customize</span>
+        </Badge>
+        
+        {/* Photo Gallery Button */}
+        <Badge variant="outline" className="bg-fuchsia-600/80 text-fuchsia-100 border-fuchsia-500 px-4 py-2 h-auto flex items-center gap-2 cursor-pointer hover:bg-fuchsia-500/80 transition-colors">
+          <Image className="h-5 w-5" />
+          <Music className="h-5 w-5" />
+          <span className="text-sm font-medium">Photo Gallery</span>
+        </Badge>
+        
+        {/* Edit Profile Button */}
+        <Badge variant="outline" className="bg-slate-700/80 text-slate-100 border-slate-600 px-4 py-2 h-auto flex items-center gap-2 cursor-pointer hover:bg-slate-600/80 transition-colors">
+          <SettingsIcon className="h-5 w-5" />
+          <span className="text-sm font-medium">Edit Profile</span>
+        </Badge>
+      </div>
+
+      {/* Two-column layout for profile content */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Left Column - About & Character Stats */}
+        <div className="space-y-6">
+          {/* About Section */}
+          <div className="bg-black/70 border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-4 border-b border-gray-800 flex items-center gap-2">
+              <Users className="h-5 w-5 text-red-400" />
+              <h2 className="text-lg font-bold text-white">About</h2>
             </div>
-          )}
-          
-          <div className="flex justify-between items-start z-10 relative">
-            <div className="w-full">
-              <div className="flex items-center gap-3 flex-wrap">
-                {/* Username with effect */}
-                <h1 
-                  className={cn(
-                    "text-3xl font-bold", 
-                    profile.nameEffect?.className
-                  )}
-                  style={getNameEffectStyles(profile.nameEffect)}
-                >
-                  {profile.username}
-                </h1>
-                
-                {/* Level badge with glow effect */}
-                <Badge 
-                  className={cn(
-                    "px-3 py-1.5 bg-amber-500/90 text-white shadow-lg",
-                    "border border-amber-400/30",
-                    "flex items-center gap-1.5",
-                    "animate-[pulse_3s_ease-in-out_infinite]"
-                  )}
-                >
-                  <Star className="h-4 w-4 fill-white" /> 
-                  <span className="font-semibold">Level {profile.level || 1}</span>
-                </Badge>
-                
-                {/* Member since info */}
-                <div className="ml-auto flex items-center text-sm text-muted-foreground">
-                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" /> 
-                  <span>Member since {memberSince}</span>
-                </div>
-              </div>
-              
-              {/* Additional badges */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {profile.gang && (
-                  <Badge className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-1.5 px-3 py-1.5 shadow-lg">
-                    <Users className="h-3.5 w-3.5" /> 
-                    <span className="font-medium">{profile.gang.name}</span>
-                    <span className="bg-purple-800 text-purple-100 px-1.5 py-0.5 rounded-sm text-xs ml-1">
-                      {profile.gang.tag}
-                    </span>
-                  </Badge>
-                )}
-              </div>
+            <div className="p-4">
+              {profile.bio ? (
+                <p className="text-gray-300">{profile.bio}</p>
+              ) : (
+                <p className="text-gray-500 italic">No bio provided yet.</p>
+              )}
             </div>
           </div>
           
-          {/* Bio with styled container */}
-          {profile.bio && (
-            <div className={cn(
-              "mt-6 p-4 rounded-lg",
-              profile.profileTheme?.bioClassName || "bg-secondary/20"
-            )}>
-              <h2 className="text-lg font-semibold mb-2 flex items-center">
-                <span className="mr-2">Bio</span>
-                <div className="h-px flex-grow bg-border/50"></div>
-              </h2>
-              <p className="text-muted-foreground">{profile.bio}</p>
+          {/* Character Stats Section */}
+          <div className="bg-black/70 border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-4 border-b border-gray-800 flex items-center gap-2">
+              <Award className="h-5 w-5 text-red-400" />
+              <h2 className="text-lg font-bold text-white">Character Stats</h2>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="p-4 space-y-4">
+              {/* XP Progress */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-400">Level Progress</span>
+                  <span className="text-gray-300">0 / 100 XP</span>
+                </div>
+                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-amber-500 to-amber-300" 
+                    style={{ width: '0%' }}
+                  ></div>
+                </div>
+              </div>
+              
+              {/* Strength Stat */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-400 flex items-center">
+                    <Dumbbell className="h-3.5 w-3.5 mr-1.5 text-red-400" />
+                    Strength
+                  </span>
+                  <span className="text-red-400">{profile.strength || 0}/100</span>
+                </div>
+                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-red-700 to-red-500" 
+                    style={{ width: `${profile.strength || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              {/* Stealth Stat */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-400 flex items-center">
+                    <MoveRight className="h-3.5 w-3.5 mr-1.5 text-green-400" />
+                    Stealth
+                  </span>
+                  <span className="text-green-400">{profile.stealth || 0}/100</span>
+                </div>
+                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-green-700 to-green-500" 
+                    style={{ width: `${profile.stealth || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              {/* Charisma Stat */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-400 flex items-center">
+                    <Users className="h-3.5 w-3.5 mr-1.5 text-blue-400" />
+                    Charisma
+                  </span>
+                  <span className="text-blue-400">{profile.charisma || 0}/100</span>
+                </div>
+                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-700 to-blue-500" 
+                    style={{ width: `${profile.charisma || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+              
+              {/* Intelligence Stat */}
+              <div>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="text-gray-400 flex items-center">
+                    <Shield className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
+                    Intelligence
+                  </span>
+                  <span className="text-amber-400">{profile.intelligence || 0}/100</span>
+                </div>
+                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-amber-700 to-amber-500" 
+                    style={{ width: `${profile.intelligence || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Right Column - Showcase */}
+        <div className="md:col-span-2">
+          <div className="bg-black/70 border border-gray-800 rounded-lg overflow-hidden">
+            <div className="p-4 border-b border-gray-800 flex items-center gap-2">
+              <Award className="h-5 w-5 text-red-400" />
+              <h2 className="text-lg font-bold text-white">Showcase</h2>
+            </div>
+            <div className="p-4 space-y-6">
+              {/* Music Player */}
+              {profile.htmlProfile ? (
+                <div 
+                  className="custom-profile"
+                  dangerouslySetInnerHTML={{ __html: profile.htmlProfile }}
+                />
+              ) : (
+                <>
+                  {/* Example Music Player */}
+                  <div className="bg-gray-900/80 rounded-lg p-4 mb-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-20 h-20 rounded-md overflow-hidden">
+                        <img 
+                          src="https://i.scdn.co/image/ab67616d0000b2732a038d3bf875d23e4aeaa84e"
+                          alt="Album Cover" 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">Happier Than Ever</h3>
+                        <p className="text-gray-400">BILLIE EILISH</p>
+                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                          <span>2:35 / 4:58</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-full h-1 bg-gray-700 rounded-full mb-4">
+                      <div className="w-1/2 h-full bg-white rounded-full"></div>
+                    </div>
+                    <div className="flex justify-center items-center gap-4">
+                      <div className="rounded-full bg-red-500 w-10 h-10 flex items-center justify-center text-white">
+                        <span>▶</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                        <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                        <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Image Grid */}
+                  <div className="grid grid-cols-2 gap-4 mt-6">
+                    <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
+                      <img 
+                        src="https://i.pinimg.com/736x/2e/61/83/2e61839b1699f4e88e97b3dd6bf12cad.jpg"
+                        alt="Gallery Image 1" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="aspect-square rounded-lg overflow-hidden shadow-lg">
+                      <img 
+                        src="https://i.pinimg.com/736x/43/fc/2b/43fc2b1cd1507f7b28926d458a3e57c8.jpg"
+                        alt="Gallery Image 2" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Profile Tabs */}
       <Tabs defaultValue="custom" className="mt-8">
