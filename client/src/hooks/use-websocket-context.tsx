@@ -2,7 +2,7 @@ import { createContext, useContext, ReactNode, useCallback, useEffect } from 're
 import { useWebSocket, WebSocketMessage } from './use-websocket';
 import { useToast } from './use-toast';
 import { queryClient } from '@/lib/queryClient';
-import { useAuth } from './use-auth';
+import { useSupabaseAuth } from './use-supabase-auth';
 
 type WebSocketContextType = {
   isConnected: boolean;
@@ -15,7 +15,7 @@ const WebSocketContext = createContext<WebSocketContextType | null>(null);
 export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { isConnected, lastMessage, sendMessage } = useWebSocket();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { gameUser } = useSupabaseAuth();
 
   // Handle WebSocket messages
   const handleWebSocketMessage = useCallback((message: WebSocketMessage | null) => {
@@ -102,14 +102,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   // Send heartbeat every 30 seconds to keep connection alive
   useEffect(() => {
-    if (!isConnected || !user) return;
+    if (!isConnected || !gameUser) return;
     
     const interval = setInterval(() => {
-      sendMessage('heartbeat', { userId: user.id });
+      sendMessage('heartbeat', { userId: gameUser.id });
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [isConnected, sendMessage, user]);
+  }, [isConnected, sendMessage, gameUser]);
 
   return (
     <WebSocketContext.Provider value={{ isConnected, lastMessage, sendMessage }}>
