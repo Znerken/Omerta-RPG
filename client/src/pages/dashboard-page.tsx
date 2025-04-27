@@ -240,7 +240,8 @@ export default function DashboardPage() {
   const xpForNextLevel = 100; // Each level requires 100 XP
   // For current level progress, we only care about XP beyond previous level
   const totalXpForPreviousLevel = (user.level - 1) * 100;
-  const currentLevelXP = user.xp - totalXpForPreviousLevel;
+  // Apply modulo operation to get only the XP within the current level
+  const currentLevelXP = (user.xp - totalXpForPreviousLevel) % 100;
   const xpProgress = Math.min(100, Math.round((currentLevelXP / xpForNextLevel) * 100)) || 0;
   
   // Calculate wealth rank
