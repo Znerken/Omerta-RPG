@@ -90,14 +90,27 @@ export function registerDrugRoutes(app: Express) {
   // Admin routes for drug management
   app.post("/api/admin/drugs", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
-      const drugData = insertDrugSchema.parse(req.body);
-      const newDrug = await drugStorage.createDrug(drugData);
+      // Add default values if not provided
+      const drugData = {
+        ...req.body,
+        riskLevel: req.body.riskLevel || 1,
+        addictionRate: req.body.addictionRate || 0,
+        strengthBonus: req.body.strengthBonus || 0,
+        stealthBonus: req.body.stealthBonus || 0,
+        charismaBonus: req.body.charismaBonus || 0,
+        intelligenceBonus: req.body.intelligenceBonus || 0,
+        cashGainBonus: req.body.cashGainBonus || 0,
+      };
+
+      const validatedData = insertDrugSchema.parse(drugData);
+      const newDrug = await drugStorage.createDrug(validatedData);
       res.status(201).json(newDrug);
     } catch (error) {
+      console.error("Error creating drug:", error);
       if (error instanceof ZodError) {
-        handleZodError(error, res);
+        const errorMessage = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+        res.status(400).json({ error: errorMessage });
       } else {
-        console.error("Error creating drug:", error);
         res.status(500).json({ error: "Failed to create drug" });
       }
     }
