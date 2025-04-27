@@ -198,8 +198,8 @@ export function registerSocialRoutes(app: Express) {
         
         // Check if there's a friend request
         const request = userFriendRequests.find(r => 
-          (r.senderId === currentUserId && r.receiverId === user.id) ||
-          (r.senderId === user.id && r.receiverId === currentUserId)
+          (r.sender_id === currentUserId && r.receiver_id === user.id) ||
+          (r.sender_id === user.id && r.receiver_id === currentUserId)
         );
         
         // Determine friendship status
@@ -210,7 +210,7 @@ export function registerSocialRoutes(app: Express) {
           friendStatus = "friends";
         } else if (request) {
           // If there's a request, check if current user sent it or received it
-          if (request.senderId === currentUserId) {
+          if (request.sender_id === currentUserId) {
             friendStatus = "sent";
           } else {
             friendStatus = "received";
