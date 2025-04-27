@@ -1,5 +1,5 @@
 import { db } from './db-supabase';
-import { users, stats, userFriends, gangs, gangMembers, messages } from '@shared/schema';
+import { users, stats, userStatus, userFriends, gangs, gangMembers, messages } from '@shared/schema';
 import { eq, and, asc, desc, sql, not, inArray, isNull, or, like } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
@@ -109,15 +109,40 @@ export class SupabaseStorage {
    */
   async createUser(user: InsertUser) {
     try {
+      // Only include fields that exist in the users table
+      const { username, password, email, supabaseId } = user;
+      
+      // Insert user without the status and lastSeen fields
       const [insertedUser] = await db
         .insert(users)
         .values({
-          ...user,
-          createdAt: new Date(),
-          lastSeen: new Date(),
-          status: 'offline'
+          username,
+          password,
+          email,
+          supabaseId,
+          createdAt: new Date()
         })
         .returning();
+
+      // Create user status entry
+      await db
+        .insert(userStatus)
+        .values({
+          userId: insertedUser.id,
+          status: 'offline',
+          lastActive: new Date()
+        });
+
+      // Create user stats entry
+      await db
+        .insert(stats)
+        .values({
+          userId: insertedUser.id,
+          strength: 10,
+          stealth: 10,
+          charisma: 10,
+          intelligence: 10
+        });
 
       return insertedUser;
     } catch (error) {
