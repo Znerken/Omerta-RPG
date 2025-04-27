@@ -3,14 +3,13 @@ import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { getSession, getCurrentUser } from '@/lib/supabase';
-import { Link, useLocation } from 'wouter';
+import { Link } from 'wouter';
 
 export default function DashboardPage() {
   const { gameUser: user, signOut, supabaseUser } = useSupabaseAuth();
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const queryClient = useQueryClient();
   const [directUserData, setDirectUserData] = useState<any>(null);
-  const [location, navigate] = useLocation();
   
   // Always fetch user data directly on load
   useEffect(() => {
@@ -62,134 +61,185 @@ export default function DashboardPage() {
   // Use data from any available source (for component rendering)
   const userData = user || directUserData;
   
+  // Calculate stats and properties with fallbacks to avoid errors
+  const level = userData?.level || 1;
+  const xp = userData?.xp || 0;
+  const cash = userData?.cash || 0;
+  const xpPercentage = Math.min(100, Math.round((xp / (level * 100)) * 100));
+  
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-4xl font-bold mb-6 text-center bg-gradient-to-br from-red-600 to-red-400 bg-clip-text text-transparent">OMERTÀ</h1>
-      
-      {/* Show normal UI if we have user data from any source */}
-      {(userData) && (
-        <>
-          <div className="bg-black/40 border border-white/10 rounded-lg p-6 mb-6">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-black/60 to-red-900/30 flex items-center justify-center">
-                {(userData.avatar) ? (
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Header section */}
+      <header className="bg-black/40 border-b border-gray-800 shadow-lg">
+        <div className="container mx-auto p-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-red-500 to-red-300 bg-clip-text text-transparent">
+            OMERTÀ
+          </h1>
+          {userData && (
+            <div className="flex items-center space-x-4">
+              <div className="hidden md:block text-sm">
+                <span className="text-green-400">${cash.toLocaleString()}</span>
+              </div>
+              <button
+                onClick={() => signOut()}
+                className="px-3 py-1 bg-red-900/50 hover:bg-red-800 text-white text-sm rounded transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {!userData && (
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-red-600/30 border-t-red-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading your profile...</p>
+          </div>
+        </div>
+      )}
+
+      {userData && (
+        <div className="container mx-auto p-4">
+          {/* Player profile card */}
+          <div className="bg-black/30 rounded-lg p-6 mb-8 border border-gray-800">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-black/60 to-red-900/30 flex items-center justify-center border-2 border-red-900/30">
+                {userData.avatar ? (
                   <img src={userData.avatar} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                 ) : (
-                  <div className="text-red-400 text-3xl">👤</div>
+                  <div className="text-red-400 text-5xl">👤</div>
                 )}
               </div>
               
-              <div className="flex-1 text-center sm:text-left">
-                <h2 className="text-2xl font-bold">{userData.username}</h2>
-                <p className="text-gray-400">Level {userData.level || 1}</p>
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-3xl font-bold text-white">{userData.username}</h2>
+                <p className="text-gray-400 mb-2">Level {level}</p>
                 
-                <div className="mt-2">
-                  {/* Get all values with fallbacks */}
-                  {(() => {
-                    const xp = userData.xp || 0;
-                    const level = userData.level || 1;
-                    const percentage = Math.min(100, Math.round((xp / (level * 100)) * 100));
-                    
-                    return (
-                      <>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span>XP: {xp}</span>
-                          <span>{percentage}%</span>
-                        </div>
-                        <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full" 
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </>
-                    );
-                  })()}
+                <div className="mb-4">
+                  <div className="flex justify-between text-xs mb-1 text-gray-400">
+                    <span>XP: {xp}</span>
+                    <span>{xpPercentage}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full" 
+                      style={{ width: `${xpPercentage}%` }}
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="text-center">
-                <div className="bg-black/30 p-3 rounded-lg border border-white/10">
-                  <div className="text-green-400">💰</div>
-                  <div className="font-bold">${(userData.cash || 0).toLocaleString()}</div>
-                  <div className="text-xs text-gray-500">Cash</div>
+                
+                <div className="flex flex-wrap gap-4 text-center">
+                  <div className="bg-black/30 p-3 rounded-lg border border-gray-800 min-w-[100px]">
+                    <div className="text-green-400 text-xl">💰</div>
+                    <div className="font-bold">${cash.toLocaleString()}</div>
+                    <div className="text-xs text-gray-500">Cash</div>
+                  </div>
+                  
+                  <div className="bg-black/30 p-3 rounded-lg border border-gray-800 min-w-[100px]">
+                    <div className="text-purple-400 text-xl">👑</div>
+                    <div className="font-bold">{userData.respect || 0}</div>
+                    <div className="text-xs text-gray-500">Respect</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div 
-              className="bg-black/40 border border-white/10 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-black/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/crimes')}
-            >
-              <div className="text-red-400 text-4xl mb-2">🔫</div>
-              <h3 className="font-semibold">Crimes</h3>
-              <p className="text-sm text-gray-400">Rob banks, steal cars</p>
-            </div>
-            
-            <div 
-              className="bg-black/40 border border-white/10 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-black/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/training')}
-            >
-              <div className="text-yellow-400 text-4xl mb-2">💪</div>
-              <h3 className="font-semibold">Training</h3>
-              <p className="text-sm text-gray-400">Improve your skills</p>
-            </div>
-            
-            <div 
-              className="bg-black/40 border border-white/10 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-black/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/drugs')}
-            >
-              <div className="text-emerald-400 text-4xl mb-2">💊</div>
-              <h3 className="font-semibold">Drugs</h3>
-              <p className="text-sm text-gray-400">Trade and produce</p>
-            </div>
-            
-            <div 
-              className="bg-black/40 border border-white/10 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-black/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/banking')}
-            >
-              <div className="text-blue-400 text-4xl mb-2">🏦</div>
-              <h3 className="font-semibold">Banking</h3>
-              <p className="text-sm text-gray-400">Manage your finances</p>
-            </div>
-            
-            <div 
-              className="bg-black/40 border border-white/10 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-black/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/casino')}
-            >
-              <div className="text-purple-400 text-4xl mb-2">🎰</div>
-              <h3 className="font-semibold">Casino</h3>
-              <p className="text-sm text-gray-400">Try your luck</p>
-            </div>
-            
-            <div 
-              className="bg-black/40 border border-white/10 rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-black/50 transition-colors cursor-pointer"
-              onClick={() => navigate('/gang')}
-            >
-              <div className="text-orange-400 text-4xl mb-2">👨‍👨‍👦‍👦</div>
-              <h3 className="font-semibold">Family</h3>
-              <p className="text-sm text-gray-400">Join a crime family</p>
-            </div>
-          </div>
+          {/* Gameplay options */}
+          <h2 className="text-xl font-semibold mb-4 text-gray-300">Quick Actions</h2>
           
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={() => signOut()}
-              className="px-4 py-2 bg-red-900/50 hover:bg-red-800/70 text-white rounded-md transition-colors"
-            >
-              Sign Out
-            </button>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <Link href="/crimes">
+              <a className="bg-black/30 border border-gray-800 hover:border-red-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-red-400 text-3xl mb-2">🔫</div>
+                <h3 className="font-medium">Crimes</h3>
+              </a>
+            </Link>
+            
+            <Link href="/training">
+              <a className="bg-black/30 border border-gray-800 hover:border-yellow-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-yellow-400 text-3xl mb-2">💪</div>
+                <h3 className="font-medium">Training</h3>
+              </a>
+            </Link>
+            
+            <Link href="/drugs">
+              <a className="bg-black/30 border border-gray-800 hover:border-emerald-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-emerald-400 text-3xl mb-2">💊</div>
+                <h3 className="font-medium">Drugs</h3>
+              </a>
+            </Link>
+            
+            <Link href="/banking">
+              <a className="bg-black/30 border border-gray-800 hover:border-blue-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-blue-400 text-3xl mb-2">🏦</div>
+                <h3 className="font-medium">Banking</h3>
+              </a>
+            </Link>
+            
+            <Link href="/casino">
+              <a className="bg-black/30 border border-gray-800 hover:border-purple-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-purple-400 text-3xl mb-2">🎰</div>
+                <h3 className="font-medium">Casino</h3>
+              </a>
+            </Link>
+            
+            <Link href="/gang">
+              <a className="bg-black/30 border border-gray-800 hover:border-orange-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-orange-400 text-3xl mb-2">👨‍👨‍👦‍👦</div>
+                <h3 className="font-medium">Family</h3>
+              </a>
+            </Link>
           </div>
-        </>
-      )}
-      
-      {/* Loading state */}
-      {!userData && (
-        <div className="text-center py-8">
-          <div className="inline-block w-12 h-12 border-4 border-red-600/30 border-t-red-600 rounded-full animate-spin mb-4"></div>
-          <p>Loading your profile...</p>
+
+          {/* Secondary actions */}
+          <h2 className="text-xl font-semibold mb-4 text-gray-300">Other Activities</h2>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Link href="/locations">
+              <a className="bg-black/30 border border-gray-800 hover:border-indigo-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-indigo-400 text-3xl mb-2">🗺️</div>
+                <h3 className="font-medium">Locations</h3>
+              </a>
+            </Link>
+            
+            <Link href="/messages">
+              <a className="bg-black/30 border border-gray-800 hover:border-pink-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-pink-400 text-3xl mb-2">💬</div>
+                <h3 className="font-medium">Messages</h3>
+              </a>
+            </Link>
+            
+            <Link href="/inventory">
+              <a className="bg-black/30 border border-gray-800 hover:border-amber-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-amber-400 text-3xl mb-2">🎒</div>
+                <h3 className="font-medium">Inventory</h3>
+              </a>
+            </Link>
+            
+            <Link href="/achievements">
+              <a className="bg-black/30 border border-gray-800 hover:border-green-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-green-400 text-3xl mb-2">🏆</div>
+                <h3 className="font-medium">Achievements</h3>
+              </a>
+            </Link>
+            
+            <Link href="/leaderboard">
+              <a className="bg-black/30 border border-gray-800 hover:border-teal-900/50 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-teal-400 text-3xl mb-2">📊</div>
+                <h3 className="font-medium">Leaderboard</h3>
+              </a>
+            </Link>
+            
+            <Link href="/profile">
+              <a className="bg-black/30 border border-gray-800 hover:border-gray-700 rounded-lg p-4 flex flex-col items-center text-center hover:bg-black/50 transition-colors">
+                <div className="text-gray-400 text-3xl mb-2">👤</div>
+                <h3 className="font-medium">Profile</h3>
+              </a>
+            </Link>
+          </div>
         </div>
       )}
     </div>
