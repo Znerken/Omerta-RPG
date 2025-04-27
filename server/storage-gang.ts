@@ -592,28 +592,47 @@ export class GangStorage {
    */
   async removeGangMember(userId: number, gangId: number): Promise<boolean> {
     try {
+      console.log(`[DEBUG] Removing user ${userId} from gang ${gangId}`);
+      
       // Begin transaction
       await db.execute(sql`BEGIN`);
       
-      // Remove member from gang
-      await db
-        .delete(gangMembers)
-        .where(
-          and(
-            eq(gangMembers.userId, userId),
-            eq(gangMembers.gangId, gangId)
-          )
-        );
+      // Check if user is actually in the gang first with a parameterized query
+      const checkQuery = {
+        text: `SELECT * FROM gang_members WHERE user_id = $1 AND gang_id = $2`,
+        args: [userId, gangId]
+      };
+      
+      const checkResult = await db.execute(checkQuery);
+      
+      if (!checkResult.rows || checkResult.rows.length === 0) {
+        console.log(`[DEBUG] User ${userId} is not a member of gang ${gangId}`);
+        await db.execute(sql`ROLLBACK`);
+        return false;
+      }
+      
+      console.log(`[DEBUG] Found gang membership to remove:`, JSON.stringify(checkResult.rows[0]));
+      
+      // Remove member from gang using parameterized query to avoid SQL injection
+      const deleteQuery = {
+        text: `DELETE FROM gang_members WHERE user_id = $1 AND gang_id = $2`,
+        args: [userId, gangId]
+      };
+      
+      await db.execute(deleteQuery);
       
       // Update user's gang_id to null
-      await db
-        .update(users)
-        .set({ gangId: null })
-        .where(eq(users.id, userId));
+      const updateQuery = {
+        text: `UPDATE users SET gang_id = NULL WHERE id = $1`,
+        args: [userId]
+      };
+      
+      await db.execute(updateQuery);
       
       // Commit transaction
       await db.execute(sql`COMMIT`);
       
+      console.log(`[DEBUG] Successfully removed user ${userId} from gang ${gangId}`);
       return true;
     } catch (error) {
       // Rollback on error
