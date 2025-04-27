@@ -98,30 +98,37 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       
       if (isEmail) {
         // Login with email
+        console.log('Logging in with email:', emailOrUsername);
         ({ data, error } = await signInWithPassword(emailOrUsername, password));
       } else {
         // Login with username - we need to get the email for this username first
         try {
+          console.log('Fetching email for username:', emailOrUsername);
           const res = await apiRequest('POST', '/api/get-email-by-username', { username: emailOrUsername });
           
           if (!res.ok) {
+            console.error('API error:', await res.text());
             throw new Error('User not found');
           }
           
-          const { email } = await res.json();
+          const emailData = await res.json();
+          console.log('Email lookup response:', emailData);
           
-          if (!email) {
+          if (!emailData.email) {
             throw new Error('User not found');
           }
           
           // Now sign in with the retrieved email
-          ({ data, error } = await signInWithPassword(email, password));
+          console.log('Logging in with retrieved email:', emailData.email);
+          ({ data, error } = await signInWithPassword(emailData.email, password));
         } catch (err: any) {
+          console.error('Login error:', err);
           throw new Error(err.message || 'Login failed');
         }
       }
       
       if (error) {
+        console.error('Supabase auth error:', error);
         throw new Error(error);
       }
       

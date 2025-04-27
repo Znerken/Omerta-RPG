@@ -101,6 +101,7 @@ export async function getCurrentUser() {
  */
 export async function signInWithPassword(email: string, password: string) {
   try {
+    console.log('Attempting to sign in with email:', email);
     const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -108,11 +109,14 @@ export async function signInWithPassword(email: string, password: string) {
     });
     
     if (error) {
+      console.error('Supabase sign in error:', error);
       return { error: error.message };
     }
     
+    console.log('Sign in successful', data ? 'with data' : 'but no data returned');
     return { data };
   } catch (error: any) {
+    console.error('Exception during sign in:', error);
     return { error: error.message || 'An unknown error occurred' };
   }
 }

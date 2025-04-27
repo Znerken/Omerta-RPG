@@ -69,11 +69,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get email by username (for dual login functionality)
   app.post('/api/get-email-by-username', async (req: Request, res: Response) => {
     try {
+      console.log('Got request for email by username:', req.body);
       const { username } = req.body;
       
       if (!username) {
+        console.log('Username is missing in request');
         return res.status(400).json({ message: 'Username is required' });
       }
+      
+      console.log('Looking up user with username:', username);
       
       // Look up the user by username
       const user = await db.select({ email: users.email })
@@ -81,9 +85,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(users.username, username))
         .limit(1);
       
+      console.log('Query result:', user);
+      
       if (!user.length) {
+        console.log('No user found with username:', username);
         return res.status(404).json({ message: 'User not found' });
       }
+      
+      console.log('Found email for username:', username, user[0].email);
       
       // Return the email
       res.json({ email: user[0].email });
