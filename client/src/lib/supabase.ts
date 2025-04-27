@@ -1,43 +1,33 @@
-import { createClient } from '@supabase/supabase-js';
+import { useSupabase } from '@/providers/supabase-provider';
 
-// Initialize with placeholder that will be updated
-let supabaseUrl = '';
-let supabaseAnonKey = '';
+// This file serves as a bridge between old code expecting a supabase export
+// and the new provider-based approach
 
-// Fetch Supabase config from server
-async function fetchSupabaseConfig() {
-  try {
-    const response = await fetch('/api/config');
-    const config = await response.json();
-    
-    if (config.VITE_SUPABASE_URL && config.VITE_SUPABASE_ANON_KEY) {
-      supabaseUrl = config.VITE_SUPABASE_URL;
-      supabaseAnonKey = config.VITE_SUPABASE_ANON_KEY;
-      console.log('Supabase configuration loaded successfully.');
-      
-      // Re-initialize the client with the new config
-      initializeSupabaseClient();
-      return true;
-    } else {
-      console.error('Invalid Supabase configuration received from server.');
-      return false;
-    }
-  } catch (error) {
-    console.error('Failed to fetch Supabase configuration:', error);
-    return false;
+/**
+ * Gets the Supabase client from the context
+ * @returns Supabase client or throws an error if not available
+ */
+export function getSupabaseClient() {
+  const { supabase, isLoading, error } = useSupabase();
+  
+  if (isLoading) {
+    throw new Error('Supabase client is still loading');
   }
+  
+  if (error) {
+    throw new Error(`Supabase client error: ${error}`);
+  }
+  
+  if (!supabase) {
+    throw new Error('Supabase client is not available');
+  }
+  
+  return supabase;
 }
 
-// Create a Supabase client (initial placeholder)
-export let supabase = createClient('', '');
-
-// Function to initialize or re-initialize the Supabase client
-function initializeSupabaseClient() {
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
-}
-
-// Fetch config immediately
-fetchSupabaseConfig();
+// For compatibility with existing code using the direct export
+// This should be avoided in new code, but keeps existing code working
+export const supabase = null; // This will be overridden at runtime by the provider
 
 /**
  * Get the current session
@@ -45,6 +35,7 @@ fetchSupabaseConfig();
  */
 export async function getSession() {
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.getSession();
     if (error) {
       console.error('Error getting session:', error.message);
@@ -63,6 +54,7 @@ export async function getSession() {
  */
 export async function getCurrentUser() {
   try {
+    const supabase = getSupabaseClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error) {
       console.error('Error getting user:', error.message);
@@ -83,6 +75,7 @@ export async function getCurrentUser() {
  */
 export async function signInWithPassword(email: string, password: string) {
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -107,6 +100,7 @@ export async function signInWithPassword(email: string, password: string) {
  */
 export async function signUp(email: string, password: string, metadata: any = {}) {
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -131,6 +125,7 @@ export async function signUp(email: string, password: string, metadata: any = {}
  */
 export async function signOut() {
   try {
+    const supabase = getSupabaseClient();
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('Error signing out:', error.message);
@@ -150,6 +145,7 @@ export async function signOut() {
  */
 export async function resetPassword(email: string) {
   try {
+    const supabase = getSupabaseClient();
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
@@ -171,6 +167,7 @@ export async function resetPassword(email: string) {
  */
 export async function updatePassword(newPassword: string) {
   try {
+    const supabase = getSupabaseClient();
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });

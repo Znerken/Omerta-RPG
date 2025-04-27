@@ -1,7 +1,8 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useQuery, useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
-import { supabase, signInWithPassword, signUp as signUpFn, signOut as signOutFn } from '@/lib/supabase';
+import { signInWithPassword, signUp as signUpFn, signOut as signOutFn } from '@/lib/supabase';
+import { useSupabase } from '@/providers/supabase-provider';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -31,10 +32,15 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Get Supabase client from our provider
+  const { supabase } = useSupabase();
+
   // Fetch the authenticated user data from Supabase on mount
   useEffect(() => {
+    if (!supabase) return; // Skip if supabase client is not available yet
+    
     // Get the initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session } }: any) => {
       if (session?.user) {
         setSupabaseUser(session.user);
       }
@@ -42,7 +48,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (_event: any, session: any) => {
         setSupabaseUser(session?.user || null);
         
         // Invalidate user data query when auth state changes
@@ -56,7 +62,7 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
     // Clean up the subscription
     return () => subscription.unsubscribe();
-  }, [queryClient]);
+  }, [supabase, queryClient]);
 
   // Fetch the game user profile if authenticated
   const {
@@ -222,7 +228,7 @@ export function useSupabaseAuth() {
 }
 
 // Protected route component
-export function withAuthProtection<P>(Component: React.ComponentType<P>): React.FC<P> {
+export function withAuthProtection<P extends object>(Component: React.ComponentType<P>): React.FC<P> {
   return function ProtectedComponent(props: P) {
     const { isAuthenticated, isLoading } = useSupabaseAuth();
     
