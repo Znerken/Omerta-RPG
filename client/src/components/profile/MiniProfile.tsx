@@ -109,6 +109,10 @@ export function MiniProfile({
           
           {/* XP progress bar */}
           <div className="w-full mt-1">
+            <div className="flex justify-between text-[10px] mb-0.5 text-zinc-500">
+              <span>{currentLevelXP}/{xpForNextLevel} XP</span>
+              <span>{xpProgress}%</span>
+            </div>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
