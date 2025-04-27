@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
+import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
 import { formatCurrency, formatNumber } from "@shared/gameUtils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -171,7 +171,7 @@ const PROFILE_THEMES = [
 ];
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { gameUser: user } = useSupabaseAuth();
   const { data: dashboardData, isLoading: isDashboardLoading } = useQuery({
     queryKey: ["/api/dashboard"],
   });
