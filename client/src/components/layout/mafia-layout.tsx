@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useAchievements } from "@/hooks/use-achievements";
 import { useMessages } from "@/hooks/use-messages";
+import { useNotification } from "@/hooks/use-notification";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import {
   DollarSign,
   UserPlus,
   Bell,
+  BellOff,
   Gauge,
   Zap
 } from "lucide-react";
@@ -82,6 +84,7 @@ export function MafiaLayout({ children, title, description }: MafiaLayoutProps) 
   const { user, logoutMutation } = useAuth();
   const { unviewedCount, hasNewAchievements } = useAchievements();
   const { unreadCount } = useMessages();
+  const { notificationsEnabled, toggleNotifications } = useNotification();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   const handleLogout = () => {
