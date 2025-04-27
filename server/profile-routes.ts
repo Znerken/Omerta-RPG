@@ -89,21 +89,45 @@ export function registerProfileRoutes(app: Express) {
     }
   });
 
-  // Super simple fallback for profile viewing (bypassing all complexity)
+  // EMERGENCY TEST ROUTE - ultra simple with no schema dependencies
+  app.get("/api/users/:id/simple-profile", async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.id);
+      console.log(`DIRECT DB QUERY for user ID ${userId} - EMERGENCY TEST ROUTE`);
+      
+      const result = await db.execute(sql`
+        SELECT * FROM users WHERE id = ${userId}
+      `);
+      
+      console.log("EMERGENCY ROUTE RESULT:", JSON.stringify(result.rows, null, 2));
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Return raw data without any transformations
+      return res.json({
+        success: true,
+        user: result.rows[0]
+      });
+    } catch (error) {
+      console.error("EMERGENCY ROUTE ERROR:", error);
+      return res.status(500).json({ 
+        message: "Failed to fetch profile",
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
+  });
+  
+  // Standard profile route - keep the original but very simplified
   app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
       console.log(`Simple profile lookup for user ID ${userId}`);
       
-      // Direct query to get user data - simplest possible approach
+      // Test with a basic query first
       const userResult = await db.execute(
-        sql`SELECT id, username, level, xp, cash, respect, avatar, 
-                banner_image as "bannerImage", bio, html_profile as "htmlProfile", 
-                profile_theme as "profileTheme", is_jailed as "isJailed", 
-                jail_time_end as "jailTimeEnd", created_at as "createdAt" 
-             FROM users 
-             WHERE id = ${userId} 
-             LIMIT 1`
+        sql`SELECT * FROM users WHERE id = ${userId}`
       );
       
       console.log(`Query completed with ${userResult.rows.length} results for user ID ${userId}`);
@@ -112,13 +136,28 @@ export function registerProfileRoutes(app: Express) {
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Just return the raw DB result directly to minimize any potential conversion issues
+      // Manual field mapping instead of transformations
+      const user = userResult.rows[0];
       const profile = {
-        ...userResult.rows[0],
+        id: user.id,
+        username: user.username,
+        level: user.level || 1,
+        xp: user.xp || 0,
+        cash: user.cash || 0,
+        respect: user.respect || 0,
+        avatar: user.avatar,
+        bannerImage: user.banner_image,
+        bio: user.bio,
+        htmlProfile: user.html_profile,
+        profileTheme: user.profile_theme,
+        showAchievements: user.show_achievements !== false,
+        isJailed: user.is_jailed || false,
+        jailTimeEnd: user.jail_time_end,
+        createdAt: user.created_at,
         inGang: false // No gangs for simplicity
       };
       
-      console.log(`Returning profile for ${profile.username}`);
+      console.log(`Returning standard profile for ${profile.username}`);
       return res.json(profile);
       
     } catch (error) {

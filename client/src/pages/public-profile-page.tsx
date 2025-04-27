@@ -55,19 +55,34 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
   console.log("PublicProfilePage - urlUserId:", urlUserId);
   console.log("PublicProfilePage - final userId:", userId);
 
-  // Fetch public profile data
+  // Fetch public profile data - temporarily using the emergency endpoint
   const { 
-    data: profile, 
+    data: rawData, 
     isLoading, 
     error 
   } = useQuery({
-    queryKey: ['/api/users', userId, 'profile'],
-    queryFn: () => fetch(`/api/users/${userId}/profile`).then(res => {
+    queryKey: ['/api/users', userId, 'simple-profile'],
+    queryFn: () => fetch(`/api/users/${userId}/simple-profile`).then(res => {
       if (!res.ok) throw new Error('Failed to fetch profile');
-      return res.json() as Promise<UserProfile>;
+      return res.json();
     }),
     enabled: !!userId && !isNaN(userId),
   });
+  
+  // Convert the raw DB data to the expected profile format
+  const profile = rawData?.success ? {
+    id: rawData.user.id,
+    username: rawData.user.username,
+    level: rawData.user.level || 1,
+    avatar: rawData.user.avatar,
+    bannerImage: rawData.user.banner_image,
+    bio: rawData.user.bio,
+    htmlProfile: rawData.user.html_profile,
+    showAchievements: rawData.user.show_achievements !== false,
+    createdAt: rawData.user.created_at,
+    status: rawData.user.status || 'offline',
+    // No gang info for now
+  } as UserProfile : undefined;
 
   // Fetch user achievements if visible
   const { 
