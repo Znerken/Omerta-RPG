@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LeaderboardScene, FallbackLeaderboard } from './3DElements';
+import { FallbackLeaderboard } from './3DElements';
 import { 
   TrophyIcon, 
   DollarSignIcon, 
@@ -10,8 +10,6 @@ import {
   UsersIcon, 
   RefreshCwIcon,
   Loader2Icon,
-  BoxIcon,
-  ListIcon
 } from 'lucide-react';
 
 interface LeaderboardCardProps {
@@ -38,17 +36,6 @@ export function LeaderboardCard3D({
   defaultTab = "level"
 }: LeaderboardCardProps) {
   const [activeTab, setActiveTab] = useState<string>(defaultTab);
-  const [view3D, setView3D] = useState<boolean>(true);
-  const [error3D, setError3D] = useState<boolean>(false);
-  const [hasTriedLoad, setHasTriedLoad] = useState<boolean>(false);
-  
-  // Reset 3D error state when changing tabs
-  useEffect(() => {
-    if (hasTriedLoad) {
-      setHasTriedLoad(false);
-      setError3D(false);
-    }
-  }, [activeTab]);
   
   // Get the right data for the active tab
   const getTabData = () => {
@@ -81,17 +68,10 @@ export function LeaderboardCard3D({
     setActiveTab(tabId);
   };
   
-  // Handle 3D error
-  const handleError3D = () => {
-    console.error("Error loading 3D view, falling back to 2D");
-    setError3D(true);
-    setView3D(false);
-  };
-  
   // Loading placeholder
   if (loading) {
     return (
-      <div className="relative bg-dark-surface w-full h-[500px] rounded-lg flex items-center justify-center overflow-hidden">
+      <div className="relative bg-dark-surface w-full h-[600px] rounded-lg flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-radial from-primary/5 to-transparent" />
         <motion.div 
           initial={{ opacity: 0 }}
@@ -108,7 +88,7 @@ export function LeaderboardCard3D({
   // Empty data placeholder
   if (!data || data.length === 0) {
     return (
-      <div className="bg-dark-surface w-full h-[500px] rounded-lg flex items-center justify-center overflow-hidden">
+      <div className="bg-dark-surface w-full h-[600px] rounded-lg flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-radial from-primary/5 to-transparent" />
         <div className="flex flex-col items-center text-center px-4 z-10">
           <TrophyIcon className="h-16 w-16 text-gray-500 mb-4" />
@@ -141,30 +121,6 @@ export function LeaderboardCard3D({
           ))}
         </div>
         
-        {/* View toggle */}
-        <div className="bg-dark-lighter/70 backdrop-blur-sm rounded-lg p-1 flex">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`h-9 px-3 ${view3D && !error3D ? 'text-gray-400 hover:text-white' : 'bg-primary text-white'}`}
-            onClick={() => setView3D(false)}
-            disabled={!view3D}
-          >
-            <ListIcon className="h-4 w-4 mr-2" />
-            2D
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`h-9 px-3 ${!view3D || error3D ? 'text-gray-400 hover:text-white' : 'bg-primary text-white'}`}
-            onClick={() => setView3D(true)}
-            disabled={view3D || error3D}
-          >
-            <BoxIcon className="h-4 w-4 mr-2" />
-            3D
-          </Button>
-        </div>
-        
         {/* Refresh button */}
         <Button 
           variant="ghost" 
@@ -185,41 +141,29 @@ export function LeaderboardCard3D({
         <CardContent className="p-0">
           <AnimatePresence mode="wait">
             <motion.div
-              key={`${activeTab}-${view3D ? '3d' : '2d'}`}
+              key={activeTab}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               className="relative"
-              onError={handleError3D}
             >
-              {view3D && !error3D ? (
-                // 3D Visualization
-                <div className="relative" onError={handleError3D}>
-                  <LeaderboardScene 
-                    players={data} 
-                    activeTab={activeTab} 
-                  />
-                  
-                  {/* Overlay navigation buttons for mobile */}
-                  <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-                    {tabs.map((tab) => (
-                      <Button
-                        key={tab.id}
-                        variant={activeTab === tab.id ? "default" : "outline"}
-                        size="sm"
-                        className={`h-8 w-8 rounded-full ${activeTab === tab.id ? 'bg-primary text-white' : 'bg-black/50 backdrop-blur-sm text-white'}`}
-                        onClick={() => handleTabChange(tab.id)}
-                      >
-                        {tab.icon}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                // 2D Table view with animations
-                <FallbackLeaderboard players={data} activeTab={activeTab} />
-              )}
+              <FallbackLeaderboard players={data} activeTab={activeTab} />
+              
+              {/* Overlay navigation buttons for mobile */}
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2 md:hidden">
+                {tabs.map((tab) => (
+                  <Button
+                    key={tab.id}
+                    variant={activeTab === tab.id ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 w-8 rounded-full ${activeTab === tab.id ? 'bg-primary text-white' : 'bg-black/50 backdrop-blur-sm text-white'}`}
+                    onClick={() => handleTabChange(tab.id)}
+                  >
+                    {tab.icon}
+                  </Button>
+                ))}
+              </div>
             </motion.div>
           </AnimatePresence>
         </CardContent>

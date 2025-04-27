@@ -221,20 +221,20 @@ export function PlayerCard(props: {
 // Enhanced 2D Leaderboard
 export function FallbackLeaderboard({ players, activeTab }: { players: any[], activeTab: string }) {
   return (
-    <div className="bg-[#111827] bg-opacity-80 p-6 rounded-lg h-[450px] overflow-auto border border-gray-800 shadow-xl">
-      <h2 className="text-2xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-red-600 uppercase tracking-wider">
+    <div className="bg-[#111827] bg-opacity-80 p-6 rounded-lg h-[600px] overflow-auto border border-gray-800 shadow-xl">
+      <h2 className="text-3xl font-bold mb-8 text-center bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-red-600 uppercase tracking-wider">
         {activeTab} Leaderboard
       </h2>
       
-      <div className="space-y-4">
+      <div className="space-y-6">
         {players.slice(0, 10).map((player, i) => (
           <motion.div 
             key={player.id}
-            className={`flex items-center justify-between p-4 rounded-lg ${
-              i === 0 ? 'bg-gradient-to-r from-amber-900/30 to-amber-700/20 border border-amber-600/40 shadow-[0_0_15px_rgba(245,158,11,0.15)]' :
-              i === 1 ? 'bg-gradient-to-r from-slate-800/40 to-slate-700/20 border border-slate-400/30' :
-              i === 2 ? 'bg-gradient-to-r from-amber-900/20 to-amber-800/10 border border-amber-700/20' :
-              'bg-gray-900/40 border border-gray-800/30 hover:bg-gray-800/30 transition-colors'
+            className={`flex items-center p-5 rounded-lg ${
+              i === 0 ? 'bg-gradient-to-r from-amber-900/40 to-amber-700/30 border border-amber-600/40 shadow-[0_0_25px_rgba(245,158,11,0.2)]' :
+              i === 1 ? 'bg-gradient-to-r from-slate-800/50 to-slate-700/30 border border-slate-400/30 shadow-[0_0_20px_rgba(203,213,225,0.1)]' :
+              i === 2 ? 'bg-gradient-to-r from-amber-900/30 to-amber-800/20 border border-amber-700/20 shadow-[0_0_15px_rgba(180,83,9,0.1)]' :
+              'bg-gray-900/40 border border-gray-800/30 hover:bg-gray-800/40 transition-colors'
             }`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -242,36 +242,139 @@ export function FallbackLeaderboard({ players, activeTab }: { players: any[], ac
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <div className="flex items-center">
-              <div className={`w-10 h-10 flex items-center justify-center rounded-full mr-4 font-bold ${
-                i === 0 ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-black ring-2 ring-amber-500 ring-opacity-50 shadow-[0_0_10px_rgba(245,158,11,0.5)]' :
-                i === 1 ? 'bg-gradient-to-br from-slate-400 to-slate-600 text-black ring-2 ring-slate-400 ring-opacity-50' :
-                i === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800 text-black ring-2 ring-amber-600 ring-opacity-50' :
-                'bg-gray-800 text-gray-300 ring-1 ring-gray-700'
+            {/* Rank indicator */}
+            <div className={`h-16 w-16 flex items-center justify-center rounded-full mr-5 font-bold text-2xl ${
+              i === 0 ? 'bg-gradient-to-br from-amber-500 to-amber-700 text-black ring-2 ring-amber-500 ring-opacity-70 shadow-[0_0_15px_rgba(245,158,11,0.5)]' :
+              i === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500 text-black ring-2 ring-slate-400 ring-opacity-70 shadow-[0_0_10px_rgba(148,163,184,0.5)]' :
+              i === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-900 text-black ring-2 ring-amber-600 ring-opacity-70 shadow-[0_0_10px_rgba(180,83,9,0.4)]' :
+              'bg-gray-800 text-gray-300 ring-1 ring-gray-700'
+            }`}>
+              {i + 1}
+            </div>
+            
+            {/* Profile & player info - main content */}
+            <div className="flex flex-1 items-center">
+              {/* Profile image - will use avatar if available, otherwise a placeholder */}
+              <div className={`h-20 w-20 rounded-xl overflow-hidden mr-5 border-2 ${
+                i === 0 ? 'border-amber-500/70 shadow-[0_0_10px_rgba(245,158,11,0.3)]' :
+                i === 1 ? 'border-slate-400/70 shadow-[0_0_8px_rgba(148,163,184,0.3)]' :
+                i === 2 ? 'border-amber-700/70 shadow-[0_0_8px_rgba(180,83,9,0.3)]' :
+                'border-gray-700/50'
               }`}>
-                {i + 1}
+                <div className="h-full w-full bg-gray-800 flex items-center justify-center">
+                  {player.avatar ? (
+                    <img 
+                      src={player.avatar} 
+                      alt={`${player.username}'s avatar`} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className={`text-4xl font-bold ${
+                      i === 0 ? 'text-amber-500' :
+                      i === 1 ? 'text-slate-400' :
+                      i === 2 ? 'text-amber-700' :
+                      'text-gray-600'
+                    }`}>
+                      {player.username.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div>
-                <div className={`font-medium ${
+              
+              {/* Player details */}
+              <div className="flex-1">
+                <div className={`text-xl font-bold ${
                   i === 0 ? 'text-amber-400' :
                   i === 1 ? 'text-slate-300' :
                   i === 2 ? 'text-amber-600' :
                   'text-gray-300'
-                }`}>{player.username}</div>
-                <div className="text-xs text-gray-500">Level {player.level}</div>
+                }`}>
+                  {player.username}
+                </div>
+                <div className="text-sm text-gray-500 mt-1 flex items-center">
+                  <span className="inline-block px-2.5 py-0.5 bg-gray-800/80 rounded-full text-gray-400 mr-2">
+                    Level {player.level}
+                  </span>
+                  {player.respect && (
+                    <span className="inline-block px-2.5 py-0.5 bg-yellow-900/40 rounded-full text-yellow-600">
+                      {player.respect.toLocaleString()} Respect
+                    </span>
+                  )}
+                </div>
+                
+                {/* Stats bars */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-3 max-w-md">
+                  {player.strength && (
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-500 w-16">Strength:</span>
+                      <div className="h-1.5 bg-gray-800 rounded-full flex-1 ml-2">
+                        <div 
+                          className="h-full bg-red-600 rounded-full" 
+                          style={{ width: `${Math.min(100, player.strength)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {player.stealth && (
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-500 w-16">Stealth:</span>
+                      <div className="h-1.5 bg-gray-800 rounded-full flex-1 ml-2">
+                        <div 
+                          className="h-full bg-blue-600 rounded-full" 
+                          style={{ width: `${Math.min(100, player.stealth)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {player.charisma && (
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-500 w-16">Charisma:</span>
+                      <div className="h-1.5 bg-gray-800 rounded-full flex-1 ml-2">
+                        <div 
+                          className="h-full bg-purple-600 rounded-full" 
+                          style={{ width: `${Math.min(100, player.charisma)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  
+                  {player.intelligence && (
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-500 w-16">Intel:</span>
+                      <div className="h-1.5 bg-gray-800 rounded-full flex-1 ml-2">
+                        <div 
+                          className="h-full bg-green-600 rounded-full" 
+                          style={{ width: `${Math.min(100, player.intelligence)}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            
-            <div className="text-right">
-              <div className={`font-mono font-medium ${
-                i === 0 ? 'text-green-400' :
-                i === 1 ? 'text-green-500' :
-                i === 2 ? 'text-green-500' :
-                'text-green-600'
-              }`}>${player.cash?.toLocaleString()}</div>
-              <div className="text-xs text-gray-500 flex items-center justify-end">
-                <span className="mr-1">{player.xp?.toLocaleString()}</span>
-                <span className="text-xs text-gray-400">XP</span>
+              
+              {/* Player money and XP */}
+              <div className="text-right">
+                <div className={`font-mono text-xl font-bold ${
+                  i === 0 ? 'text-green-400' :
+                  i === 1 ? 'text-green-500' :
+                  i === 2 ? 'text-green-500' :
+                  'text-green-600'
+                }`}>
+                  ${player.cash?.toLocaleString()}
+                </div>
+                <div className="text-sm text-gray-500 flex items-center justify-end mt-1">
+                  <span className="mr-1 font-medium">{player.xp?.toLocaleString()}</span>
+                  <span className="text-xs text-gray-400">XP</span>
+                </div>
+                
+                {/* Gang tag if available */}
+                {player.gang && (
+                  <div className="mt-2 inline-block px-3 py-1 rounded-full bg-dark-surface text-gray-400 text-xs border border-gray-700">
+                    {player.gang}
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>
@@ -281,126 +384,5 @@ export function FallbackLeaderboard({ players, activeTab }: { players: any[], ac
   );
 }
 
-// 3D Leaderboard Scene
-export function LeaderboardScene({ players, activeTab }: { players: any[], activeTab: string }) {
-  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
-  const [use3D, setUse3D] = useState(false);
-  
-  // Reset the selection when tab changes
-  useEffect(() => {
-    setSelectedPlayer(null);
-  }, [activeTab]);
-
-  // For now, just use the 2D version because of rendering issues
-  if (!use3D) {
-    return (
-      <div>
-        <div className="flex justify-end mb-4">
-          <button 
-            className="px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 hover:border-gray-600 transition-all shadow-md flex items-center space-x-1 hover:scale-105"
-            onClick={() => setUse3D(true)}
-          >
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mr-1"></span>
-            <span>Try 3D View</span>
-          </button>
-        </div>
-        <FallbackLeaderboard players={players} activeTab={activeTab} />
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="flex justify-end mb-4">
-        <button 
-          className="px-3 py-1.5 text-xs font-medium text-gray-300 bg-gray-800 hover:bg-gray-700 rounded border border-gray-700 hover:border-gray-600 transition-all shadow-md flex items-center space-x-1 hover:scale-105"
-          onClick={() => setUse3D(false)}
-        >
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse mr-1"></span>
-          <span>Switch to 2D View</span>
-        </button>
-      </div>
-      <div className="relative h-[500px]">
-        <Canvas shadows dpr={[1, 2]} style={{ height: '500px' }}>
-          <fog attach="fog" args={['#070b10', 5, 20]} />
-          
-          <PerspectiveCamera 
-            makeDefault 
-            position={[0, 0, 5]} 
-            fov={45}
-          />
-          
-          {/* Top 3 Trophies */}
-          {players.length > 0 && (
-            <>
-              <Trophy position={[0, 2, 0]} scale={0.3} color="#FFD700" />
-              {players.length > 1 && (
-                <Trophy position={[-2, 1.6, 0]} scale={0.2} color="#C0C0C0" />
-              )}
-              {players.length > 2 && (
-                <Trophy position={[2, 1.6, 0]} scale={0.2} color="#CD7F32" />
-              )}
-            </>
-          )}
-          
-          {/* Leaderboard Title */}
-          <Text
-            position={[0, 3, 0]}
-            fontSize={0.5}
-            color="#FFFFFF"
-            anchorX="center"
-            anchorY="middle"
-          >
-            {activeTab.toUpperCase()} LEADERBOARD
-          </Text>
-          
-          {/* Player Cards */}
-          <group>
-            {players.slice(0, Math.min(10, players.length)).map((player, i) => (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                index={i}
-                position={[
-                  // Arrange in a curved formation
-                  3.5 * Math.sin((i / Math.min(10, players.length || 1)) * Math.PI),
-                  -0.6 * i + 1,
-                  -2 * Math.cos((i / Math.min(10, players.length || 1)) * 0.5 * Math.PI)
-                ]}
-                selected={selectedPlayer === i}
-                onClick={() => setSelectedPlayer(i === selectedPlayer ? null : i)}
-                delay={i * 200}
-              />
-            ))}
-          </group>
-          
-          {/* Environment and lighting */}
-          <ambientLight intensity={0.4} />
-          <spotLight 
-            position={[0, 10, 0]} 
-            intensity={0.6} 
-            angle={0.3} 
-            penumbra={1} 
-            castShadow 
-          />
-          <directionalLight
-            position={[5, 5, 5]}
-            intensity={0.8}
-            castShadow
-          />
-          
-          <ContactShadows
-            position={[0, -2, 0]}
-            opacity={0.4}
-            scale={10}
-            blur={1.5}
-            far={4}
-          />
-          
-          {/* Use a simpler environment that doesn't require loading external files */}
-          <color attach="background" args={['#0a0a0f']} />
-        </Canvas>
-      </div>
-    </div>
-  );
-}
+// We've removed the 3D option entirely as requested
+// This file now only contains the enhanced 2D leaderboard component
