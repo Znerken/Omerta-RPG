@@ -86,9 +86,9 @@ export default function LeaderboardPage() {
         description="See who's on top in the mafia world"
       />
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="bg-dark-surface/50 backdrop-blur-sm mb-6 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3">
+          <Card className="bg-dark-surface/80 backdrop-blur-sm mb-6 overflow-hidden">
             <CardHeader className="pb-2 relative z-10">
               <motion.div 
                 className="flex justify-between items-center"
@@ -103,7 +103,7 @@ export default function LeaderboardPage() {
                   </span>
                 </CardTitle>
                 <div className="flex items-center space-x-2">
-                  <div className="hidden md:flex items-center p-1 bg-dark-lighter/70 backdrop-blur-sm rounded-lg">
+                  <div className="hidden md:flex items-center p-1 bg-dark-lighter/80 backdrop-blur-sm rounded-md">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -135,7 +135,7 @@ export default function LeaderboardPage() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 bg-dark-lighter/70 backdrop-blur-sm"
+                    className="h-8 w-8 bg-dark-lighter/80 backdrop-blur-sm"
                     onClick={() => {
                       // Refresh all leaderboard queries
                       ['level', 'cash', 'respect', 'gangs'].forEach(type => {
@@ -158,7 +158,7 @@ export default function LeaderboardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`h-8 flex-1 ${timeFrame === 'all' ? 'bg-primary text-white' : 'bg-dark-lighter/70 text-gray-400'}`}
+                  className={`h-8 flex-1 ${timeFrame === 'all' ? 'bg-primary text-white' : 'bg-dark-lighter/80 text-gray-400'}`}
                   onClick={() => setTimeFrame('all')}
                 >
                   All Time
@@ -166,7 +166,7 @@ export default function LeaderboardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`h-8 flex-1 ${timeFrame === 'daily' ? 'bg-primary text-white' : 'bg-dark-lighter/70 text-gray-400'}`}
+                  className={`h-8 flex-1 ${timeFrame === 'daily' ? 'bg-primary text-white' : 'bg-dark-lighter/80 text-gray-400'}`}
                   onClick={() => setTimeFrame('daily')}
                 >
                   Daily
@@ -174,7 +174,7 @@ export default function LeaderboardPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`h-8 flex-1 ${timeFrame === 'weekly' ? 'bg-primary text-white' : 'bg-dark-lighter/70 text-gray-400'}`}
+                  className={`h-8 flex-1 ${timeFrame === 'weekly' ? 'bg-primary text-white' : 'bg-dark-lighter/80 text-gray-400'}`}
                   onClick={() => setTimeFrame('weekly')}
                 >
                   Weekly
@@ -204,7 +204,7 @@ export default function LeaderboardPage() {
             animate={{ opacity: isLoaded ? 1 : 0, x: isLoaded ? 0 : 50 }}
             transition={{ delay: 0.4, duration: 0.5 }}
           >
-            <Card className="bg-dark-surface/50 backdrop-blur-sm overflow-hidden">
+            <Card className="bg-dark-surface/80 backdrop-blur-sm overflow-hidden">
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center text-xl">
                   <div className="mr-2 text-primary rounded-full bg-primary/10 p-1.5">
@@ -217,12 +217,12 @@ export default function LeaderboardPage() {
                 {user ? (
                   <div className="space-y-4">
                     <motion.div 
-                      className="bg-dark-lighter/70 backdrop-blur-sm p-4 rounded-lg flex items-center justify-between"
-                      whileHover={{ scale: 1.02, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
+                      className="bg-dark-lighter/80 backdrop-blur-sm p-3 rounded-md flex items-center justify-between"
+                      whileHover={{ scale: 1.01, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
                       transition={{ type: 'spring', stiffness: 400, damping: 10 }}
                     >
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 mr-3">
+                        <div className="h-10 w-10 rounded-md bg-blue-500/20 flex items-center justify-center text-blue-400 mr-3">
                           <TrendingUp className="h-5 w-5" />
                         </div>
                         <div>
@@ -232,9 +232,9 @@ export default function LeaderboardPage() {
                       </div>
                       <div className="flex items-center">
                         <div className={`
-                          px-3 py-1 rounded-full font-mono text-sm
+                          px-3 py-1 rounded-md font-mono text-sm
                           ${userLevelRank === "N/A" || userLevelRank === "Not ranked" 
-                            ? "bg-gray-800 text-gray-400" 
+                            ? "bg-dark-surface text-gray-400" 
                             : `bg-${getRankColor(userLevelRank)}-900/30 text-${getRankColor(userLevelRank)}-400`}
                           flex items-center gap-1 font-bold
                         `}>
@@ -245,12 +245,12 @@ export default function LeaderboardPage() {
                     </motion.div>
                     
                     <motion.div 
-                      className="bg-dark-lighter/70 backdrop-blur-sm p-4 rounded-lg flex items-center justify-between"
-                      whileHover={{ scale: 1.02, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
+                      className="bg-dark-lighter/80 backdrop-blur-sm p-3 rounded-md flex items-center justify-between"
+                      whileHover={{ scale: 1.01, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
                       transition={{ type: 'spring', stiffness: 400, damping: 10 }}
                     >
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 mr-3">
+                        <div className="h-10 w-10 rounded-md bg-green-500/20 flex items-center justify-center text-green-400 mr-3">
                           <DollarSign className="h-5 w-5" />
                         </div>
                         <div>
@@ -260,9 +260,9 @@ export default function LeaderboardPage() {
                       </div>
                       <div className="flex items-center">
                         <div className={`
-                          px-3 py-1 rounded-full font-mono text-sm
+                          px-3 py-1 rounded-md font-mono text-sm
                           ${userCashRank === "N/A" || userCashRank === "Not ranked" 
-                            ? "bg-gray-800 text-gray-400" 
+                            ? "bg-dark-surface text-gray-400" 
                             : `bg-${getRankColor(userCashRank)}-900/30 text-${getRankColor(userCashRank)}-400`}
                           flex items-center gap-1 font-bold
                         `}>
@@ -273,12 +273,12 @@ export default function LeaderboardPage() {
                     </motion.div>
                     
                     <motion.div 
-                      className="bg-dark-lighter/70 backdrop-blur-sm p-4 rounded-lg flex items-center justify-between"
-                      whileHover={{ scale: 1.02, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
+                      className="bg-dark-lighter/80 backdrop-blur-sm p-3 rounded-md flex items-center justify-between"
+                      whileHover={{ scale: 1.01, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
                       transition={{ type: 'spring', stiffness: 400, damping: 10 }}
                     >
                       <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400 mr-3">
+                        <div className="h-10 w-10 rounded-md bg-yellow-500/20 flex items-center justify-center text-yellow-400 mr-3">
                           <Star className="h-5 w-5" />
                         </div>
                         <div>
@@ -288,9 +288,9 @@ export default function LeaderboardPage() {
                       </div>
                       <div className="flex items-center">
                         <div className={`
-                          px-3 py-1 rounded-full font-mono text-sm
+                          px-3 py-1 rounded-md font-mono text-sm
                           ${userRespectRank === "N/A" || userRespectRank === "Not ranked" 
-                            ? "bg-gray-800 text-gray-400" 
+                            ? "bg-dark-surface text-gray-400" 
                             : `bg-${getRankColor(userRespectRank)}-900/30 text-${getRankColor(userRespectRank)}-400`}
                           flex items-center gap-1 font-bold
                         `}>
@@ -302,12 +302,12 @@ export default function LeaderboardPage() {
                     
                     {user.gangId ? (
                       <motion.div 
-                        className="bg-dark-lighter/70 backdrop-blur-sm p-4 rounded-lg flex items-center justify-between"
-                        whileHover={{ scale: 1.02, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
+                        className="bg-dark-lighter/80 backdrop-blur-sm p-3 rounded-md flex items-center justify-between"
+                        whileHover={{ scale: 1.01, backgroundColor: 'rgba(39, 39, 42, 0.9)' }}
                         transition={{ type: 'spring', stiffness: 400, damping: 10 }}
                       >
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 mr-3">
+                          <div className="h-10 w-10 rounded-md bg-purple-500/20 flex items-center justify-center text-purple-400 mr-3">
                             <Users className="h-5 w-5" />
                           </div>
                           <div>
@@ -316,7 +316,7 @@ export default function LeaderboardPage() {
                           </div>
                         </div>
                         <div className="flex items-center">
-                          <div className="px-3 py-1 rounded-full bg-gray-800 text-gray-400 font-mono text-sm flex items-center gap-1 font-bold">
+                          <div className="px-3 py-1 rounded-md bg-dark-surface text-gray-400 font-mono text-sm flex items-center gap-1 font-bold">
                             <ChevronsUp className="h-4 w-4" />
                             {user.gang 
                               ? `#${gangLeaderboard?.findIndex((g: any) => g.id === user.gang.id) + 1 || "N/A"}` 
@@ -325,7 +325,7 @@ export default function LeaderboardPage() {
                         </div>
                       </motion.div>
                     ) : (
-                      <div className="bg-dark-lighter/70 backdrop-blur-sm p-4 rounded-lg text-center text-gray-400">
+                      <div className="bg-dark-lighter/80 backdrop-blur-sm p-3 rounded-md text-center text-gray-400">
                         Join a gang to see gang rankings
                       </div>
                     )}
