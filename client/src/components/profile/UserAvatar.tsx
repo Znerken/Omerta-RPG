@@ -147,7 +147,12 @@ export function UserAvatar({
 
   // Wrap in a link if linkToProfile is true
   if (linkToProfile) {
-    return <Link href={`/profile`}>{avatar}</Link>;
+    const userId = user?.id;
+    if (userId) {
+      return <Link href={`/player/${userId}`}>{avatar}</Link>;
+    } else {
+      return <Link href={`/profile`}>{avatar}</Link>;
+    }
   }
 
   return avatar;
