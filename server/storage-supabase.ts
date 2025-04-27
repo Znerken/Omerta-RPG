@@ -125,11 +125,20 @@ export class SupabaseStorage {
       const { username, password, email, supabaseId } = user;
       
       // Use direct SQL to avoid issues with unknown columns
-      const insertQuery = await db.execute(sql`
-        INSERT INTO users (username, password, email, supabase_id, created_at)
-        VALUES (${username}, ${password}, ${email}, ${supabaseId}, NOW())
-        RETURNING *
-      `);
+      // Handle null supabaseId properly
+      const insertQuery = await db.execute(
+        supabaseId 
+          ? sql`
+              INSERT INTO users (username, password, email, supabase_id, created_at)
+              VALUES (${username}, ${password}, ${email}, ${supabaseId}, NOW())
+              RETURNING *
+            `
+          : sql`
+              INSERT INTO users (username, password, email, created_at)
+              VALUES (${username}, ${password}, ${email}, NOW())
+              RETURNING *
+            `
+      );
       
       const insertedUser = insertQuery.rows[0];
 
