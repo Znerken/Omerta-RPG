@@ -332,6 +332,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Route to force link the current authenticated Supabase user with a game user
+  app.post('/api/link-supabase-user', async (req: Request, res: Response) => {
+    try {
+      // Extract the token and validate it
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ message: 'No auth header present' });
+      }
+      
+      // Get the Supabase user from the token
+      const supabaseUser = await extractAndValidateToken(req);
+      if (!supabaseUser) {
+        return res.status(401).json({ message: 'Invalid token' });
+      }
+      
+      // Get the game username from the request body
+      const { username, password } = req.body;
+      if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+      }
+      
+      // Find the game user by username
+      const gameUser = await storage.getUserByUsername(username);
+      if (!gameUser) {
+        return res.status(404).json({ message: 'Game user not found' });
+      }
+      
+      // Check if the password is correct (basic check for now)
+      if (gameUser.password !== password) {
+        return res.status(401).json({ message: 'Invalid password' });
+      }
+      
+      // Update the user with the Supabase ID
+      const updatedUser = await storage.updateUser(gameUser.id, {
+        supabaseId: supabaseUser.sub,
+        email: supabaseUser.email || gameUser.email // Use Supabase email if available
+      });
+      
+      res.json({
+        success: true,
+        message: 'Successfully linked Supabase user to game account',
+        user: {
+          id: updatedUser.id,
+          username: updatedUser.username,
+          email: updatedUser.email,
+          supabaseId: updatedUser.supabaseId
+        }
+      });
+    } catch (error) {
+      console.error('Error linking Supabase user:', error);
+      res.status(500).json({ message: 'Server error linking Supabase user' });
+    }
+  });
+
   // Debug route to check Supabase auth and game database link
   app.get('/api/debug/auth-link', async (req: Request, res: Response) => {
     try {

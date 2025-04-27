@@ -21,7 +21,8 @@ import DrugsPage from '@/pages/drugs-page';
 import LocationsPage from '@/pages/locations-page';
 import FriendsPage from '@/pages/friends-page';
 import AdminPage from '@/pages/admin-page';
-import PublicProfilePage, { PublicProfilePageProps } from '@/pages/public-profile-page';
+import PublicProfilePage from '@/pages/public-profile-page';
+import AccountLinkingPage from '@/pages/account-linking-page';
 import { ProtectedRoute, AdminProtectedRoute, JailProtectedRoute } from '@/lib/protected-route-supabase';
 
 // App component
@@ -33,6 +34,7 @@ function App() {
           <Switch>
             {/* Public routes */}
             <Route path="/auth" component={SupabaseAuthPage} />
+            <Route path="/link-account" component={AccountLinkingPage} />
 
             {/* Protected routes (require authentication) */}
             <ProtectedRoute path="/" component={DashboardPage} />
