@@ -40,7 +40,7 @@ export default function InventoryPage() {
 
   const buyItemMutation = useMutation({
     mutationFn: async (itemId: number) => {
-      const res = await apiRequest("POST", `/api/items/${itemId}/buy`);
+      const res = await apiRequest("POST", `/api/items/${itemId}/purchase`);
       return await res.json();
     },
     onSuccess: (data) => {
@@ -95,7 +95,7 @@ export default function InventoryPage() {
 
   const equipItemMutation = useMutation({
     mutationFn: async (itemId: number) => {
-      const res = await apiRequest("POST", `/api/inventory/${itemId}/equip`);
+      const res = await apiRequest("POST", `/api/inventory/${itemId}/toggle-equip`);
       return await res.json();
     },
     onSuccess: (data) => {
