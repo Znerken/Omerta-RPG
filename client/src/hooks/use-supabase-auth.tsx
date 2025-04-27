@@ -134,18 +134,44 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       toast({
         title: "Login successful",
         description: "Welcome back to OMERTÀ",
       });
+      
+      // Invalidate user profile data after login
       queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
       
-      // Redirect to dashboard after successful login
-      console.log('Redirecting to dashboard after successful login');
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1000); // Short delay to allow toast to be seen
+      // Ensure Supabase session is properly set
+      console.log('Login successful, validating session before redirect');
+      
+      // Small delay to ensure session is registered
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Fetch the game user profile directly to ensure it's available
+      try {
+        const res = await apiRequest('GET', '/api/user/profile');
+        if (res.ok) {
+          const gameUserData = await res.json();
+          console.log('Successfully fetched game user profile, redirecting to dashboard');
+          
+          // Set the data directly in the cache to ensure it's available immediately
+          queryClient.setQueryData(['/api/user/profile'], gameUserData);
+          
+          // Redirect to dashboard
+          window.location.href = '/';
+        } else {
+          console.error('Failed to fetch game user profile:', await res.text());
+          toast({
+            title: "Authentication issue",
+            description: "Logged in but couldn't get your profile. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching game user profile:', error);
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -182,17 +208,39 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
       
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       toast({
         title: "Registration successful",
         description: "Welcome to OMERTÀ! Please check your email to confirm your account.",
       });
       
-      // Redirect to dashboard after successful registration
-      console.log('Redirecting to dashboard after successful registration');
-      setTimeout(() => {
+      console.log('Registration successful, preparing for redirect');
+      
+      // Give time for the Supabase session to be established and for the toast to be read
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Try to fetch the profile to ensure proper authentication
+      try {
+        const res = await apiRequest('GET', '/api/user/profile');
+        if (res.ok) {
+          const gameUserData = await res.json();
+          console.log('Successfully fetched game user profile after registration');
+          
+          // Set the data directly in the cache to ensure it's available immediately
+          queryClient.setQueryData(['/api/user/profile'], gameUserData);
+          
+          // Redirect to dashboard
+          window.location.href = '/';
+        } else {
+          console.error('Failed to fetch game user profile after registration:', await res.text());
+          // We'll still redirect to dashboard, as registration was successful
+          window.location.href = '/';
+        }
+      } catch (error) {
+        console.error('Error after registration:', error);
+        // Still redirect to dashboard as the registration was successful
         window.location.href = '/';
-      }, 2000); // Longer delay to allow the user to read the message
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -208,18 +256,25 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
     mutationFn: async () => {
       return await signOutFn();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast({
         title: "Logout successful",
         description: "You have been logged out",
       });
+      
+      console.log('Logout successful, clearing cache and redirecting');
+      
+      // Clear user data from cache
       queryClient.setQueryData(['/api/user/profile'], null);
       
-      // Redirect to login page after successful logout
-      console.log('Redirecting to login page after successful logout');
-      setTimeout(() => {
-        window.location.href = '/auth';
-      }, 1000); // Short delay to allow toast to be seen
+      // Small delay to ensure the session is properly cleared
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Clear all queries from cache to ensure a clean state
+      queryClient.clear();
+      
+      // Redirect to login page
+      window.location.href = '/auth';
     },
     onError: (error: Error) => {
       toast({

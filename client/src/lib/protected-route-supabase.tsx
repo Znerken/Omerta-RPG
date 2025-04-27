@@ -1,9 +1,10 @@
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
 import { Route, Redirect, useLocation } from 'wouter';
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, UserCheck, AlertCircle, Shield } from 'lucide-react';
+import { getCurrentUser, getSession } from './supabase';
 
 interface RouteProps {
   path: string;
@@ -14,8 +15,65 @@ interface RouteProps {
 export function ProtectedRoute({ path, component: Component }: RouteProps) {
   const { isLoading, isAuthenticated, gameUser } = useSupabaseAuth();
   const [, navigate] = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
+  const [hasDirectAuth, setHasDirectAuth] = useState(false);
 
-  if (isLoading) {
+  // Double-check authentication directly with Supabase
+  useEffect(() => {
+    async function verifyAuth() {
+      try {
+        // First check if we already have auth from the context
+        if (isAuthenticated && gameUser) {
+          console.log('Protected route using context auth');
+          setHasDirectAuth(true);
+          setIsChecking(false);
+          return;
+        }
+        
+        // If the context is still loading, wait for it
+        if (isLoading) {
+          return;
+        }
+        
+        // Double check with Supabase directly
+        const session = await getSession();
+        const user = await getCurrentUser();
+        
+        if (session && user) {
+          console.log('Protected route found direct auth');
+          setHasDirectAuth(true);
+          
+          // Force prefetch the game user
+          try {
+            const res = await fetch('/api/user/profile', {
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              }
+            });
+            
+            if (res.ok) {
+              console.log('Successfully prefetched game user profile');
+            }
+          } catch (err) {
+            console.error('Error prefetching game user profile', err);
+          }
+        } else {
+          console.log('No direct auth found');
+          setHasDirectAuth(false);
+        }
+        
+        setIsChecking(false);
+      } catch (error) {
+        console.error('Error verifying auth:', error);
+        setHasDirectAuth(false);
+        setIsChecking(false);
+      }
+    }
+    
+    verifyAuth();
+  }, [isAuthenticated, isLoading, gameUser]);
+
+  if (isLoading || isChecking) {
     return (
       <Route path={path}>
         <LoadingScreen message="Authenticating..." />
@@ -23,7 +81,8 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
     );
   }
 
-  if (!isAuthenticated || !gameUser) {
+  if ((!isAuthenticated && !hasDirectAuth) || (!gameUser && !hasDirectAuth)) {
+    console.log('Redirecting to auth from protected route');
     return (
       <Route path={path}>
         <Redirect to="/auth" />
