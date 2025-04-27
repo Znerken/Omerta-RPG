@@ -91,21 +91,54 @@ export function registerProfileRoutes(app: Express) {
   app.get("/api/users/:id/profile", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      const profile = await storage.getUserProfile(userId);
       
-      if (!profile) {
+      // First check if the user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        console.log(`User ID ${userId} not found in database`);
         return res.status(404).json({ message: "User not found" });
       }
       
-      // Remove sensitive fields
-      const { password, email, ...publicProfile } = profile;
-      
-      // Only show achievements if user allows it
-      if (!profile.showAchievements) {
-        delete publicProfile.achievements;
+      try {
+        const profile = await storage.getUserProfile(userId);
+        
+        if (!profile) {
+          console.log(`Failed to retrieve profile for user ID ${userId}`);
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        // Remove sensitive fields
+        const { password, email, ...publicProfile } = profile;
+        
+        // Only show achievements if user allows it
+        if (!profile.showAchievements) {
+          delete publicProfile.achievements;
+        }
+        
+        res.json(publicProfile);
+      } catch (profileError) {
+        console.error(`Error retrieving profile for user ID ${userId}:`, profileError);
+        
+        // Return a basic profile with just the user information if there's an error with the profile
+        const basicProfile = {
+          id: user.id,
+          username: user.username,
+          level: user.level,
+          respect: user.respect,
+          avatar: user.avatar,
+          bannerImage: user.bannerImage,
+          bio: user.bio,
+          htmlProfile: user.htmlProfile,
+          profileTheme: user.profileTheme,
+          isJailed: user.isJailed,
+          jailTimeEnd: user.jailTimeEnd,
+          inGang: false,
+          createdAt: user.createdAt
+        };
+        
+        console.log(`Returning basic profile for user ID ${userId} due to error`);
+        res.json(basicProfile);
       }
-      
-      res.json(publicProfile);
     } catch (error) {
       console.error("Error fetching profile:", error);
       res.status(500).json({ message: "Failed to fetch profile" });

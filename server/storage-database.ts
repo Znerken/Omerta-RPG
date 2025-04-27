@@ -254,69 +254,84 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       console.log(`[DEBUG] Found user:`, user);
       
       try {
-        // First check directly in the database - use raw SQL query to avoid column doesn't exist errors
-        const result = await db.execute(
-          sql`SELECT * FROM gang_members WHERE user_id = ${userId}`
+        // Check if the user is in a gang - use safe SQL that doesn't depend on column names
+        // This avoids the "column rank does not exist" error
+        const gangResult = await db.execute(
+          sql`
+            SELECT 
+              g.* 
+            FROM 
+              users u
+            LEFT JOIN 
+              gang_members gm ON u.id = gm.user_id
+            LEFT JOIN 
+              gangs g ON gm.gang_id = g.id
+            WHERE 
+              u.id = ${userId} AND gm.gang_id IS NOT NULL
+          `
         );
         
-        const directMember = result.rows[0];
-        console.log(`[DEBUG] Direct database query for gangMembers:`, directMember);
-        
-        // If user is in a gang based on direct query
-        if (directMember) {
-          // Get the gang details
-          const [gangData] = await db
-            .select()
-            .from(gangs)
-            .where(eq(gangs.id, directMember.gang_id));
-            
+        // If user is in a gang based on the join
+        if (gangResult.rows.length > 0) {
+          const gangData = gangResult.rows[0];
+          console.log(`[DEBUG] Found gang for user:`, gangData);
+          
+          // Get just the gang member info - without the rank column reference
+          const memberResult = await db.execute(
+            sql`SELECT * FROM gang_members WHERE user_id = ${userId}`
+          );
+          
+          const memberData = memberResult.rows[0];
+          console.log(`[DEBUG] Found gang member data:`, memberData);
+          
+          // Default rank to 'Member' if it doesn't exist
+          let memberRank = 'Member';
+          try {
+            if (memberData && memberData.rank) {
+              memberRank = memberData.rank;
+            }
+          } catch (error) {
+            console.log('[DEBUG] No rank field in gang_members table, using default "Member"');
+          }
+          
           // Return user with gang info
-          console.log(`[DEBUG] User is in gang (direct query), returning user with gang info`);
-          
-          // Handle both column naming conventions
-          const memberRank = directMember.rank || 'Member'; // Default to 'Member' if rank doesn't exist
-          
           return {
             ...user,
             inGang: true,
-            gangId: directMember.gang_id,
-            gang: gangData,
+            gangId: gangData.id,
+            gang: {
+              id: gangData.id,
+              name: gangData.name,
+              tag: gangData.tag,
+              description: gangData.description,
+              logo: gangData.logo,
+              bankBalance: gangData.bank_balance || 0,
+              level: gangData.level || 1,
+              experience: gangData.experience || 0,
+              respect: gangData.respect || 0,
+              strength: gangData.strength || 10,
+              defense: gangData.defense || 10,
+              createdAt: gangData.created_at,
+              ownerId: gangData.owner_id
+            },
             gangRank: memberRank,
             gangMember: {
-              ...directMember,
-              gangId: directMember.gang_id,
-              userId: directMember.user_id,
-              joinedAt: directMember.joined_at
+              id: memberData.id,
+              gangId: memberData.gang_id,
+              userId: memberData.user_id,
+              rank: memberRank,
+              contribution: memberData.contribution || 0,
+              joinedAt: memberData.joined_at
             }
           };
         }
       } catch (error) {
-        console.error("Error in direct gang member query:", error);
-        // Continue to fallback method
-      }
-      
-      // Fallback to using storage methods
-      try {
-        const gangMember = await this.getGangMember(userId);
-        console.log(`[DEBUG] getGangMember result:`, gangMember);
-        
-        if (gangMember) {
-          console.log(`[DEBUG] User is in gang via getGangMember, returning user with gang info`);
-          return {
-            ...user,
-            inGang: true,
-            gangId: gangMember.gangId,
-            gang: gangMember.gang,
-            gangRank: gangMember.rank || 'Member',
-            gangMember
-          };
-        }
-      } catch (error) {
-        console.error("Error in fallback gang member query:", error);
+        console.error("Error in gang lookup query:", error);
+        // Continue to return user without gang info
       }
       
       // Return user without gang info if we get here
-      console.log(`[DEBUG] User with ID ${userId} is not in a gang`);
+      console.log(`[DEBUG] User with ID ${userId} is not in a gang or error occurred`);
       return {
         ...user,
         inGang: false
