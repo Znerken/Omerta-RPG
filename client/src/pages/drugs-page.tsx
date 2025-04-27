@@ -757,7 +757,7 @@ const LabsTab = React.memo(function LabsTab() {
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="flex items-center">
-                        <Flasks className="h-4 w-4 mr-1 text-blue-500" /> Capacity
+                        <FlaskConical className="h-4 w-4 mr-1 text-blue-500" /> Capacity
                       </span>
                       <span className="font-medium">{lab.capacity} units</span>
                     </div>
