@@ -222,6 +222,99 @@ export function registerDrugRoutes(app: Express) {
       }
     }
   });
+  
+  // Admin endpoints to give drugs and ingredients to users
+  app.post("/api/admin/users/:userId/give-ingredient", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { ingredientId, quantity = 1 } = req.body;
+      
+      if (!ingredientId || isNaN(ingredientId)) {
+        return res.status(400).json({ error: "Valid ingredientId is required" });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Check if ingredient exists
+      const ingredient = await drugStorage.getDrugIngredient(ingredientId);
+      if (!ingredient) {
+        return res.status(404).json({ error: "Ingredient not found" });
+      }
+      
+      // Check if user already has this ingredient
+      const userIngredient = await drugStorage.getUserIngredient(userId, ingredientId);
+      
+      if (userIngredient) {
+        // Update existing ingredient quantity
+        const updatedIngredient = await drugStorage.updateUserIngredientQuantity(
+          userIngredient.id,
+          userIngredient.quantity + quantity
+        );
+        return res.status(200).json(updatedIngredient);
+      } else {
+        // Add new ingredient to user
+        const newUserIngredient = await drugStorage.addIngredientToUser({
+          userId,
+          ingredientId,
+          quantity
+        });
+        return res.status(201).json(newUserIngredient);
+      }
+    } catch (error) {
+      console.error("Error giving ingredient to user:", error);
+      return res.status(500).json({ error: "Failed to give ingredient to user" });
+    }
+  });
+  
+  app.post("/api/admin/users/:userId/give-drug", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { drugId, quantity = 1 } = req.body;
+      
+      if (!drugId || isNaN(drugId)) {
+        return res.status(400).json({ error: "Valid drugId is required" });
+      }
+      
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Check if drug exists
+      const drug = await drugStorage.getDrug(drugId);
+      if (!drug) {
+        return res.status(404).json({ error: "Drug not found" });
+      }
+      
+      // Check if user already has this drug
+      const userDrug = await drugStorage.getUserDrug(userId, drugId);
+      
+      if (userDrug) {
+        // Update existing drug quantity
+        const updatedDrug = await drugStorage.updateUserDrugQuantity(
+          userDrug.id,
+          userDrug.quantity + quantity
+        );
+        return res.status(200).json(updatedDrug);
+      } else {
+        // Add new drug to user
+        const newUserDrug = await drugStorage.addDrugToUser({
+          userId,
+          drugId,
+          quantity
+        });
+        return res.status(201).json(newUserDrug);
+      }
+    } catch (error) {
+      console.error("Error giving drug to user:", error);
+      return res.status(500).json({ error: "Failed to give drug to user" });
+    }
+  });
 
   // ========== User Inventory Routes ==========
   app.get("/api/user/drugs", isAuthenticated, async (req: Request, res: Response) => {
@@ -536,7 +629,9 @@ export function registerDrugRoutes(app: Express) {
       // Check if user has required ingredients
       const drugWithRecipe = await drugStorage.getDrugWithRecipe(productionData.drugId);
       if (!drugWithRecipe || drugWithRecipe.recipes.length === 0) {
-        return res.status(400).json({ error: "This drug doesn't have a recipe" });
+        return res.status(400).json({ 
+          error: "This drug doesn't have a recipe. Admin needs to create a recipe connecting this drug with ingredients before production can begin."
+        });
       }
       
       // Check for each ingredient
