@@ -179,28 +179,6 @@ export default function AuthPage() {
                     </Button>
                   </form>
                 </Form>
-                
-                <div className="mt-8 pt-6 border-t border-border/30">
-                  <div className="text-center mb-3">
-                    <p className="text-xs text-muted-foreground">Development Testing</p>
-                  </div>
-                  <Button 
-                    variant="outline"
-                    className="w-full bg-black/30 border-gold/30 text-gold hover:bg-black/50"
-                    onClick={handleCreateTestUser}
-                    disabled={createTestUserMutation.isPending}
-                  >
-                    {createTestUserMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating Test User...
-                      </>
-                    ) : "Create Test User"}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Creates a random user with $500,000 cash, level 5, and 20 of all stats
-                  </p>
-                </div>
               </TabsContent>
               
               <TabsContent value="register">
@@ -272,27 +250,7 @@ export default function AuthPage() {
                   </form>
                 </Form>
                 
-                <div className="mt-8 pt-6 border-t border-border/30">
-                  <div className="text-center mb-3">
-                    <p className="text-xs text-muted-foreground">Development Testing</p>
-                  </div>
-                  <Button 
-                    variant="outline"
-                    className="w-full bg-black/30 border-gold/30 text-gold hover:bg-black/50"
-                    onClick={handleCreateTestUser}
-                    disabled={createTestUserMutation.isPending}
-                  >
-                    {createTestUserMutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating Test User...
-                      </>
-                    ) : "Create Test User"}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2 text-center">
-                    Creates a random user with $500,000 cash, level 5, and 20 of all stats
-                  </p>
-                </div>
+
               </TabsContent>
             </Tabs>
           </Card>
