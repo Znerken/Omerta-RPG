@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, asc, or, gt, lt, between, inArray, isNull } from "drizzle-orm";
+import { eq, and, sql, desc, asc, or, gt, lt, between, inArray, isNull, count } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -12,6 +12,7 @@ import {
   drugDeals,
   drugAddictions,
   drugTerritories,
+  userDrugEffects,
   type Drug,
   type InsertDrug,
   type DrugIngredient,
@@ -32,6 +33,8 @@ import {
   type InsertDrugAddiction,
   type DrugTerritory,
   type InsertDrugTerritory,
+  type UserDrugEffect,
+  type InsertUserDrugEffect,
   type DrugWithQuantity,
   type DrugWithRecipe,
 } from "@shared/schema";
@@ -935,6 +938,245 @@ export class DrugStorage {
       for (const recipe of recipes) {
         await this.createRecipe(recipe);
       }
+    }
+  }
+
+  // User Drug Effects operations
+  async getUserActiveDrugEffects(userId: number): Promise<(UserDrugEffect & { drug: Drug })[]> {
+    return await db
+      .select({
+        id: userDrugEffects.id,
+        userId: userDrugEffects.userId,
+        drugId: userDrugEffects.drugId,
+        startedAt: userDrugEffects.startedAt,
+        expiresAt: userDrugEffects.expiresAt,
+        strengthBonus: userDrugEffects.strengthBonus,
+        stealthBonus: userDrugEffects.stealthBonus,
+        charismaBonus: userDrugEffects.charismaBonus,
+        intelligenceBonus: userDrugEffects.intelligenceBonus,
+        cashGainBonus: userDrugEffects.cashGainBonus,
+        active: userDrugEffects.active,
+        sideEffectTriggered: userDrugEffects.sideEffectTriggered,
+        drug: drugs,
+      })
+      .from(userDrugEffects)
+      .innerJoin(drugs, eq(userDrugEffects.drugId, drugs.id))
+      .where(
+        and(
+          eq(userDrugEffects.userId, userId),
+          eq(userDrugEffects.active, true),
+          gt(userDrugEffects.expiresAt, new Date())
+        )
+      );
+  }
+  
+  async getUserAllDrugEffects(userId: number): Promise<(UserDrugEffect & { drug: Drug })[]> {
+    return await db
+      .select({
+        id: userDrugEffects.id,
+        userId: userDrugEffects.userId,
+        drugId: userDrugEffects.drugId,
+        startedAt: userDrugEffects.startedAt,
+        expiresAt: userDrugEffects.expiresAt,
+        strengthBonus: userDrugEffects.strengthBonus,
+        stealthBonus: userDrugEffects.stealthBonus,
+        charismaBonus: userDrugEffects.charismaBonus,
+        intelligenceBonus: userDrugEffects.intelligenceBonus,
+        cashGainBonus: userDrugEffects.cashGainBonus,
+        active: userDrugEffects.active,
+        sideEffectTriggered: userDrugEffects.sideEffectTriggered,
+        drug: drugs,
+      })
+      .from(userDrugEffects)
+      .innerJoin(drugs, eq(userDrugEffects.drugId, drugs.id))
+      .where(eq(userDrugEffects.userId, userId))
+      .orderBy(desc(userDrugEffects.startedAt));
+  }
+  
+  async getUserActiveDrugEffect(userId: number, drugId: number): Promise<UserDrugEffect | undefined> {
+    const [effect] = await db
+      .select()
+      .from(userDrugEffects)
+      .where(
+        and(
+          eq(userDrugEffects.userId, userId),
+          eq(userDrugEffects.drugId, drugId),
+          eq(userDrugEffects.active, true),
+          gt(userDrugEffects.expiresAt, new Date())
+        )
+      );
+    
+    return effect;
+  }
+  
+  async addDrugEffect(insertEffect: InsertUserDrugEffect): Promise<UserDrugEffect> {
+    // Check if there's an active effect from the same drug
+    const activeEffect = await this.getUserActiveDrugEffect(
+      insertEffect.userId, 
+      insertEffect.drugId
+    );
+    
+    if (activeEffect) {
+      // Deactivate the existing effect before adding a new one
+      await db
+        .update(userDrugEffects)
+        .set({ active: false })
+        .where(eq(userDrugEffects.id, activeEffect.id));
+    }
+    
+    // Add the new effect
+    const [newEffect] = await db.insert(userDrugEffects).values(insertEffect).returning();
+    return newEffect;
+  }
+  
+  async deactivateDrugEffect(id: number): Promise<boolean> {
+    try {
+      await db
+        .update(userDrugEffects)
+        .set({ active: false })
+        .where(eq(userDrugEffects.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error("Error deactivating drug effect:", error);
+      return false;
+    }
+  }
+  
+  async deactivateExpiredEffects(): Promise<number> {
+    const result = await db
+      .update(userDrugEffects)
+      .set({ active: false })
+      .where(
+        and(
+          eq(userDrugEffects.active, true),
+          lt(userDrugEffects.expiresAt, new Date())
+        )
+      )
+      .returning({ id: userDrugEffects.id });
+    
+    return result.length;
+  }
+  
+  async markSideEffectTriggered(id: number): Promise<boolean> {
+    try {
+      await db
+        .update(userDrugEffects)
+        .set({ sideEffectTriggered: true })
+        .where(eq(userDrugEffects.id, id));
+      
+      return true;
+    } catch (error) {
+      console.error("Error marking side effect as triggered:", error);
+      return false;
+    }
+  }
+  
+  async getUserTotalBonuses(userId: number): Promise<{
+    strengthBonus: number;
+    stealthBonus: number;
+    charismaBonus: number;
+    intelligenceBonus: number;
+    cashGainBonus: number;
+  }> {
+    // Get all active drug effects for the user
+    const activeEffects = await this.getUserActiveDrugEffects(userId);
+    
+    // Calculate the total bonuses
+    const totalBonuses = activeEffects.reduce((total, effect) => {
+      return {
+        strengthBonus: total.strengthBonus + (effect.strengthBonus || 0),
+        stealthBonus: total.stealthBonus + (effect.stealthBonus || 0),
+        charismaBonus: total.charismaBonus + (effect.charismaBonus || 0),
+        intelligenceBonus: total.intelligenceBonus + (effect.intelligenceBonus || 0),
+        cashGainBonus: total.cashGainBonus + (effect.cashGainBonus || 0),
+      };
+    }, {
+      strengthBonus: 0,
+      stealthBonus: 0,
+      charismaBonus: 0,
+      intelligenceBonus: 0,
+      cashGainBonus: 0,
+    });
+    
+    return totalBonuses;
+  }
+  
+  // Method to use a drug and apply its effects
+  async useDrug(userId: number, drugId: number): Promise<{
+    success: boolean;
+    message: string;
+    effect?: UserDrugEffect;
+  }> {
+    try {
+      // Check if user has the drug
+      const userDrug = await this.getUserDrug(userId, drugId);
+      if (!userDrug || userDrug.quantity < 1) {
+        return {
+          success: false,
+          message: "You don't have this drug in your inventory."
+        };
+      }
+      
+      // Get drug details
+      const drug = await this.getDrug(drugId);
+      if (!drug) {
+        return {
+          success: false,
+          message: "Drug not found."
+        };
+      }
+      
+      // Check if user already has an active effect from this drug
+      const existingEffect = await this.getUserActiveDrugEffect(userId, drugId);
+      if (existingEffect) {
+        return {
+          success: false,
+          message: `You are already under the effects of ${drug.name}. Wait until it wears off.`
+        };
+      }
+      
+      // Remove one drug from user's inventory
+      await this.removeDrugFromUser(userId, drugId, 1);
+      
+      // Calculate expiration time
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + (drug.durationHours * 60 * 60 * 1000));
+      
+      // Create drug effect
+      const effect = await this.addDrugEffect({
+        userId,
+        drugId,
+        expiresAt,
+        strengthBonus: drug.strengthBonus || 0,
+        stealthBonus: drug.stealthBonus || 0,
+        charismaBonus: drug.charismaBonus || 0,
+        intelligenceBonus: drug.intelligenceBonus || 0,
+        cashGainBonus: drug.cashGainBonus || 0,
+        active: true,
+        sideEffectTriggered: false
+      });
+      
+      // Check for addiction chance
+      if (drug.addictionRate > 0) {
+        const random = Math.random() * 100;
+        if (random < drug.addictionRate) {
+          // User got addicted
+          await this.createOrUpdateAddiction(userId, drugId, drug.sideEffects || "Withdrawal symptoms");
+        }
+      }
+      
+      return {
+        success: true,
+        message: `You used ${drug.name}. You feel its effects coursing through your body.`,
+        effect
+      };
+    } catch (error) {
+      console.error("Error using drug:", error);
+      return {
+        success: false,
+        message: "An error occurred while using the drug."
+      };
     }
   }
 }
