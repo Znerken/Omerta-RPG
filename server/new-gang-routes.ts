@@ -141,7 +141,7 @@ gangRouter.patch("/:id", isAuthenticated, async (req: Request, res: Response) =>
     
     // Check if the user is a leader of this gang
     const membership = await gangStorage.getGangMember(req.user.id);
-    if (!membership || membership.gangId !== gangId || membership.rank !== "Leader") {
+    if (!membership || membership.gangId !== gangId || membership.role !== "Leader") {
       return res.status(403).json({ message: "Only the gang leader can update the gang" });
     }
     
@@ -174,7 +174,7 @@ gangRouter.delete("/:id", isAuthenticated, async (req: Request, res: Response) =
     
     // Only the owner can delete a gang, or an admin
     const membership = await gangStorage.getGangMember(req.user.id);
-    const isOwner = membership && membership.gangId === gangId && membership.rank === "Leader";
+    const isOwner = membership && membership.gangId === gangId && membership.role === "Leader";
     
     if (!isOwner && !req.user.isAdmin) {
       return res.status(403).json({ message: "Only the gang leader or an admin can delete the gang" });
