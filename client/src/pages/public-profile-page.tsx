@@ -144,7 +144,7 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
     );
   }
 
-  // If error, show error message
+  // If error, show error message with link to emergency profile
   if (error || !profile) {
     return (
       <div className="container mx-auto max-w-4xl py-6">
@@ -156,7 +156,21 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
         </div>
         <Card className="p-6 text-center">
           <h2 className="text-2xl font-bold mb-2">Profile Not Found</h2>
-          <p className="text-muted-foreground">This profile does not exist or is not available.</p>
+          <p className="text-muted-foreground mb-4">This profile does not exist or is not available.</p>
+          
+          {userId && (
+            <div className="mt-2 p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-md">
+              <p className="text-amber-800 dark:text-amber-300 text-sm mb-2">
+                Try the emergency profile viewer instead:
+              </p>
+              <Link 
+                href={`/emergency-profile/${userId}`}
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-amber-100 dark:bg-amber-900 text-amber-900 dark:text-amber-200 rounded-md hover:bg-amber-200 dark:hover:bg-amber-800 transition-colors"
+              >
+                View Emergency Profile
+              </Link>
+            </div>
+          )}
         </Card>
       </div>
     );
