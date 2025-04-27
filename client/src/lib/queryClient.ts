@@ -31,15 +31,23 @@ export const queryClient = new QueryClient({
           
           if (!response.ok) {
             if (response.status === 401) {
-              // For auth errors, create a specific error type
               throw new Error("UNAUTHORIZED");
             }
             
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || response.statusText || "An error occurred");
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.message || response.statusText || "An error occurred");
+            } else {
+              throw new Error(response.statusText || "Server error");
+            }
           }
           
-          return response.json();
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return response.json();
+          }
+          throw new Error("Invalid response format");
         } catch (error) {
           // Swallow errors from logging to prevent double logs
           if (error instanceof Error && error.message !== "UNAUTHORIZED") {
