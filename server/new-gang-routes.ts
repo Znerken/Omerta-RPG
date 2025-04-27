@@ -587,8 +587,34 @@ gangRouter.post("/:id/bank/withdraw", isAuthenticated, async (req: Request, res:
  */
 gangRouter.get("/territories", async (req: Request, res: Response) => {
   try {
+    console.log("Fetching all territories");
     const territories = await gangStorage.getAllTerritories();
-    res.json(territories);
+    console.log("Retrieved territories:", territories);
+    
+    // Modify the response to include the gang name for each controlled territory
+    const territoriesWithGangData = await Promise.all(
+      territories.map(async (territory) => {
+        if (territory.controlledBy) {
+          try {
+            const gang = await gangStorage.getGang(territory.controlledBy);
+            return {
+              ...territory,
+              controllingGang: gang ? {
+                id: gang.id,
+                name: gang.name,
+                tag: gang.tag
+              } : null
+            };
+          } catch (err) {
+            console.error(`Error fetching gang ${territory.controlledBy} for territory ${territory.id}:`, err);
+            return territory;
+          }
+        }
+        return territory;
+      })
+    );
+    
+    res.json(territoriesWithGangData);
   } catch (error) {
     console.error("Error fetching territories:", error);
     res.status(500).json({ message: "Failed to fetch territories" });
@@ -897,15 +923,51 @@ gangRouter.post("/wars/:id/contribute", isAuthenticated, async (req: Request, re
  */
 gangRouter.get("/missions", isAuthenticated, async (req: Request, res: Response) => {
   try {
-    // Check if user is in a gang
-    const membership = await gangStorage.getGangMember(req.user.id);
-    if (!membership) {
+    console.log("Fetching missions for user ID:", req.user?.id);
+    
+    // Check if user is in a gang - use raw SQL query for more reliable results
+    let membership;
+    try {
+      // First check using the storage method
+      membership = await gangStorage.getGangMember(req.user.id);
+      console.log("GangMember result from storage method:", membership);
+      
+      // If that fails, check using direct SQL
+      if (!membership) {
+        const result = await db.execute(sql`
+          SELECT gm.*, u.gang_id FROM gang_members gm
+          JOIN users u ON u.id = gm.user_id
+          WHERE gm.user_id = ${req.user.id}
+        `);
+        
+        if (result.rows.length > 0) {
+          console.log("GangMember result from direct SQL:", result.rows[0]);
+          membership = {
+            id: result.rows[0].id,
+            gangId: result.rows[0].gang_id || result.rows[0].gangId,
+            userId: result.rows[0].user_id || result.rows[0].userId,
+            role: result.rows[0].role || result.rows[0].rank,
+            joinedAt: result.rows[0].joined_at || result.rows[0].joinedAt
+          };
+        }
+      }
+    } catch (membershipError) {
+      console.error("Error checking gang membership:", membershipError);
+    }
+    
+    // Check directly on the user object as a fallback
+    const gangId = membership?.gangId || req.user.gangId;
+    console.log("Determined gangId:", gangId);
+    
+    if (!gangId) {
       return res.status(403).json({ message: "You must be in a gang to view missions" });
     }
     
     // Get all available missions for this gang
-    const missions = await gangStorage.getAvailableMissionsForGang(membership.gangId);
-    res.json(missions);
+    const missions = await gangStorage.getAvailableMissionsForGang(gangId);
+    console.log("Retrieved missions for gang:", missions);
+    
+    res.json(missions || []);
   } catch (error) {
     console.error("Error fetching gang missions:", error);
     res.status(500).json({ message: "Failed to fetch gang missions" });
