@@ -420,27 +420,35 @@ export class GangStorage {
   async getGangMember(userId: number): Promise<any | undefined> {
     try {
       console.log('[DEBUG] getGangMember called for userId:', userId);
-      // Get member record
-      const [member] = await db
-        .select()
-        .from(gangMembers)
-        .where(eq(gangMembers.userId, userId));
+      
+      // Use raw SQL to avoid schema issues
+      const rawQuery = `
+        SELECT * FROM gang_members 
+        WHERE user_id = ${userId}
+      `;
+      
+      const result = await db.execute(sql.raw(rawQuery));
+      const member = result.rows[0];
       
       if (!member) {
         return undefined;
       }
       
       // Get gang info
-      const gang = await this.getGang(member.gangId);
+      const gang = await this.getGang(member.gang_id);
       
       if (!gang) {
         return undefined;
       }
       
+      // Convert snake_case to camelCase for consistency
       return {
-        ...member,
-        gangId: member.gangId,
-        gang,
+        id: member.id,
+        gangId: member.gang_id,
+        userId: member.user_id,
+        role: member.role,
+        joinedAt: member.joined_at,
+        gang
       };
     } catch (error) {
       console.error(`Error in getGangMember:`, error);
@@ -456,8 +464,15 @@ export class GangStorage {
       // Begin transaction
       await db.execute(sql`BEGIN`);
       
-      // Add member to gang
-      const [member] = await db.insert(gangMembers).values(data).returning();
+      // Add member to gang using raw SQL to avoid schema issues
+      const insertQuery = `
+        INSERT INTO gang_members (gang_id, user_id, role)
+        VALUES (${data.gangId}, ${data.userId}, '${data.role}')
+        RETURNING *
+      `;
+      
+      const result = await db.execute(sql.raw(insertQuery));
+      const member = result.rows[0];
       
       // Update user's gang_id
       await db
@@ -468,7 +483,15 @@ export class GangStorage {
       // Commit transaction
       await db.execute(sql`COMMIT`);
       
-      return member;
+      // Convert snake_case to camelCase for consistency
+      return {
+        id: member.id,
+        gangId: member.gang_id,
+        userId: member.user_id,
+        role: member.role,
+        contribution: member.contribution || 0,
+        joinedAt: member.joined_at
+      };
     } catch (error) {
       // Rollback on error
       await db.execute(sql`ROLLBACK`);
