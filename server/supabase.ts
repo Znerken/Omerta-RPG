@@ -82,8 +82,11 @@ export async function extractAndValidateToken(req: Request): Promise<any> {
         console.log('[extractAndValidateToken] Token verified with Supabase for user:', user.id);
         
         // Add the email from the user data to the decoded token for convenience
+        // Also explicitly set id to the user.id for consistency
         const mergedData = { 
           ...decoded, 
+          sub: user.id, // Maintain backward compat
+          id: user.id,  // Add explicit id property
           email: user.email 
         };
         console.log('[extractAndValidateToken] Enhancing token with email:', user.email);

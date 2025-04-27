@@ -40,12 +40,12 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
       return res.status(401).json({ message: "Unauthorized - Invalid token" });
     }
     
-    console.log('Token validated, fetching user with Supabase ID:', supabaseUser.sub);
+    console.log('Token validated, fetching user with Supabase ID:', supabaseUser.id);
     console.log('Token email is:', supabaseUser.email);
     
     // Get user from database using Supabase ID
-    console.log('Looking up user with Supabase ID:', supabaseUser.sub);
-    let user = await storage.getUserBySupabaseId(supabaseUser.sub);
+    console.log('Looking up user with Supabase ID:', supabaseUser.id);
+    let user = await storage.getUserBySupabaseId(supabaseUser.id);
     
     if (!user) {
       console.log('No user found with Supabase ID. Trying to find by email...');
@@ -57,8 +57,8 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
         if (user) {
           console.log('Found user by email, updating their Supabase ID...');
           // Update the user's Supabase ID for future logins
-          user = await storage.updateUser(user.id, { supabaseId: supabaseUser.sub });
-          console.log('User updated with Supabase ID');
+          user = await storage.updateUser(user.id, { supabaseId: supabaseUser.id });
+          console.log('User updated with Supabase ID:', supabaseUser.id);
         } else {
           console.log('No user found with email:', supabaseUser.email);
         }
@@ -66,8 +66,13 @@ export async function isAuthenticated(req: Request, res: Response, next: NextFun
     }
     
     if (!user) {
-      console.log('No user found with Supabase ID or email:', supabaseUser.sub);
-      return res.status(401).json({ message: "Unauthorized - User not found" });
+      console.log('No user found with Supabase ID or email:', supabaseUser.id);
+      return res.status(401).json({ 
+        message: "Unauthorized - User not found",
+        needsLinking: true,
+        supabaseId: supabaseUser.id,
+        email: supabaseUser.email
+      });
     }
     
     // Attach user to request
