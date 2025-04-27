@@ -160,6 +160,16 @@ export default function AuthPage() {
                       )}
                     />
                     
+                    <div className="flex justify-end">
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-sm text-muted-foreground" 
+                        asChild
+                      >
+                        <a href="/forgot-password">Forgot password?</a>
+                      </Button>
+                    </div>
+                    
                     <Button 
                       type="submit" 
                       className="w-full" 

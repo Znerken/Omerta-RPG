@@ -34,6 +34,8 @@ import CasinoPage from "@/pages/casino-page";
 import FriendsPage from "@/pages/friends-page";
 import FriendSystemTestPage from "@/pages/friend-system-test";
 import LocationsPage from "@/pages/locations-page";
+import ForgotPasswordPage from "@/pages/forgot-password-page";
+import ResetPasswordPage from "@/pages/reset-password-page";
 
 // Protected route with layout wrapper
 function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
@@ -56,6 +58,8 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       
       {/* Protected routes with layout */}
       <Route path="/">

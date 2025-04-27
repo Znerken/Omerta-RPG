@@ -452,6 +452,19 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
     }
   }
   
+  // Update user password method
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
+    try {
+      await db
+        .update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.id, userId));
+    } catch (error) {
+      console.error("Error in updateUserPassword:", error);
+      throw new Error("Failed to update password");
+    }
+  }
+  
   // Update gang method
   async updateGang(id: number, gangData: Partial<Gang>): Promise<Gang | undefined> {
     try {

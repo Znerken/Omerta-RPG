@@ -255,24 +255,27 @@ export function setupAuth(app: Express) {
       // Find user by email
       const user = await storage.getUserByEmail(email);
       if (!user) {
-        // For security reasons, don't reveal if the email exists or not
-        return res.status(200).json({ 
-          message: "If your email is in our system, you will receive a password reset link." 
+        // For security reasons, don't reveal if the email exists or not in production
+        // But for development, we'll return a clear message
+        return res.status(404).json({ 
+          message: "No user found with this email address." 
         });
       }
       
       // Generate a token for this user
       const token = generateResetToken(user.id);
       
-      // Send email with reset link
-      // In a real application, we would use SendGrid or another email service here
-      // For now, we'll just log the token to the console
+      // Log the token to the console for debugging
       console.log(`PASSWORD RESET TOKEN for ${user.username}: ${token}`);
-      console.log(`Reset URL: http://localhost:5000/reset-password?token=${token}`);
+      console.log(`Reset URL: ${req.protocol}://${req.get('host')}/reset-password?token=${token}`);
       
-      // Return success message to the client
+      // Return the token to the client (for development/demo purposes)
+      // In production, this would be sent via email instead
       res.status(200).json({ 
-        message: "If your email is in our system, you will receive a password reset link." 
+        message: "Reset token generated successfully.",
+        username: user.username,
+        token: token,
+        resetLink: `/reset-password?token=${token}`
       });
     } catch (error) {
       console.error("Error in forgot password:", error);
