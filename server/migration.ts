@@ -1,29 +1,31 @@
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
+import { drizzle, sql } from 'drizzle-orm/neon-serverless';
 import { createClient } from '@supabase/supabase-js';
-import { sql } from 'drizzle-orm';
-import { initializeDatabase, createTables, syncSupabaseUsers, db, closeDatabase } from './db-supabase';
-import { createSupabaseUser } from './supabase';
-import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import * as schema from '../shared/schema';
+import * as casinoSchema from '../shared/schema-casino';
+import * as economySchema from '../shared/schema-economy';
 
 // Load environment variables
 dotenv.config();
 
-// Create source database pool
-const sourcePool = new Pool({
+// Create PostgreSQL pool
+const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+// Create Drizzle client
+const db = drizzle(pool, { schema: { ...schema, ...casinoSchema, ...economySchema } });
+
 // Create Supabase admin client
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+const supabase = createClient(
+  process.env.SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string,
   {
     auth: {
       autoRefreshToken: false,
-      persistSession: false,
-    },
+      persistSession: false
+    }
   }
 );
 
@@ -37,31 +39,28 @@ const supabaseAdmin = createClient(
  * 5. Link existing users to their Supabase IDs
  */
 async function migrate() {
+  console.log('Starting PostgreSQL to Supabase migration...');
+  
   try {
-    console.log('Starting migration to Supabase...');
-
-    // Step 1: Initialize database
-    const initialized = await initializeDatabase();
-    if (!initialized) {
-      throw new Error('Failed to initialize database connection');
-    }
-
-    // Step 2: Create tables if they don't exist
-    await createTables();
-
-    // Step 3: Add any missing columns required for Supabase
+    // 1. Check database connection
+    console.log('Checking database connection...');
+    const result = await db.execute<{ now: Date }>(sql\`SELECT NOW()\`);
+    console.log(`Database connected at ${result.rows[0].now}`);
+    
+    // 2. Add missing columns if needed
+    console.log('Checking for missing columns...');
     await addMissingColumns();
-
-    // Step 4 & 5: Migrate users to Supabase and link them
+    
+    // 3. Migrate users to Supabase Auth
+    console.log('Migrating users to Supabase Auth...');
     await migrateUsers();
-
-    // Close database connection
-    await closeDatabase();
-
-    console.log('Migration completed successfully');
+    
+    console.log('Migration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error);
     process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 
@@ -69,43 +68,43 @@ async function migrate() {
  * Add missing columns to support Supabase integration
  */
 async function addMissingColumns() {
-  try {
-    console.log('Adding missing columns for Supabase integration...');
-
-    // Check if status column exists in users table
-    const statusColumnExists = await checkColumnExists('users', 'status');
-    if (!statusColumnExists) {
-      console.log('Adding status column to users table...');
-      await db.execute(sql`
-        ALTER TABLE users 
-        ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'offline'
-      `);
-    }
-
-    // Check if last_seen column exists in users table
-    const lastSeenColumnExists = await checkColumnExists('users', 'last_seen');
-    if (!lastSeenColumnExists) {
-      console.log('Adding last_seen column to users table...');
-      await db.execute(sql`
-        ALTER TABLE users 
-        ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP DEFAULT NOW()
-      `);
-    }
-
-    // Check if supabase_id column exists in users table
-    const supabaseIdColumnExists = await checkColumnExists('users', 'supabase_id');
-    if (!supabaseIdColumnExists) {
-      console.log('Adding supabase_id column to users table...');
-      await db.execute(sql`
-        ALTER TABLE users 
-        ADD COLUMN IF NOT EXISTS supabase_id TEXT
-      `);
-    }
-
-    console.log('All required columns exist');
-  } catch (error) {
-    console.error('Error adding missing columns:', error);
-    throw error;
+  // Check if supabase_id column exists in users table
+  const hasSupabaseIdColumn = await checkColumnExists('users', 'supabase_id');
+  
+  if (!hasSupabaseIdColumn) {
+    console.log('Adding supabase_id column to users table...');
+    await pool.query(
+      'ALTER TABLE users ADD COLUMN supabase_id TEXT'
+    );
+    console.log('Added supabase_id column to users table');
+  } else {
+    console.log('supabase_id column already exists in users table');
+  }
+  
+  // Check if status column exists in users table
+  const hasStatusColumn = await checkColumnExists('users', 'status');
+  
+  if (!hasStatusColumn) {
+    console.log('Adding status column to users table...');
+    await pool.query(
+      "ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'offline'"
+    );
+    console.log('Added status column to users table');
+  } else {
+    console.log('status column already exists in users table');
+  }
+  
+  // Check if last_seen column exists in users table
+  const hasLastSeenColumn = await checkColumnExists('users', 'last_seen');
+  
+  if (!hasLastSeenColumn) {
+    console.log('Adding last_seen column to users table...');
+    await pool.query(
+      'ALTER TABLE users ADD COLUMN last_seen TIMESTAMP WITH TIME ZONE DEFAULT NOW()'
+    );
+    console.log('Added last_seen column to users table');
+  } else {
+    console.log('last_seen column already exists in users table');
   }
 }
 
@@ -113,95 +112,70 @@ async function addMissingColumns() {
  * Check if a column exists in a table
  */
 async function checkColumnExists(tableName: string, columnName: string): Promise<boolean> {
-  try {
-    const result = await db.execute(sql`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_name = ${tableName} 
-        AND column_name = ${columnName}
-      );
-    `);
-    
-    return result.rows[0]?.exists;
-  } catch (error) {
-    console.error(`Error checking if column ${columnName} exists in ${tableName}:`, error);
-    throw error;
-  }
+  const result = await pool.query(
+    \`SELECT column_name 
+     FROM information_schema.columns 
+     WHERE table_name = $1 AND column_name = $2\`,
+    [tableName, columnName]
+  );
+  
+  return result.rows.length > 0;
 }
 
 /**
  * Migrate existing users to Supabase Auth and link them
  */
 async function migrateUsers() {
-  try {
-    console.log('Migrating users to Supabase Auth...');
-
-    // Get all users without a Supabase ID
-    const usersToMigrate = await db.query.users.findMany({
-      where: eq(users.supabaseId, null),
-    });
-
-    console.log(`Found ${usersToMigrate.length} users to migrate`);
-
-    // Process each user
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (const user of usersToMigrate) {
-      try {
-        console.log(`Migrating user: ${user.username} (${user.email})`);
-
-        // Create a temporary password for the user
-        // This is OK since they will need to use "Forgot Password" to set a new one
-        const tempPassword = `Temp${Math.random().toString(36).substring(2, 10)}!`;
-        
-        // Create user in Supabase Auth
-        const supabaseUser = await createSupabaseUser(
-          user.email,
-          tempPassword,
-          {
-            username: user.username,
-            game_user_id: user.id,
-          }
-        );
-
-        if (!supabaseUser) {
-          console.error(`Failed to create Supabase user for ${user.username}`);
-          errorCount++;
-          continue;
+  // Get all users without Supabase ID
+  const result = await pool.query(
+    'SELECT * FROM users WHERE supabase_id IS NULL'
+  );
+  
+  const usersToMigrate = result.rows;
+  console.log(`Found ${usersToMigrate.length} users to migrate to Supabase`);
+  
+  const temporaryPassword = 'TemporaryPassword123!';
+  let successCount = 0;
+  let failureCount = 0;
+  
+  for (const user of usersToMigrate) {
+    try {
+      console.log(`Migrating user: ${user.username} (ID: ${user.id})`);
+      
+      // Create a Supabase user
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email: user.email,
+        password: temporaryPassword,
+        email_confirm: true,
+        user_metadata: {
+          username: user.username,
+          game_user_id: user.id
         }
-
-        // Update user record with Supabase ID
-        await db
-          .update(users)
-          .set({ 
-            supabaseId: supabaseUser.id,
-            status: user.status || 'offline',
-            lastSeen: new Date() 
-          })
-          .where(eq(users.id, user.id));
-
-        console.log(`Successfully migrated user ${user.username} to Supabase Auth`);
-        successCount++;
-      } catch (error) {
-        console.error(`Error migrating user ${user.username}:`, error);
-        errorCount++;
+      });
+      
+      if (authError) {
+        console.error(`Error creating Supabase user: ${authError.message}`);
+        failureCount++;
+        continue;
       }
+      
+      console.log(`Created Supabase user: ${authUser.user.email} (ID: ${authUser.user.id})`);
+      
+      // Update user in database with Supabase ID
+      await pool.query(
+        'UPDATE users SET supabase_id = $1 WHERE id = $2',
+        [authUser.user.id, user.id]
+      );
+      
+      console.log(`Updated user "${user.username}" with Supabase ID: ${authUser.user.id}`);
+      successCount++;
+    } catch (error) {
+      console.error(`Error migrating user ${user.username}:`, error);
+      failureCount++;
     }
-
-    // Sync any users that were created directly in Supabase Auth
-    await syncSupabaseUsers();
-
-    console.log(`
-      Migration results:
-      - Total users processed: ${usersToMigrate.length}
-      - Successfully migrated: ${successCount}
-      - Failed migrations: ${errorCount}
-    `);
-  } catch (error) {
-    console.error('Error migrating users:', error);
-    throw error;
   }
+  
+  console.log(`Migration summary: ${successCount} succeeded, ${failureCount} failed`);
 }
 
 // Run the migration

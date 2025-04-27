@@ -1,6 +1,6 @@
 /**
  * Switch between original and Supabase implementations
- * Usage: node switch-to-supabase.js [--original|--supabase]
+ * Usage: node server/switch-to-supabase.cjs [--original|--supabase]
  */
 
 const fs = require('fs');
@@ -33,7 +33,7 @@ function backupOriginalFiles() {
   console.log('Backing up original files...');
   
   for (const mapping of fileMappings) {
-    const originalPath = path.join(__dirname, mapping.original);
+    const originalPath = path.join(__dirname, '..', mapping.original);
     const backupPath = path.join(backupFolder, path.basename(mapping.original));
     
     if (fs.existsSync(originalPath) && !fs.existsSync(backupPath)) {
@@ -50,9 +50,9 @@ function switchImplementation(toOriginal = false) {
   
   for (const mapping of fileMappings) {
     const source = toOriginal ? mapping.original : mapping.supabase;
-    const target = toOriginal ? mapping.original : mapping.original;
-    const sourcePath = path.join(__dirname, source);
-    const targetPath = path.join(__dirname, target);
+    const target = mapping.original;
+    const sourcePath = path.join(__dirname, '..', source);
+    const targetPath = path.join(__dirname, '..', target);
     
     // Skip if source doesn't exist
     if (!fs.existsSync(sourcePath)) {
@@ -74,7 +74,7 @@ function switchImplementation(toOriginal = false) {
 
 // Update vite.config.ts to use the right entry point
 function updateViteConfig(toOriginal = false) {
-  const viteConfigPath = path.join(__dirname, 'vite.config.ts');
+  const viteConfigPath = path.join(__dirname, '..', 'vite.config.ts');
   
   if (!fs.existsSync(viteConfigPath)) {
     console.log(`Warning: vite.config.ts not found at ${viteConfigPath}, skipping.`);

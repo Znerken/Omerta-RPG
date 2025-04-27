@@ -1,6 +1,6 @@
 /**
  * This script links an existing user to a Supabase account
- * Usage: node server/link_supabase_user.js <username>
+ * Usage: node server/link_supabase_user.cjs <username>
  */
 
 require('dotenv').config();
@@ -98,7 +98,7 @@ async function linkUser(username, password = 'TemporaryPassword123!') {
 const username = process.argv[2];
 
 if (!username) {
-  console.error('Usage: node server/link_supabase_user.js <username>');
+  console.error('Usage: node server/link_supabase_user.cjs <username>');
   process.exit(1);
 }
 

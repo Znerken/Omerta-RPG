@@ -3,15 +3,9 @@
  * It ensures we have compiled TypeScript before running the migration
  */
 
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-// Get __dirname equivalent in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 // Helper function to check if a file exists
 function exists(filePath) {

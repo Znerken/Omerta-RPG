@@ -1,6 +1,6 @@
 /**
  * This script checks if a user exists in the database
- * Usage: node server/check_user.js <username>
+ * Usage: node server/check_user.cjs <username>
  */
 
 require('dotenv').config();
@@ -37,16 +37,20 @@ async function checkUser(username) {
     }
 
     // Check user stats
-    const statsResult = await pool.query(
-      'SELECT * FROM user_stats WHERE user_id = $1',
-      [user.id]
-    );
+    try {
+      const statsResult = await pool.query(
+        'SELECT * FROM user_stats WHERE user_id = $1',
+        [user.id]
+      );
 
-    if (statsResult.rows.length === 0) {
-      console.log(`User stats not found for user ${user.id}`);
-    } else {
-      const stats = statsResult.rows[0];
-      console.log(`User stats: Strength: ${stats.strength}, Stealth: ${stats.stealth}, Charisma: ${stats.charisma}, Intelligence: ${stats.intelligence}`);
+      if (statsResult.rows.length === 0) {
+        console.log(`User stats not found for user ${user.id}`);
+      } else {
+        const stats = statsResult.rows[0];
+        console.log(`User stats: Strength: ${stats.strength}, Stealth: ${stats.stealth}, Charisma: ${stats.charisma}, Intelligence: ${stats.intelligence}`);
+      }
+    } catch (error) {
+      console.log(`Could not retrieve user stats: ${error.message}`);
     }
 
     // Check if user is in a gang
@@ -75,7 +79,7 @@ async function checkUser(username) {
 const username = process.argv[2];
 
 if (!username) {
-  console.error('Usage: node server/check_user.js <username>');
+  console.error('Usage: node server/check_user.cjs <username>');
   process.exit(1);
 }
 
