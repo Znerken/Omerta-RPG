@@ -5,6 +5,9 @@ import { z } from "zod";
 // Import economy types
 import * as Economy from "./schema-economy";
 
+// Gang Schema (for modular import)
+import * as GangSystem from "./schema-gang";
+
 // Session Schema for authentication (matching existing database)
 // Note: We're skipping schema validation for this table to avoid
 // losing session data since it's maintained by connect-pg-simple
