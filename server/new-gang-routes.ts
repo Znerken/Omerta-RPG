@@ -107,11 +107,11 @@ gangRouter.post("/", isAuthenticated, async (req: Request, res: Response) => {
     // Create the gang
     const newGang = await gangStorage.createGang(gangData);
     
-    // Add founder as a member with Leader rank
+    // Add founder as a member with Leader role
     await gangStorage.addGangMember({
       gangId: newGang.id,
       userId: req.user.id,
-      rank: "Leader"
+      role: "Leader"
     });
     
     res.status(201).json(newGang);
