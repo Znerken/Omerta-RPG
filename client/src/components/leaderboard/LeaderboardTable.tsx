@@ -1,11 +1,14 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 import { formatCurrency, getInitials } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface LeaderboardTableProps {
   defaultTab?: string;
@@ -69,15 +72,77 @@ export function LeaderboardTable({ defaultTab = "level" }: LeaderboardTableProps
                 <TableCell className="py-3 px-4 font-mono font-bold text-secondary">#{index + 1}</TableCell>
                 <TableCell className="py-3 px-4">
                   <div className="flex items-center">
-                    <Avatar className="h-8 w-8 mr-2 bg-primary">
-                      <AvatarFallback>{getInitials(player.username)}</AvatarFallback>
-                    </Avatar>
-                    <span className={isCurrentUser ? 'font-medium' : ''}>
-                      {player.username}
-                      {isCurrentUser && (
-                        <Badge className="ml-2 bg-secondary text-black">YOU</Badge>
-                      )}
-                    </span>
+                    <Link href={`/player/${player.id}`}>
+                      <motion.div 
+                        whileHover={{ scale: 1.1 }}
+                        className={cn(
+                          "relative flex items-center justify-center cursor-pointer",
+                          isCurrentUser ? "animate-pulse-slow" : ""
+                        )}
+                      >
+                        {/* Animated Glow Effect */}
+                        <div className={cn(
+                          "absolute inset-0 rounded-full",
+                          isCurrentUser 
+                            ? "bg-gradient-to-r from-gold-400 to-gold-600 animate-pulse-slow" 
+                            : index < 3 
+                              ? "bg-gradient-to-r from-primary to-secondary animate-pulse-slow"
+                              : "bg-gradient-to-r from-slate-700 to-slate-900"
+                        )} 
+                        style={{ 
+                          filter: isCurrentUser ? "blur(6px)" : index < 3 ? "blur(4px)" : "blur(2px)",
+                          opacity: isCurrentUser ? 0.8 : index < 3 ? 0.6 : 0.3,
+                          transform: "scale(1.15)",
+                        }}/>
+                        
+                        {/* Avatar Frame */}
+                        <div className={cn(
+                          "absolute inset-0 rounded-full border-2",
+                          isCurrentUser 
+                            ? "border-gold-500"
+                            : index < 3 
+                              ? index === 0 
+                                ? "border-gold-500" 
+                                : index === 1 
+                                  ? "border-silver-400" 
+                                  : "border-bronze-500"
+                              : "border-slate-600"
+                        )} 
+                        style={{ transform: "scale(1.05)" }}/>
+                        
+                        {/* Avatar Image */}
+                        <Avatar className="h-10 w-10 relative z-10 rounded-full">
+                          {player.avatar ? (
+                            <AvatarImage 
+                              src={player.avatar} 
+                              alt={player.username} 
+                              className="rounded-full object-cover"
+                            />
+                          ) : (
+                            <AvatarFallback className={cn(
+                              "rounded-full",
+                              index === 0 
+                                ? "bg-gradient-to-br from-gold-400 to-gold-600" 
+                                : index === 1 
+                                  ? "bg-gradient-to-br from-silver-300 to-silver-500" 
+                                  : index === 2 
+                                    ? "bg-gradient-to-br from-bronze-300 to-bronze-600"
+                                    : "bg-gradient-to-br from-slate-700 to-slate-900"
+                            )}>
+                              {getInitials(player.username)}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                      </motion.div>
+                    </Link>
+                    <Link href={`/player/${player.id}`} className="ml-2 hover:underline">
+                      <span className={isCurrentUser ? 'font-medium' : ''}>
+                        {player.username}
+                        {isCurrentUser && (
+                          <Badge className="ml-2 bg-secondary text-black">YOU</Badge>
+                        )}
+                      </span>
+                    </Link>
                   </div>
                 </TableCell>
                 <TableCell className="py-3 px-4">Level {player.level}</TableCell>

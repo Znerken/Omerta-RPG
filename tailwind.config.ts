@@ -61,6 +61,22 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Medal colors
+        gold: {
+          '400': '#FFC940',
+          '500': '#FFB800',
+          '600': '#E0A000',
+        },
+        silver: {
+          '300': '#E0E0E0',
+          '400': '#C0C0C0',
+          '500': '#A0A0A0',
+        },
+        bronze: {
+          '300': '#E0A982',
+          '500': '#CD7F32',
+          '600': '#A56124',
+        },
       },
       keyframes: {
         "accordion-down": {
@@ -79,10 +95,24 @@ export default {
             height: "0",
           },
         },
+        "pulse-slow": {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.6" },
+        },
+        "glow": {
+          "0%, 100%": { 
+            filter: "brightness(1) drop-shadow(0 0 5px rgba(255, 255, 255, 0.3))" 
+          },
+          "50%": { 
+            filter: "brightness(1.2) drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))" 
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-slow": "pulse-slow 3s ease-in-out infinite", 
+        "glow": "glow 2s ease-in-out infinite",
       },
     },
   },
