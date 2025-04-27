@@ -3,11 +3,12 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { users, userFriends, friendRequests, userStatus, stats, userDrugs, drugs } from "@shared/schema";
 import { casinoGames, casinoBets, casinoStats } from "@shared/schema-casino";
-import { eq, and } from "drizzle-orm";
+import { eq, and, like } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { drugStorage } from "./storage-drugs";
+import { isAuthenticated, isAdmin } from "./middleware/auth";
 
 // Middleware to restrict dev routes to development environment
 const developmentOnly = (req: Request, res: Response, next: Function) => {
@@ -38,6 +39,57 @@ function generateRandomString(length: number) {
 
 // Register development routes
 export function registerDevRoutes(app: Express) {
+  // Delete all test users (only accessible by admin)
+  app.delete("/api/admin/delete-test-users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      // Find all users with username starting with 'tester_'
+      const testUsers = await db.select()
+        .from(users)
+        .where(like(users.username, 'tester_%'));
+      
+      if (testUsers.length === 0) {
+        return res.json({ message: "No test users found" });
+      }
+      
+      // Get all test user IDs
+      const userIds = testUsers.map(user => user.id);
+      
+      // Delete related data for these users
+      // Stats
+      await db.delete(stats).where(sql`${stats.userId} IN ${userIds}`);
+      
+      // User drugs
+      await db.delete(userDrugs).where(sql`${userDrugs.userId} IN ${userIds}`);
+      
+      // User friends
+      await db.delete(userFriends)
+        .where(sql`${userFriends.userId} IN ${userIds} OR ${userFriends.friendId} IN ${userIds}`);
+      
+      // Friend requests
+      await db.delete(friendRequests)
+        .where(sql`${friendRequests.senderId} IN ${userIds} OR ${friendRequests.receiverId} IN ${userIds}`);
+      
+      // User status
+      await db.delete(userStatus).where(sql`${userStatus.userId} IN ${userIds}`);
+      
+      // Finally, delete the users
+      const deletedUsers = await db.delete(users)
+        .where(like(users.username, 'tester_%'))
+        .returning();
+      
+      return res.json({ 
+        message: `Successfully deleted ${deletedUsers.length} test users`, 
+        deletedCount: deletedUsers.length,
+        deletedUsers: deletedUsers.map(u => ({ id: u.id, username: u.username }))
+      });
+    } catch (error) {
+      console.error("Error deleting test users:", error);
+      res.status(500).json({ 
+        message: "Error deleting test users", 
+        error: error.message 
+      });
+    }
+  });
   // Check if necessary tables exist
   app.get("/api/dev/check-social-tables", developmentOnly, async (req, res) => {
     try {
@@ -236,7 +288,7 @@ export function registerDevRoutes(app: Express) {
   });
   
   // Create a random test user with predefined parameters
-  app.post("/api/dev/create-test-user", async (req, res) => {
+  app.post("/api/dev/create-test-user", isAuthenticated, isAdmin, async (req, res) => {
     try {
       // Generate random username and email
       const randomStr = generateRandomString(8);
