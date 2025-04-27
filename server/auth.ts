@@ -1,191 +1,195 @@
-import { Express, Request, Response, NextFunction } from 'express';
-import { validateAuthHeader } from './supabase';
-import { storage } from './storage-supabase';
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import { Express } from "express";
+import session from "express-session";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+import { storage } from "./storage";
+import { User as SelectUser } from "@shared/schema";
+import { z } from "zod";
 
-// Extend Request type to include user
 declare global {
   namespace Express {
-    interface Request {
-      user?: any;
-      supabaseUser?: any;
-    }
+    interface User extends SelectUser {}
   }
 }
 
-/**
- * Setup auth routes for Supabase auth
- * @param app Express app
- */
-export function setupAuthRoutes(app: Express) {
-  // Authentication middleware for all API routes
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
-    // Skip auth for public routes
-    if (
-      req.path.startsWith('/auth') ||
-      req.path === '/api/check-username-email' ||
-      req.path === '/api/register'
-    ) {
-      return next();
-    }
+const scryptAsync = promisify(scrypt);
 
-    // Get JWT token from Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return next();
-    }
+async function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
 
-    try {
-      // Validate JWT token with Supabase
-      const supabaseUser = await validateAuthHeader(authHeader);
-      if (!supabaseUser) {
-        return next();
+async function comparePasswords(supplied: string, stored: string) {
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+
+// Extended schema for user registration
+const registerSchema = z.object({
+  username: z.string().min(3).max(20),
+  password: z.string().min(6),
+  email: z.string().email(),
+});
+
+export function setupAuth(app: Express) {
+  const sessionSettings: session.SessionOptions = {
+    secret: process.env.SESSION_SECRET || "mafia-game-secret",
+    resave: false,
+    saveUninitialized: false,
+    store: storage.sessionStore,
+    cookie: {
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    }
+  };
+
+  app.set("trust proxy", 1);
+  app.use(session(sessionSettings));
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.use(
+    new LocalStrategy({
+      // Add passReqToCallback for more context if needed in the future
+      passReqToCallback: false
+    }, async (username, password, done) => {
+      try {
+        const user = await storage.getUserByUsername(username);
+        
+        // Check for valid user and password
+        if (!user) {
+          return done(null, false, { message: "Invalid username or password" });
+        }
+        
+        if (!(await comparePasswords(password, user.password))) {
+          return done(null, false, { message: "Invalid username or password" });
+        }
+        
+        // Check if user is banned
+        if (user.banExpiry && new Date(user.banExpiry) > new Date()) {
+          const banTimeLeft = Math.ceil((new Date(user.banExpiry).getTime() - Date.now()) / (1000 * 60 * 60));
+          return done(null, false, { 
+            message: `Your account is banned for ${banTimeLeft} more hours. Reason: ${user.banReason || 'No reason provided'}` 
+          });
+        }
+        
+        return done(null, user);
+      } catch (err) {
+        return done(err);
       }
+    }),
+  );
 
-      // Get user from database using Supabase ID
-      const user = await storage.getUserBySupabaseId(supabaseUser.id);
+  passport.serializeUser((user, done) => done(null, user.id));
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
       if (!user) {
-        return next();
+        return done(null, false);
       }
-
-      // Attach user to request
-      req.user = user;
-      req.supabaseUser = supabaseUser;
-      next();
-    } catch (error) {
-      console.error('Auth middleware error:', error);
-      next();
+      
+      // Check if user is banned (terminate session if ban is active)
+      if (user.banExpiry && new Date(user.banExpiry) > new Date()) {
+        return done(null, false);
+      }
+      
+      done(null, user);
+    } catch (err) {
+      done(err);
     }
   });
 
-  // Get current user endpoint
-  app.use('/api/user', authProtected, (req: Request, res: Response) => {
-    res.json(req.user);
-  });
-
-  // Check if username or email is already taken
-  app.post('/api/check-username-email', async (req: Request, res: Response) => {
+  app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, email } = req.body;
-
-      if (!username || !email) {
-        return res.status(400).json({ message: 'Username and email are required' });
+      // Validate input
+      const result = registerSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
       }
-
-      const isAvailable = await checkUsernameEmail(username, email);
-
-      if (!isAvailable) {
-        return res.status(409).json({ message: 'Username or email is already taken' });
+      
+      // Check for existing user
+      const existingUsername = await storage.getUserByUsername(req.body.username);
+      if (existingUsername) {
+        return res.status(400).json({ message: "Username already exists" });
       }
-
-      res.status(200).json({ available: true });
-    } catch (error) {
-      console.error('Error checking username/email:', error);
-      res.status(500).json({ message: 'Error checking username/email availability' });
-    }
-  });
-
-  // Register new user
-  app.post('/api/register', async (req: Request, res: Response) => {
-    try {
-      const { username, email, password } = req.body;
-
-      if (!username || !email || !password) {
-        return res.status(400).json({ message: 'Username, email, and password are required' });
+      
+      const existingEmail = await storage.getUserByEmail(req.body.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already in use" });
       }
-
-      // Check if user already exists
-      const isAvailable = await checkUsernameEmail(username, email);
-      if (!isAvailable) {
-        return res.status(409).json({ message: 'Username or email is already taken' });
-      }
-
-      // Register user in our game database
-      // The Supabase user is created on the client side
-      const newUser = await storage.createUser({
-        username,
-        email,
-        password, // This would usually be hashed, but we're relying on Supabase for auth
-        level: 1,
-        xp: 0,
-        cash: 1000,
-        respect: 0,
-        isAdmin: false,
-        isJailed: false,
+      
+      // Create user with hashed password
+      const user = await storage.createUser({
+        ...req.body,
+        password: await hashPassword(req.body.password),
       });
-
-      // Create user stats
-      await storage.createUserStats(newUser.id);
-
-      res.status(201).json(newUser);
+      
+      // Log user in
+      req.login(user, (err) => {
+        if (err) return next(err);
+        
+        // Return user without password
+        const { password, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
+      });
     } catch (error) {
-      console.error('Error registering user:', error);
-      res.status(500).json({ message: 'Error registering user' });
+      next(error);
     }
   });
-}
 
-/**
- * Middleware to ensure user is authenticated
- */
-export function authProtected(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-  next();
-}
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err, user, info) => {
+      if (err) return next(err);
+      
+      // Handle bans and invalid credentials
+      if (!user) {
+        // If we have info with a message (like from ban check), use that
+        const message = info && info.message ? info.message : "Invalid credentials";
+        return res.status(401).json({ message });
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        
+        // Return user without password
+        const { password, ...userWithoutPassword } = user;
+        res.status(200).json(userWithoutPassword);
+      });
+    })(req, res, next);
+  });
 
-/**
- * Middleware to ensure user is an admin
- */
-export function adminProtected(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ message: 'Forbidden. Admin access required.' });
-  }
-
-  next();
-}
-
-/**
- * Middleware to redirect jailed users
- */
-export function jailProtected(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-
-  if (req.user.isJailed) {
-    return res.status(403).json({ 
-      message: 'You are in jail', 
-      jailed: true,
-      jailTimeEnd: req.user.jailTimeEnd 
+  app.post("/api/logout", (req, res, next) => {
+    req.logout((err) => {
+      if (err) return next(err);
+      res.sendStatus(200);
     });
-  }
+  });
 
-  next();
-}
-
-/**
- * Check if a username or email is available
- */
-export async function checkUsernameEmail(username: string, email: string): Promise<boolean> {
-  try {
-    const existingUserByUsername = await storage.getUserByUsername(username);
-    if (existingUserByUsername) {
-      return false;
+  app.get("/api/user", (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    // Return user without password
+    const { password, ...userWithoutPassword } = req.user as SelectUser;
+    res.json(userWithoutPassword);
+  });
+  
+  app.get("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    
+    try {
+      const userWithStats = await storage.getUserWithStats(req.user.id);
+      if (!userWithStats) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const { password, ...userProfile } = userWithStats;
+      res.json(userProfile);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get user profile" });
     }
-
-    const existingUserByEmail = await storage.getUserByEmail(email);
-    if (existingUserByEmail) {
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Error checking username/email:', error);
-    return false;
-  }
+  });
 }

@@ -21,24 +21,9 @@ export const queryClient = new QueryClient({
           url = queryKey as string;
         }
         
-        // Get the Supabase access token if available
-        let supabaseToken = '';
-        try {
-          // Try to get the token from the global Supabase client if available
-          if (window.__SUPABASE_CLIENT) {
-            const { data: { session } } = await window.__SUPABASE_CLIENT.auth.getSession();
-            supabaseToken = session?.access_token || '';
-          }
-        } catch (e) {
-          console.error("Error getting Supabase token for default query:", e);
-        }
-        
         const response = await fetch(url, {
           credentials: "include", 
-          headers: { 
-            "X-Requested-With": "XMLHttpRequest",
-            ...(supabaseToken && { "Authorization": `Bearer ${supabaseToken}` })
-          }
+          headers: { "X-Requested-With": "XMLHttpRequest" }
         });
         
         if (!response.ok) {
@@ -70,28 +55,11 @@ export async function apiRequest(
   url: string,
   data?: any
 ): Promise<Response> {
-  // Get the Supabase access token if available
-  let supabaseToken = '';
-  try {
-    // Try to get the token from the global Supabase client if available
-    if (window.__SUPABASE_CLIENT) {
-      const { data: { session } } = await window.__SUPABASE_CLIENT.auth.getSession();
-      supabaseToken = session?.access_token || '';
-      
-      console.log(`API Request to ${url} - Auth token available: ${!!supabaseToken}`);
-    } else {
-      console.warn(`API Request to ${url} - No Supabase client available`);
-    }
-  } catch (e) {
-    console.error("Error getting Supabase token:", e);
-  }
-  
   const options: RequestInit = {
     method,
     headers: {
       "Content-Type": "application/json",
       "X-Requested-With": "XMLHttpRequest",
-      ...(supabaseToken && { "Authorization": `Bearer ${supabaseToken}` }),
     },
     credentials: "include",
   };
@@ -100,20 +68,15 @@ export async function apiRequest(
     options.body = JSON.stringify(data);
   }
 
-  try {
-    const response = await fetch(url, options);
-    
-    if (!response.ok) {
-      console.error(`API Error ${response.status} for ${url}:`, await response.text());
-      const errorData = await response.json().catch(() => ({ message: response.statusText || "An error occurred" }));
-      throw new Error(errorData.message || response.statusText || "An error occurred");
-    }
-    
-    return response;
-  } catch (error) {
-    console.error(`API Request failed for ${url}:`, error);
-    throw error;
+  const response = await fetch(url, options);
+  
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.message || response.statusText || "An error occurred";
+    throw new Error(errorMessage);
   }
+  
+  return response;
 }
 
 // Helper function to create query functions
@@ -133,33 +96,15 @@ export function getQueryFn({ on401 = "throw" }: { on401?: "throw" | "returnNull"
       url = queryKey as string;
     }
     
-    // Get the Supabase access token if available
-    let supabaseToken = '';
-    try {
-      // Try to get the token from the global Supabase client if available
-      if (window.__SUPABASE_CLIENT) {
-        const { data: { session } } = await window.__SUPABASE_CLIENT.auth.getSession();
-        supabaseToken = session?.access_token || '';
-        
-        if (supabaseToken && url.includes('/api/')) {
-          console.log(`Query for ${url} - Auth token available: ${!!supabaseToken}`);
-        }
-      }
-    } catch (e) {
-      console.error("Error getting Supabase token for query:", e);
-    }
-    
     try {
       const response = await fetch(url, {
         credentials: "include",
         headers: {
           "X-Requested-With": "XMLHttpRequest",
-          ...(supabaseToken && { "Authorization": `Bearer ${supabaseToken}` }),
         },
       });
       
       if (response.status === 401) {
-        console.warn(`Unauthorized access to ${url}`);
         if (on401 === "returnNull") {
           return null;
         }
@@ -167,10 +112,7 @@ export function getQueryFn({ on401 = "throw" }: { on401?: "throw" | "returnNull"
       }
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Query error for ${url}:`, response.status, errorText);
-        
-        const errorData = JSON.parse(errorText);
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.message || response.statusText || "An error occurred");
       }
       

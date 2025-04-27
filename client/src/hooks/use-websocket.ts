@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSupabaseAuth } from './use-supabase-auth';
-import { getAuthToken } from '@/lib/supabase';
+import { useAuth } from './use-auth';
 
 export interface WebSocketMessage {
   type: string;
@@ -8,91 +7,63 @@ export interface WebSocketMessage {
 }
 
 export function useWebSocket() {
-  const { supabaseUser } = useSupabaseAuth();
+  const { user } = useAuth();
   const socketRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
 
   useEffect(() => {
     // Only attempt to connect if the user is logged in
-    if (!supabaseUser?.id) {
+    if (!user?.id) {
       setIsConnected(false);
       return;
     }
 
-    let socket: WebSocket | null = null;
-    let cleanupFunction: (() => void) | null = null;
-
-    // Setup the WebSocket connection with authentication token
+    // Setup the WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    const connectWebSocket = async () => {
+    const wsUrl = `${protocol}//${window.location.host}/ws?userId=${user.id}`;
+
+    // Create the WebSocket connection
+    const socket = new WebSocket(wsUrl);
+    socketRef.current = socket;
+
+    // Connection opened
+    socket.addEventListener('open', () => {
+      console.log('WebSocket connection established');
+      setIsConnected(true);
+    });
+
+    // Listen for messages
+    socket.addEventListener('message', (event) => {
       try {
-        // Get token for authentication
-        const token = await getAuthToken();
-        
-        if (!token) {
-          console.error('Could not get authentication token for WebSocket');
-          return;
-        }
-        
-        const wsUrl = `${protocol}//${window.location.host}/ws?token=${token}`;
-        
-        // Create WebSocket connection
-        socket = new WebSocket(wsUrl);
-        socketRef.current = socket;
-        
-        // Connection opened handler
-        socket.addEventListener('open', () => {
-          console.log('WebSocket connection established');
-          setIsConnected(true);
-        });
-        
-        // Message handler
-        socket.addEventListener('message', (event) => {
-          try {
-            const data = JSON.parse(event.data) as WebSocketMessage;
-            setLastMessage(data);
-          } catch (err) {
-            console.error('Error parsing WebSocket message:', err);
-          }
-        });
-        
-        // Connection closed handler
-        socket.addEventListener('close', () => {
-          console.log('WebSocket disconnected');
-          setIsConnected(false);
-        });
-        
-        // Error handler
-        socket.addEventListener('error', (error) => {
-          console.error('WebSocket error:', error);
-          setIsConnected(false);
-        });
-        
-        // Define cleanup function
-        cleanupFunction = () => {
-          console.log('Cleaning up WebSocket connection');
-          if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.close();
-          }
-          socketRef.current = null;
-        };
-      } catch (error) {
-        console.error('Error setting up WebSocket:', error);
+        const data = JSON.parse(event.data) as WebSocketMessage;
+        setLastMessage(data);
+      } catch (err) {
+        console.error('Error parsing WebSocket message:', err);
       }
-    };
-    
-    // Attempt to connect
-    connectWebSocket();
-    
+    });
+
+    // Connection closed
+    socket.addEventListener('close', () => {
+      console.log('WebSocket disconnected');
+      setIsConnected(false);
+    });
+
+    // Connection error
+    socket.addEventListener('error', (error) => {
+      console.error('WebSocket error:', error);
+      setIsConnected(false);
+    });
+
     // Cleanup on unmount
     return () => {
-      if (cleanupFunction) {
-        cleanupFunction();
+      console.log('Closing WebSocket connection');
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.close();
       }
+      socketRef.current = null;
     };
-  }, [supabaseUser?.id]);
+  }, [user?.id]);
 
   // Send a message to the server
   const sendMessage = (type: string, data: any) => {

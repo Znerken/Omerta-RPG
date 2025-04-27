@@ -1,578 +1,599 @@
-import type { Express, Request, Response } from 'express';
-import { createServer, type Server } from 'http';
-import { setupAuthRoutes, authProtected, adminProtected, jailProtected, checkUsernameEmail } from './auth-supabase';
-import { storage } from './storage-supabase';
-import { registerWebSocketServer } from './websocket-supabase';
-import { registerProfileRoutes } from './profile-routes';
-import { registerCasinoRoutes } from './casino-routes';
-import { registerDrugRoutes } from './drug-routes';
-import { registerBankingRoutes } from './banking-routes';
-import { registerGangRoutes } from './gang-routes';
-import { registerAchievementRoutes } from './achievement-routes';
-import { registerAdminRoutes } from './admin-routes';
-import { registerSocialRoutes } from './social-routes';
-import { eq, and, desc, sql } from 'drizzle-orm';
-import { users, userStats, crimes, locationChallenges as locations } from '@shared/schema';
-import { db } from './db-supabase';
-import { extractAndValidateToken } from './supabase';
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth } from "./auth";
+import { registerBankingRoutes } from "./banking-routes";
+import { registerAdminRoutes } from "./admin-routes";
+import { registerAchievementRoutes } from "./achievement-routes";
+import { registerDrugRoutes } from "./drug-routes";
+import { registerCasinoRoutes } from "./casino-routes";
+import { registerProfileRoutes } from "./profile-routes";
+import { registerSocialRoutes, setNotifyUserFunction } from "./social-routes";
+import { registerDevRoutes } from "./dev-routes";
+import challengeRoutes from "./challenge-routes";
+import gangRoutes from "./gang-routes";
+import locationRoutes from "./location-routes";
+import { WebSocketServer } from "ws";
+import WebSocket from "ws";
+import { z } from "zod";
+import { calculateRequiredXP } from "../shared/gameUtils";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import { gangMembers } from "@shared/schema";
+import { getUserStatus, updateUserStatus, createUserStatus } from './social-database';
 
-/**
- * Register all routes for the API
- */
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Authenticate all requests with Supabase
-  setupAuthRoutes(app);
+  // sets up /api/register, /api/login, /api/logout, /api/user
+  setupAuth(app);
+  
+  // Register banking and economy routes
+  registerBankingRoutes(app);
+  
+  // Register admin routes
+  registerAdminRoutes(app);
+  
+  // Register achievement routes
+  registerAchievementRoutes(app);
+  
+  // Register drug system routes
+  registerDrugRoutes(app);
+  
+  // Register challenge routes
+  app.use("/api", challengeRoutes);
+  
+  // Register location-based challenges
+  app.use("/api", locationRoutes);
+  
+  // Register gang routes with nested features
+  app.use("/api/gangs", gangRoutes);
+  
+  // Register casino routes
+  registerCasinoRoutes(app);
+  
+  // Register profile routes
+  registerProfileRoutes(app);
+  
+  // Register dev routes for testing
+  registerDevRoutes(app);
+  
+  // Create HTTP server
+  const httpServer = createServer(app);
 
-  // User-related routes
-  app.get('/api/user/stats', authProtected, async (req: Request, res: Response) => {
-    try {
-      const stats = await storage.getUserStats(req.user.id);
-      if (!stats) {
-        return res.status(404).json({ message: 'Stats not found' });
-      }
-      
-      res.json(stats);
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-      res.status(500).json({ message: 'Failed to fetch user stats' });
+  // WebSocket server for real-time updates
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Track client connections by user ID
+  const clients = new Map<number, Set<WebSocket>>();
+
+  // Send a notification to a specific user
+  function notifyUser(userId: number, type: string, data: any) {
+    if (!clients.has(userId)) {
+      console.log(`No active connections for user ${userId}`);
+      return;
     }
-  });
-
-  app.post('/api/check-username-email', async (req: Request, res: Response) => {
-    try {
-      const { username, email } = req.body;
-      
-      if (!username || !email) {
-        return res.status(400).json({ message: 'Username and email are required' });
+    
+    const userClients = clients.get(userId)!;
+    const message = JSON.stringify({ type, data });
+    
+    userClients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
       }
-      
-      const isAvailable = await checkUsernameEmail(username, email);
-      
-      if (isAvailable) {
-        return res.json({ available: true });
+    });
+  }
+
+  // Register social system routes and pass the notification function
+  registerSocialRoutes(app);
+  setNotifyUserFunction(notifyUser);
+  
+  // WebSocket handling
+  wss.on('connection', (ws, req) => {
+    console.log('WebSocket connection established');
+    
+    // Parse user ID from query string
+    const url = new URL(req.url || '', `http://${req.headers.host}`);
+    const userId = parseInt(url.searchParams.get('userId') || '0', 10);
+    
+    if (!userId) {
+      console.log('No userId provided for WebSocket connection');
+      return ws.close(1008, 'Invalid userId');
+    }
+    
+    // Add this client to the map for this user
+    if (!clients.has(userId)) {
+      clients.set(userId, new Set());
+    }
+    clients.get(userId)?.add(ws);
+    
+    console.log(`User ${userId} connected via WebSocket. Active connections: ${clients.get(userId)?.size}`);
+    
+    // Send initial notification of unread messages count
+    storage.getUnreadMessages(userId).then(messages => {
+      if (messages.length > 0) {
+        ws.send(JSON.stringify({
+          type: 'unreadMessages',
+          data: { count: messages.length }
+        }));
+      }
+    }).catch(err => {
+      console.error('Error sending initial unread count:', err);
+    });
+    
+    // Auto-update user status to online when they connect
+    
+    // Update the user's status to online
+    getUserStatus(userId).then(async (status) => {
+      if (status) {
+        // Update existing status to online
+        await updateUserStatus(userId, {
+          status: "online",
+          lastActive: new Date()
+        });
       } else {
-        return res.status(400).json({ message: 'Username or email is already taken' });
-      }
-    } catch (error) {
-      console.error('Error checking username/email:', error);
-      res.status(500).json({ message: 'Failed to check username/email availability' });
-    }
-  });
-
-  // Training routes
-  app.post('/api/stats/train/:stat', authProtected, jailProtected, async (req: Request, res: Response) => {
-    try {
-      const { stat } = req.params;
-      const userId = req.user.id;
-      
-      // Get user stats
-      const userStat = await storage.getUserStats(userId);
-      if (!userStat) {
-        return res.status(404).json({ message: 'User stats not found' });
-      }
-      
-      // Check which stat to train and if cooldown has expired
-      const now = new Date();
-      let cooldownField;
-      let statField;
-      
-      switch (stat) {
-        case 'strength':
-          cooldownField = 'strengthTrainingCooldown';
-          statField = 'strength';
-          break;
-        case 'stealth':
-          cooldownField = 'stealthTrainingCooldown';
-          statField = 'stealth';
-          break;
-        case 'charisma':
-          cooldownField = 'charismaTrainingCooldown';
-          statField = 'charisma';
-          break;
-        case 'intelligence':
-          cooldownField = 'intelligenceTrainingCooldown';
-          statField = 'intelligence';
-          break;
-        default:
-          return res.status(400).json({ message: 'Invalid stat' });
-      }
-      
-      // Check if cooldown has expired
-      if (userStat[cooldownField] && new Date(userStat[cooldownField]) > now) {
-        return res.status(400).json({
-          message: 'Cooldown not expired',
-          cooldownRemaining: Math.ceil((new Date(userStat[cooldownField]).getTime() - now.getTime()) / 1000)
+        // Create new status as online
+        await createUserStatus({
+          userId,
+          status: "online",
+          lastActive: new Date(),
+          lastLocation: null
         });
       }
       
-      // Calculate new cooldown (5 minutes)
-      const cooldown = new Date();
-      cooldown.setMinutes(cooldown.getMinutes() + 5);
+      // Notify friends about this user coming online
+      // First get the complete user info to ensure we have accurate data
+      storage.getUser(userId).then(userInfo => {
+        if (!userInfo) {
+          console.error('Could not find user info for status update, userId:', userId);
+          return;
+        }
+        
+        // Then get and notify all friends
+        storage.getUserFriends(userId).then(friends => {
+          friends.forEach(friend => {
+            notifyUser(friend.id, "friend_status", {
+              userId,
+              username: userInfo.username,
+              avatar: userInfo.avatar || null,
+              status: "online"
+            });
+          });
+        }).catch(err => {
+          console.error('Error notifying friends of status change:', err);
+        });
+      }).catch(err => {
+        console.error('Error getting user info for status update:', err);
+      });
+    }).catch(err => {
+      console.error('Error updating user status to online:', err);
+    });
+    
+    // Handle client messages
+    ws.on('message', (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        console.log(`Received message from user ${userId}:`, data);
+        
+        // Handle specific client actions
+        if (data.type === 'markRead' && data.messageId) {
+          storage.markMessageAsRead(data.messageId)
+            .then(success => {
+              if (success) {
+                // Re-fetch unread count and notify client
+                return storage.getUnreadMessages(userId);
+              }
+              return [];
+            })
+            .then(unreadMessages => {
+              ws.send(JSON.stringify({
+                type: 'unreadMessages',
+                data: { count: unreadMessages.length }
+              }));
+            })
+            .catch(err => {
+              console.error('Error handling markRead:', err);
+            });
+        }
+      } catch (err) {
+        console.error('Error parsing WebSocket message:', err);
+      }
+    });
+    
+    // Handle disconnection
+    ws.on('close', () => {
+      console.log(`WebSocket connection closed for user ${userId}`);
+      clients.get(userId)?.delete(ws);
       
-      // Update the stat and cooldown
-      const updateData = {
-        [statField]: userStat[statField] + 1,
-        [cooldownField]: cooldown
+      // Clean up empty user entries
+      if (clients.get(userId)?.size === 0) {
+        clients.delete(userId);
+        
+        // Update user status to offline if they have no more connections
+        getUserStatus(userId).then(async (status) => {
+          if (status) {
+            await updateUserStatus(userId, {
+              status: "offline",
+              lastActive: new Date()
+            });
+            
+            // Notify friends about status change
+            // First get the user info to ensure accurate data
+            storage.getUser(userId).then(userInfo => {
+              if (!userInfo) {
+                console.error('Could not find user info for offline status update, userId:', userId);
+                return;
+              }
+              
+              // Then notify friends
+              storage.getUserFriends(userId).then(friends => {
+                friends.forEach(friend => {
+                  notifyUser(friend.id, "friend_status", {
+                    userId,
+                    username: userInfo.username,
+                    avatar: userInfo.avatar || null,
+                    status: "offline"
+                  });
+                });
+              }).catch(err => {
+                console.error('Error notifying friends of offline status:', err);
+              });
+            }).catch(err => {
+              console.error('Error getting user info for offline status update:', err);
+            });
+          }
+        }).catch(err => {
+          console.error('Error updating user status to offline:', err);
+        });
+      }
+    });
+  });
+  
+  // Broadcast to all connected clients
+  function broadcast(type: string, data: any) {
+    wss.clients.forEach(client => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ type, data }));
+      }
+    });
+  }
+  
+  // Player API Routes
+  app.get("/api/dashboard", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const userId = req.user.id;
+      const userWithStats = await storage.getUserWithStats(userId);
+      const userWithGang = await storage.getUserWithGang(userId);
+      const recentCrimes = await storage.getCrimeHistoryByUserId(userId, 5);
+      // Temporarily use empty array for top players until the leaderboard methods are fully implemented
+      const topPlayers = [];
+      
+      // Get next level XP requirement
+      const currentLevel = userWithStats!.level;
+      const requiredXP = calculateRequiredXP(currentLevel);
+      
+      // Format response
+      const dashboardData = {
+        user: {
+          ...userWithStats,
+          nextLevelXP: requiredXP,
+          gang: userWithGang?.gang,
+          gangRank: userWithGang?.gangRank
+        },
+        recentActivity: recentCrimes,
+        topPlayers: [] // Empty array for now until leaderboard functionality is fully implemented
       };
       
-      const updatedStats = await storage.updateUserStats(userId, updateData);
-      
-      // Also add some XP to the user
-      await storage.updateUser(userId, {
-        xp: req.user.xp + 10
-      });
-      
-      res.json(updatedStats);
+      res.json(dashboardData);
     } catch (error) {
-      console.error('Error training stat:', error);
-      res.status(500).json({ message: 'Failed to train stat' });
+      res.status(500).json({ message: "Failed to fetch dashboard data" });
     }
   });
-
-  // Crime routes
-  app.get('/api/crimes', async (req: Request, res: Response) => {
+  
+  // User profile endpoint with gang membership
+  app.get("/api/user/profile", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
     try {
-      // Order by difficulty (if defined) or fall back to ID
-      const crimesList = await db.select().from(crimes);
-      res.json(crimesList);
+      const userId = req.user.id;
+      
+      // Get gang member info directly
+      const gangMember = await storage.getGangMember(userId);
+      console.log("Gang Member:", gangMember);
+      
+      // Get user with gang info
+      const userWithGang = await storage.getUserWithGang(userId);
+      
+      // Add frontend-specific fields - these are not in the schema 
+      // but the frontend expects them
+      const response = {
+        ...(userWithGang || req.user),
+        inGang: !!gangMember,  // Boolean flag for easy checks
+        gangMember: gangMember || null,  // Complete member record with gang details
+        gangId: gangMember?.gangId || null  // Direct gangId reference
+      };
+      
+      console.log("Sending user profile response with gang data:", JSON.stringify(response));
+      res.json(response);
     } catch (error) {
-      console.error('Error fetching crimes:', error);
-      res.status(500).json({ message: 'Failed to fetch crimes' });
+      console.error("Error getting user profile:", error);
+      console.error("Error stack:", error instanceof Error ? error.stack : "No stack available");
+      res.status(500).json({ message: "Failed to get user profile" });
     }
   });
-
-  app.post('/api/crimes/:id/execute', authProtected, jailProtected, async (req: Request, res: Response) => {
+  
+  // Crime API Routes
+  app.get("/api/crimes", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
     try {
-      const { id } = req.params;
-      const crime = await db.select().from(crimes).where(eq(crimes.id, parseInt(id))).limit(1);
+      const crimes = await storage.getCrimesWithHistory(req.user.id);
+      res.json(crimes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch crimes" });
+    }
+  });
+  
+  app.post("/api/crimes/:id/execute", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
+    try {
+      const crimeId = parseInt(req.params.id);
+      const userId = req.user.id;
       
-      if (!crime.length) {
-        return res.status(404).json({ message: 'Crime not found' });
+      // Get crime and user
+      const crime = await storage.getCrime(crimeId);
+      if (!crime) {
+        return res.status(404).json({ message: "Crime not found" });
       }
       
-      const crimeData = crime[0];
-      const userStats = await storage.getUserStats(req.user.id);
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
       
+      if (user.isJailed) {
+        return res.status(400).json({ message: "You are in jail and cannot commit crimes" });
+      }
+      
+      // Check cooldown
+      const userHistory = await storage.getCrimeHistoryByUserId(userId);
+      const lastAttempt = userHistory.find(h => h.crimeId === crimeId);
+      
+      const now = new Date();
+      if (lastAttempt && lastAttempt.nextAvailableAt && lastAttempt.nextAvailableAt > now) {
+        return res.status(400).json({ 
+          message: "Crime on cooldown",
+          nextAvailableAt: lastAttempt.nextAvailableAt
+        });
+      }
+      
+      // Get user stats
+      const userStats = await storage.getStatsByUserId(userId);
       if (!userStats) {
-        return res.status(404).json({ message: 'User stats not found' });
+        return res.status(500).json({ message: "User stats not found" });
       }
       
-      // Calculate success probability based on user stats and crime weight
-      let successProbability = 0.5; // Base probability
+      // Calculate success chance
+      const strengthFactor = (userStats.strength / 100) * crime.strengthWeight;
+      const stealthFactor = (userStats.stealth / 100) * crime.stealthWeight;
+      const charismaFactor = (userStats.charisma / 100) * crime.charismaWeight;
+      const intelligenceFactor = (userStats.intelligence / 100) * crime.intelligenceWeight;
       
-      // Adjust based on stats
-      const statWeight = 0.1; // Weight for each stat's contribution
-      successProbability += statWeight * (userStats.strength / 100);
-      successProbability += statWeight * (userStats.stealth / 100);
-      successProbability += statWeight * (userStats.charisma / 100);
-      successProbability += statWeight * (userStats.intelligence / 100);
+      const successChance = Math.min(
+        95, // Cap at 95%
+        Math.round((strengthFactor + stealthFactor + charismaFactor + intelligenceFactor) * 100)
+      );
       
-      // Adjust based on crime difficulty (using average of all weights as indicator)
-      const difficultyFactor = (crimeData.strengthWeight + crimeData.stealthWeight + 
-                               crimeData.charismaWeight + crimeData.intelligenceWeight) / 4 * 0.01;
-      successProbability -= difficultyFactor;
+      // Random result based on success chance
+      const isSuccess = Math.random() * 100 < successChance;
       
-      // Ensure probability is between 0.1 and 0.9
-      successProbability = Math.min(0.9, Math.max(0.1, successProbability));
+      // Calculate cooldown time
+      const cooldownEnd = new Date(now.getTime() + crime.cooldown * 1000);
       
-      // Determine if crime was successful
-      const success = Math.random() < successProbability;
-      
-      if (success) {
-        // Crime was successful
-        // Reward the player with cash and XP from crime min/max ranges
+      if (isSuccess) {
+        // Calculate rewards
         const cashReward = Math.floor(
-          crimeData.minCashReward + 
-          Math.random() * (crimeData.maxCashReward - crimeData.minCashReward)
+          Math.random() * (crime.maxCashReward - crime.minCashReward + 1) + crime.minCashReward
         );
         const xpReward = Math.floor(
-          crimeData.minXpReward + 
-          Math.random() * (crimeData.maxXpReward - crimeData.minXpReward)
+          Math.random() * (crime.maxXpReward - crime.minXpReward + 1) + crime.minXpReward
         );
         
-        await storage.updateUser(req.user.id, {
-          cash: req.user.cash + cashReward,
-          xp: req.user.xp + xpReward
+        // Update user
+        const updatedUser = await storage.updateUser(userId, {
+          cash: user.cash + cashReward,
+          xp: user.xp + xpReward
         });
         
-        return res.json({
+        let levelUp = false;
+        // Check for level up
+        if (updatedUser) {
+          const newLevel = Math.floor(1 + Math.sqrt(updatedUser.xp / 100));
+          if (newLevel > updatedUser.level) {
+            await storage.updateUser(userId, { level: newLevel });
+            levelUp = true;
+          }
+        }
+        
+        // Create crime history record
+        const crimeRecord = await storage.createCrimeHistory({
+          userId,
+          crimeId,
           success: true,
-          caught: false,
-          cashReward: cashReward,
-          xpReward: xpReward,
-          message: `You successfully completed the ${crimeData.name} and earned $${cashReward} and ${xpReward} XP.`
+          cashReward,
+          xpReward,
+          jailed: false,
+          nextAvailableAt: cooldownEnd
+        });
+        
+        // Check for achievements
+        let unlockedAchievements = [];
+        try {
+          // 1. Check for "crime_committed" achievement (any crime)
+          const crimeAchievements = await storage.checkAndUpdateAchievementProgress(userId, "crime_committed");
+          
+          // 2. Check for specific crime achievements using the crime name as target
+          const specificCrimeAchievements = await storage.checkAndUpdateAchievementProgress(
+            userId,
+            "crime_specific",
+            crime.name
+          );
+          
+          // 3. Check for cash earned from crimes achievement
+          const cashAchievements = await storage.checkAndUpdateAchievementProgress(
+            userId,
+            "crime_cash_earned", 
+            undefined,
+            cashReward
+          );
+          
+          // Combine all unlocked achievements
+          unlockedAchievements = [
+            ...crimeAchievements,
+            ...specificCrimeAchievements,
+            ...cashAchievements
+          ];
+        } catch (err) {
+          console.error("Error checking achievements:", err);
+          // Continue execution, don't let achievement errors affect the main flow
+        }
+          
+          // Include achievement notification in response if any were unlocked
+          return res.json({
+            success: true,
+            cashReward,
+            xpReward,
+            unlockedAchievements: unlockedAchievements.length > 0 ? unlockedAchievements : undefined,
+            cooldownEnd,
+            message: "Crime successful!",
+            levelUp
         });
       } else {
-        // Crime failed - determine if player was caught
-        const catchProbability = crimeData.jailRisk / 100; // Use configured jail risk
-        const caught = Math.random() < catchProbability;
+        // Check if user got caught
+        const caught = Math.random() * 100 < crime.jailRisk;
         
         if (caught) {
-          // Player was caught and goes to jail
-          const now = new Date();
-          const jailTime = new Date(now);
-          jailTime.setMinutes(jailTime.getMinutes() + crimeData.jailTime); // Use configured jail time
+          // Calculate jail time
+          const jailEnd = new Date(now.getTime() + crime.jailTime * 1000);
           
-          await storage.updateUser(req.user.id, {
+          // Update user as jailed
+          await storage.updateUser(userId, {
             isJailed: true,
-            jailTimeEnd: jailTime,
-            jailReason: `Caught during ${crimeData.name}`
+            jailTimeEnd: jailEnd
+          });
+          
+          // Create crime history record
+          await storage.createCrimeHistory({
+            userId,
+            crimeId,
+            success: false,
+            jailed: true,
+            nextAvailableAt: cooldownEnd
           });
           
           return res.json({
             success: false,
             caught: true,
-            jailed: true,
-            jailTime: jailTime,
-            message: `You were caught during the ${crimeData.name} and have been sent to jail until ${jailTime.toLocaleString()}.`
+            jailEnd,
+            cooldownEnd,
+            message: "Crime failed! You were caught and sent to jail."
           });
         } else {
-          // Player failed but wasn't caught
+          // Create crime history record
+          await storage.createCrimeHistory({
+            userId,
+            crimeId,
+            success: false,
+            jailed: false,
+            nextAvailableAt: cooldownEnd
+          });
+          
           return res.json({
             success: false,
             caught: false,
-            message: `You failed to complete the ${crimeData.name} but managed to escape without being caught.`
+            cooldownEnd,
+            message: "Crime failed but you escaped arrest!"
           });
         }
       }
     } catch (error) {
-      console.error('Error executing crime:', error);
-      res.status(500).json({ message: 'Failed to execute crime' });
-    }
-  });
-
-  // Location routes
-  app.get('/api/locations', async (req: Request, res: Response) => {
-    try {
-      const locationsList = await db.select().from(locations);
-      res.json(locationsList);
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-      res.status(500).json({ message: 'Failed to fetch locations' });
-    }
-  });
-
-  app.get('/api/locations/:id', async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const [location] = await db.select().from(locations).where(eq(locations.id, parseInt(id)));
-      
-      if (!location) {
-        return res.status(404).json({ message: 'Location not found' });
-      }
-      
-      res.json(location);
-    } catch (error) {
-      console.error('Error fetching location:', error);
-      res.status(500).json({ message: 'Failed to fetch location' });
-    }
-  });
-
-  // Dashboard route
-  app.get('/api/dashboard', authProtected, async (req: Request, res: Response) => {
-    try {
-      // Get user with gang info
-      const user = req.user;
-      
-      // Get user's gang if they have one
-      const gang = await storage.getUserGang(user.id);
-      
-      // Enrich user with gang info
-      const userWithGang = {
-        ...user,
-        gang: gang || null,
-      };
-      
-      // Get high-level summary data
-      const latestUsers = await db
-        .select({
-          id: users.id,
-          username: users.username,
-          level: users.level,
-          createdAt: users.createdAt
-        })
-        .from(users)
-        .orderBy(desc(users.createdAt))
-        .limit(5);
-      
-      // Count total users
-      const [userCount] = await db
-        .select({
-          count: sql<number>`count(*)`
-        })
-        .from(users);
-      
-      // Response with dashboard data
-      res.json({
-        user: userWithGang,
-        stats: {
-          totalUsers: userCount.count,
-          // Add more stats as needed
-        },
-        latestUsers
-      });
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      res.status(500).json({ message: 'Failed to fetch dashboard data' });
-    }
-  });
-
-  // A simple route to check auth state
-  app.get('/api/debug/auth-check', async (req: Request, res: Response) => {
-    try {
-      const authHeader = req.headers.authorization;
-      const hasAuthHeader = !!authHeader;
-      
-      // Return information about the request's auth state
-      res.json({
-        hasAuthHeader,
-        authHeaderValue: hasAuthHeader ? `${authHeader?.substring(0, 10)}...` : null,
-        isAuthenticated: req.isAuthenticated(),
-        user: req.isAuthenticated() ? {
-          id: req.user?.id,
-          username: req.user?.username,
-          supabaseId: req.user?.supabaseId,
-          hasSupabaseId: !!req.user?.supabaseId
-        } : null
-      });
-    } catch (error) {
-      console.error('Error in auth check route:', error);
-      res.status(500).json({ message: 'Error checking auth state' });
+      console.error("Crime execution error:", error);
+      res.status(500).json({ message: "Failed to execute crime" });
     }
   });
   
-  // Route to force link the current authenticated Supabase user with a game user
-  app.post('/api/link-supabase-user', async (req: Request, res: Response) => {
+  // User stats route
+  app.get("/api/stats", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
     try {
-      console.log('Attempting to link Supabase user to game account');
-      
-      // Extract the token and validate it
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        console.log('Linking failed: No auth header present');
-        return res.status(401).json({ message: 'No auth header present' });
-      }
-      
-      // Get the Supabase user from the token
-      const supabaseUser = await extractAndValidateToken(req);
-      if (!supabaseUser) {
-        console.log('Linking failed: Invalid token');
-        return res.status(401).json({ message: 'Invalid token' });
-      }
-      
-      console.log(`Authenticated Supabase user: ${supabaseUser.id} (${supabaseUser.email})`);
-      
-      // Get the game username from the request body
-      const { username, password } = req.body;
-      if (!username || !password) {
-        console.log('Linking failed: Username and password are required');
-        return res.status(400).json({ message: 'Username and password are required' });
-      }
-      
-      console.log(`Attempting to find game user with username: ${username}`);
-      
-      // Find the game user by username
-      const gameUser = await storage.getUserByUsername(username);
-      if (!gameUser) {
-        console.log(`Linking failed: Game user not found with username: ${username}`);
-        return res.status(404).json({ message: 'Game user not found' });
-      }
-      
-      console.log(`Found game user: ${gameUser.username} (ID: ${gameUser.id})`);
-      
-      // Check if the password is correct (basic check for now)
-      if (gameUser.password !== password) {
-        console.log(`Linking failed: Invalid password for user: ${username}`);
-        return res.status(401).json({ message: 'Invalid password' });
-      }
-      
-      // Check if this game account is already linked to a different Supabase ID
-      if (gameUser.supabaseId && gameUser.supabaseId !== supabaseUser.id) {
-        console.log(`Linking failed: Game user is already linked to a different Supabase ID: ${gameUser.supabaseId}`);
-        return res.status(409).json({ 
-          message: 'This game account is already linked to a different Supabase account' 
-        });
-      }
-      
-      console.log(`Ready to link game user ID ${gameUser.id} with Supabase ID ${supabaseUser.id}`);
-      
-      // Update the user with the Supabase ID
-      const updatedUser = await storage.updateUser(gameUser.id, {
-        supabaseId: supabaseUser.id, // Use the id property, not sub
-        email: supabaseUser.email || gameUser.email // Use Supabase email if available
-      });
-      
-      console.log(`Successfully linked game user ID ${gameUser.id} with Supabase ID ${supabaseUser.id}`);
-      
-      res.json({
-        success: true,
-        message: 'Successfully linked Supabase user to game account',
-        user: {
-          id: updatedUser.id,
-          username: updatedUser.username,
-          email: updatedUser.email,
-          supabaseId: updatedUser.supabaseId
-        }
-      });
+      const stats = await storage.getStatsByUserId(req.user.id);
+      res.json(stats);
     } catch (error) {
-      console.error('Error linking Supabase user:', error);
-      res.status(500).json({ message: 'Server error linking Supabase user' });
-    }
-  });
-
-  // Debug route to check Supabase auth and game database link
-  app.get('/api/debug/auth-link', async (req: Request, res: Response) => {
-    try {
-      // Extract the token
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        return res.status(401).json({ message: 'No auth header present' });
-      }
-      
-      const token = authHeader.split('Bearer ')[1];
-      if (!token) {
-        return res.status(401).json({ message: 'No token in auth header' });
-      }
-      
-      // Get the Supabase user from the token
-      const supabaseUser = await extractAndValidateToken(req);
-      if (!supabaseUser) {
-        return res.status(401).json({ message: 'Invalid token' });
-      }
-      
-      console.log('Debug route - token validated for Supabase user:', supabaseUser.id);
-      
-      // Try to find the user in the game database by Supabase ID
-      let gameUser = await storage.getUserBySupabaseId(supabaseUser.id);
-      let source = 'supabaseId';
-      
-      // If not found, try email
-      if (!gameUser && supabaseUser.email) {
-        console.log(`Debug route - user not found by Supabase ID, trying email: ${supabaseUser.email}`);
-        gameUser = await storage.getUserByEmail(supabaseUser.email);
-        source = 'email';
-        
-        // If found by email, update their Supabase ID for future logins
-        if (gameUser) {
-          console.log(`Debug route - user found by email, updating Supabase ID from ${gameUser.supabaseId} to ${supabaseUser.id}`);
-          await storage.updateUser(gameUser.id, { supabaseId: supabaseUser.id });
-          console.log('Debug route - updated Supabase ID for user found by email');
-        }
-      }
-      
-      if (!gameUser) {
-        return res.status(404).json({
-          message: 'No game user found for the authenticated Supabase user',
-          supabaseUserId: supabaseUser.id,
-          email: supabaseUser.email || 'unknown'
-        });
-      }
-      
-      // Return debug information
-      res.json({
-        success: true,
-        foundBy: source,
-        supabaseUser: {
-          id: supabaseUser.id,
-          email: supabaseUser.email
-        },
-        gameUser: {
-          id: gameUser.id,
-          username: gameUser.username,
-          email: gameUser.email,
-          supabaseId: gameUser.supabaseId
-        }
-      });
-    } catch (error) {
-      console.error('Error in auth link debug route:', error);
-      res.status(500).json({ message: 'Server error in auth link debug' });
+      res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
   
-  // Route to check if a supabase ID is already linked to a game account
-  app.get('/api/debug/check-supabase-id/:supabaseId', async (req: Request, res: Response) => {
+  // Auto-release jailed users if their time has expired
+  // This should be moved to a dedicated scheduled task in production
+  app.get("/api/jail/check-release", async (req, res) => {
     try {
-      const { supabaseId } = req.params;
+      // Get all jailed users
+      const jailedUsers = await storage.getJailedUsers();
+      const now = new Date();
       
-      if (!supabaseId) {
-        return res.status(400).json({ message: 'Supabase ID is required' });
-      }
+      let releasedCount = 0;
       
-      console.log(`Checking if Supabase ID ${supabaseId} is linked to a game account`);
-      
-      // Check if this Supabase ID is already linked to a game account
-      const user = await storage.getUserBySupabaseId(supabaseId);
-      
-      if (user) {
-        console.log(`Supabase ID ${supabaseId} is linked to game user: ${user.username} (ID: ${user.id})`);
-        return res.json({
-          linked: true,
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email
+      // Check each user
+      for (const user of jailedUsers) {
+        if (user.jailTimeEnd && user.jailTimeEnd <= now) {
+          console.log(`Auto-releasing user ${user.id} from jail`);
+          const releasedUser = await storage.releaseFromJail(user.id);
+          
+          if (releasedUser) {
+            releasedCount++;
           }
-        });
-      } else {
-        console.log(`Supabase ID ${supabaseId} is NOT linked to any game account`);
-        return res.json({ linked: false });
+        }
       }
+      
+      res.json({ 
+        success: true, 
+        message: `Released ${releasedCount} users from jail`,
+        releasedCount
+      });
     } catch (error) {
-      console.error('Error checking Supabase ID:', error);
-      res.status(500).json({ message: 'Server error checking Supabase ID' });
+      console.error("Error checking jail releases:", error);
+      res.status(500).json({ message: "Failed to check jail releases" });
     }
   });
-
-  // Route to force update a user's Supabase ID based on email
-  app.post('/api/debug/update-supabase-id', async (req: Request, res: Response) => {
+  
+  // Get user's jail status
+  app.get("/api/jail/status", async (req, res) => {
+    if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
+    
     try {
-      const { email, supabaseId } = req.body;
-      
-      if (!email || !supabaseId) {
-        return res.status(400).json({ message: 'Email and Supabase ID are required' });
-      }
-      
-      // Find the user by email
-      const user = await storage.getUserByEmail(email);
+      const user = await storage.getUser(req.user.id);
       
       if (!user) {
-        return res.status(404).json({ message: 'User not found with the provided email' });
+        return res.status(404).json({ message: "User not found" });
       }
       
-      // Update the user's Supabase ID
-      const updatedUser = await storage.updateUser(user.id, { supabaseId });
+      if (!user.isJailed) {
+        return res.json({
+          isJailed: false
+        });
+      }
       
-      res.json({
-        success: true,
-        message: 'User Supabase ID updated successfully',
-        user: {
-          id: updatedUser.id,
-          username: updatedUser.username,
-          email: updatedUser.email,
-          supabaseId: updatedUser.supabaseId
-        }
+      return res.json({
+        isJailed: true,
+        jailTimeEnd: user.jailTimeEnd
       });
     } catch (error) {
-      console.error('Error updating Supabase ID:', error);
-      res.status(500).json({ message: 'Server error updating Supabase ID' });
+      console.error("Error getting jail status:", error);
+      res.status(500).json({ message: "Failed to get jail status" });
     }
   });
   
-  // Register feature-specific routes
-  registerProfileRoutes(app);
-  registerCasinoRoutes(app);
-  registerDrugRoutes(app);
-  registerBankingRoutes(app);
-  registerGangRoutes(app);
-  registerAchievementRoutes(app);
-  registerAdminRoutes(app);
-  registerSocialRoutes(app);
-
-  // Create HTTP server
-  const httpServer = createServer(app);
-  
-  // Register WebSocket server
-  registerWebSocketServer(httpServer);
-
   return httpServer;
 }

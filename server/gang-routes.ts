@@ -1,12 +1,7 @@
-import { Router, Express } from "express";
+import { Router } from "express";
 import { storage } from "./storage";
 import { insertGangSchema, insertGangMemberSchema, insertGangTerritorySchema, insertGangWarSchema, insertGangWarParticipantSchema, insertGangMissionAttemptSchema } from "@shared/schema";
 import { ZodError } from "zod";
-
-// Function to register the gang routes with the Express app
-export function registerGangRoutes(app: Express) {
-  app.use('/api/gangs', gangRouter);
-}
 
 const gangRouter = Router();
 

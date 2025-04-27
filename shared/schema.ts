@@ -28,8 +28,6 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   email: text("email").notNull().unique(),
-  // Supabase Auth ID for linking to Supabase authentication
-  supabaseId: text("supabase_id").unique(),
   level: integer("level").notNull().default(1),
   xp: integer("xp").notNull().default(0),
   cash: integer("cash").notNull().default(1000),
@@ -267,7 +265,6 @@ export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   email: true,
-  supabaseId: true,
 });
 
 export const insertStatSchema = createInsertSchema(stats).pick({

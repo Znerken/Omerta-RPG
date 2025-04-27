@@ -1,83 +1,70 @@
-import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import session from 'express-session';
-import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
-import { initializeDatabase } from './db-supabase';
-import { registerRoutes } from './routes-supabase';
-import { setupAuthRoutes } from './auth-supabase';
-import { setupVite } from './vite';
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { setupVite, serveStatic, log } from "./vite";
 
-// Load environment variables
-dotenv.config();
-
-// Initialize Express app
 const app = express();
-const port = process.env.PORT || 5000;
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-// Set up middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CORS_ORIGIN || true
-    : true,
-  credentials: true
-}));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
-// Set up session middleware
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'omerta-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    httpOnly: true
-  }
-}));
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
 
-// Initialize Supabase authentication
-setupAuthRoutes(app);
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
 
-// Initialize the server
-async function startServer() {
-  try {
-    // Initialize database connection
-    const dbInitialized = await initializeDatabase();
-    if (!dbInitialized) {
-      throw new Error('Failed to initialize database connection');
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "…";
+      }
+
+      log(logLine);
     }
+  });
 
-    // Register API routes
-    const server = await registerRoutes(app);
-    
-    // Set up Vite middleware for development
-    if (process.env.NODE_ENV === 'development') {
-      await setupVite(app, server);
-      console.log('Vite middleware initialized for development');
-    }
+  next();
+});
 
-    // Start the server
-    server.listen(port, '0.0.0.0', () => {
-      console.log(`Server running on port ${port}`);
-    });
+(async () => {
+  const server = await registerRoutes(app);
 
-    // Handle cleanup on shutdown
-    process.on('SIGTERM', () => {
-      console.log('SIGTERM received, shutting down gracefully');
-      server.close(() => {
-        console.log('Server closed');
-        process.exit(0);
-      });
-    });
-  } catch (error) {
-    console.error('Error starting server:', error);
-    process.exit(1);
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(status).json({ message });
+    throw err;
+  });
+
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
   }
-}
 
-// Start the server
-startServer();
+  // ALWAYS serve the app on port 5000
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = 5000;
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
+})();
