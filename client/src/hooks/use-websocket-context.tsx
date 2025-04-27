@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useCallback, useEffect } from 'react';
+import { createContext, useContext, ReactNode, useCallback, useEffect, useRef } from 'react';
 import { useWebSocket, WebSocketMessage } from './use-websocket';
 import { useToast } from './use-toast';
 import { queryClient } from '@/lib/queryClient';
@@ -12,21 +12,64 @@ type WebSocketContextType = {
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
 
+// Debounce function to prevent excessive cache invalidations
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  
+  return function(this: any, ...args: Parameters<T>) {
+    const later = () => {
+      timeout = null;
+      func.apply(this, args);
+    };
+    
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+    
+    timeout = setTimeout(later, wait);
+  };
+}
+
 export function WebSocketProvider({ children }: { children: ReactNode }) {
-  const { isConnected, lastMessage, sendMessage } = useWebSocket();
+  const { isConnected, lastMessage, sendMessage, addMessageHandler } = useWebSocket();
   const { toast } = useToast();
   const { user } = useAuth();
+  const messageHandlerRef = useRef<() => void | null>(null);
+
+  // Create debounced versions of cache invalidation functions
+  const debouncedInvalidateFriends = useCallback(
+    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] }), 1000),
+    []
+  );
+  
+  const debouncedInvalidateOnline = useCallback(
+    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/social/online'] }), 1000),
+    []
+  );
+  
+  const debouncedInvalidateRequests = useCallback(
+    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/social/friends/requests'] }), 1000),
+    []
+  );
+  
+  const debouncedInvalidateMessages = useCallback(
+    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/messages'] }), 1000),
+    []
+  );
+  
+  const debouncedInvalidateUnread = useCallback(
+    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/messages/unread'] }), 1000),
+    []
+  );
 
   // Handle WebSocket messages
-  const handleWebSocketMessage = useCallback((message: WebSocketMessage | null) => {
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
     if (!message) return;
 
     // Handle different message types
     switch (message.type) {
       case 'friend_status':
         // Friend status update received - invalidate friend lists
-        console.log('WebSocket message received:', message);
-        
         // Only show toast notification if we have the username and status
         if (message.data && message.data.username && message.data.status) {
           toast({
@@ -36,8 +79,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           });
         }
         
-        queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/social/online'] });
+        debouncedInvalidateFriends();
+        debouncedInvalidateOnline();
         break;
       
       case 'friend_request':
@@ -47,7 +90,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           description: `${message.data.from?.username} sent you a friend request`,
           variant: 'default',
         });
-        queryClient.invalidateQueries({ queryKey: ['/api/social/friends/requests'] });
+        debouncedInvalidateRequests();
         break;
       
       case 'friend_request_accepted':
@@ -57,7 +100,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           description: `${message.data.username} accepted your friend request`,
           variant: 'default',
         });
-        queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] });
+        debouncedInvalidateFriends();
         break;
       
       case 'friend_removed':
@@ -67,7 +110,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           description: `${message.data.username} has removed you as a friend`,
           variant: 'default',
         });
-        queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] });
+        debouncedInvalidateFriends();
         break;
       
       case 'newMessage':
@@ -79,37 +122,56 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           description: `From ${message.data.senderName || 'Unknown'}: ${message.data.content}`,
           variant: 'default',
         });
-        queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+        debouncedInvalidateMessages();
+        debouncedInvalidateUnread();
         break;
       
       case 'unreadMessages':
         // Update unread messages count
-        queryClient.invalidateQueries({ queryKey: ['/api/messages/unread'] });
+        debouncedInvalidateUnread();
         break;
       
       default:
         // Handle other message types as needed
         break;
     }
-  }, [toast]);
+  }, [
+    toast, 
+    debouncedInvalidateFriends, 
+    debouncedInvalidateOnline, 
+    debouncedInvalidateRequests, 
+    debouncedInvalidateMessages, 
+    debouncedInvalidateUnread
+  ]);
 
-  // Process incoming messages
+  // Register message handler once
   useEffect(() => {
-    if (lastMessage) {
-      handleWebSocketMessage(lastMessage);
+    if (messageHandlerRef.current) {
+      messageHandlerRef.current();
     }
-  }, [lastMessage, handleWebSocketMessage]);
+    
+    // Register handler with the global WebSocket system
+    messageHandlerRef.current = addMessageHandler(handleWebSocketMessage);
+    
+    // Cleanup when component unmounts
+    return () => {
+      if (messageHandlerRef.current) {
+        messageHandlerRef.current();
+        messageHandlerRef.current = null;
+      }
+    };
+  }, [handleWebSocketMessage, addMessageHandler]);
 
   // Send heartbeat every 30 seconds to keep connection alive
   useEffect(() => {
-    if (!isConnected || !user) return;
+    if (!user?.id) return;
     
     const interval = setInterval(() => {
       sendMessage('heartbeat', { userId: user.id });
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [isConnected, sendMessage, user]);
+  }, [sendMessage, user]);
 
   return (
     <WebSocketContext.Provider value={{ isConnected, lastMessage, sendMessage }}>
