@@ -8,7 +8,8 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { storage } from "./storage";
-import { isAuthenticated, isAdmin } from "./middleware/auth";
+import { isAuthenticated } from "./middleware/auth";
+import { isAdmin } from "./middleware/admin";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
 

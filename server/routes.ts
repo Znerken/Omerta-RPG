@@ -8,6 +8,7 @@ import { registerAchievementRoutes } from "./achievement-routes";
 import { registerDrugRoutes } from "./drug-routes";
 import { registerCasinoRoutes } from "./casino-routes";
 import { registerProfileRoutes } from "./profile-routes";
+import { registerInventoryRoutes } from "./inventory-routes";
 import { registerSocialRoutes, setNotifyUserFunction } from "./social-routes";
 import { registerDevRoutes } from "./dev-routes";
 import challengeRoutes from "./challenge-routes";
@@ -144,6 +145,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register profile routes
   registerProfileRoutes(app);
+  
+  // Register inventory routes
+  registerInventoryRoutes(app);
   
   // Register dev routes for testing
   registerDevRoutes(app);

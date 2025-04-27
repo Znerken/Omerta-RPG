@@ -15,7 +15,8 @@ import {
   insertUserDrugEffectSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
-import { isAuthenticated, isAdmin } from "./middleware/auth";
+import { isAuthenticated } from "./middleware/auth";
+import { isAdmin } from "./middleware/admin";
 
 // Helper function to handle validation errors
 function handleZodError(error: ZodError, res: Response): void {

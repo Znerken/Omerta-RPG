@@ -1,7 +1,8 @@
 import express, { Request, Response } from "express";
 import { z } from "zod";
 import { storage } from "./storage";
-import { isAuthenticated, isAdmin } from "./middleware/auth";
+import { isAuthenticated } from "./middleware/auth";
+import { isAdmin } from "./middleware/admin";
 
 const router = express.Router();
 

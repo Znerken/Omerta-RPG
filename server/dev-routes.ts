@@ -12,7 +12,8 @@ import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { drugStorage } from "./storage-drugs";
-import { isAuthenticated, isAdmin } from "./middleware/auth";
+import { isAuthenticated } from "./middleware/auth";
+import { isAdmin } from "./middleware/admin";
 
 // Middleware to restrict dev routes to development environment
 const developmentOnly = (req: Request, res: Response, next: Function) => {

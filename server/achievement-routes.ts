@@ -1,6 +1,7 @@
 import { Express, Request, Response } from "express";
 import { storage } from "./storage";
-import { isAuthenticated, isAdmin } from "./middleware/auth";
+import { isAuthenticated } from "./middleware/auth";
+import { isAdmin } from "./middleware/admin";
 import { InsertAchievement } from "@shared/schema";
 import { z } from "zod";
 

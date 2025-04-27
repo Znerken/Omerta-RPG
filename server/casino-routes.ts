@@ -1,6 +1,7 @@
 import { Express, Request, Response } from 'express';
 import { ZodError } from 'zod';
-import { isAuthenticated, isAdmin } from './middleware/auth';
+import { isAuthenticated } from './middleware/auth';
+import { isAdmin } from './middleware/admin';
 import { CasinoStorage } from './storage-casino';
 import { 
   placeBetSchema, 
