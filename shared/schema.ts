@@ -922,6 +922,30 @@ export type DrugWithQuantity = Drug & {
   quantity: number 
 };
 
+// User Drug Effects Schema - Tracks active drug effects
+export const userDrugEffects = pgTable("user_drug_effects", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  drugId: integer("drug_id").notNull().references(() => drugs.id),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  strengthBonus: integer("strength_bonus").default(0),
+  stealthBonus: integer("stealth_bonus").default(0),
+  charismaBonus: integer("charisma_bonus").default(0),
+  intelligenceBonus: integer("intelligence_bonus").default(0),
+  cashGainBonus: integer("cash_gain_bonus").default(0),
+  active: boolean("active").notNull().default(true),
+  sideEffectTriggered: boolean("side_effect_triggered").default(false),
+});
+
+export const insertUserDrugEffectSchema = createInsertSchema(userDrugEffects).omit({
+  id: true,
+  startedAt: true,
+});
+
+export type UserDrugEffect = typeof userDrugEffects.$inferSelect;
+export type InsertUserDrugEffect = z.infer<typeof insertUserDrugEffectSchema>;
+
 // Custom type for drug with recipes and ingredients
 export type DrugWithRecipe = Drug & {
   recipes: (DrugRecipe & { 
