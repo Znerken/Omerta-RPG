@@ -41,8 +41,21 @@ export function CrimeCard({ crime }: CrimeCardProps) {
     onSuccess: (data) => {
       setCrimeResult(data);
       setShowResultModal(true);
-      queryClient.invalidateQueries({ queryKey: ["/api/crimes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      
+      // Use selective and deferred invalidation to prevent excessive renders and page refreshes
+      setTimeout(() => {
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/crimes"],
+          // Prevent automatic refetch which causes page refresh
+          refetchType: "none" 
+        });
+        
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/dashboard"],
+          // Prevent automatic refetch which causes page refresh
+          refetchType: "none" 
+        });
+      }, 100);
       
       // Show toast notification
       if (data.success) {
@@ -176,7 +189,10 @@ export function CrimeCard({ crime }: CrimeCardProps) {
               </Button>
               <ProgressCountdown 
                 expiryTimestamp={new Date(crime.lastPerformed!.nextAvailableAt!)} 
-                onComplete={() => queryClient.invalidateQueries({ queryKey: ["/api/crimes"] })}
+                onComplete={() => queryClient.invalidateQueries({ 
+                  queryKey: ["/api/crimes"],
+                  refetchType: "none" 
+                })}
                 className="mt-2"
               />
             </div>

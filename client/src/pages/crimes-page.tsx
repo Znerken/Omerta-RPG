@@ -180,10 +180,24 @@ export default function CrimesPage() {
       setCrimeResult(data);
       setShowResultModal(true);
       
-      // Invalidate relevant queries to update data
-      queryClient.invalidateQueries({ queryKey: ["/api/crimes"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      // Delay and prevent auto-refetch to avoid page refreshes
+      setTimeout(() => {
+        // Invalidate relevant queries to update data but AVOID automatic refetching
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/crimes"],
+          refetchType: "none" // This prevents automatic refetch which causes page refresh
+        });
+        
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/dashboard"],
+          refetchType: "none"
+        });
+        
+        queryClient.invalidateQueries({ 
+          queryKey: ["/api/user/profile"],
+          refetchType: "none"
+        });
+      }, 100);
       
       // Show notification based on result type
       if (data.success) {
