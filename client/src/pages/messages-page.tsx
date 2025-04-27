@@ -40,12 +40,10 @@ type NewMessageForm = {
   content: string;
 };
 
-// WebSocket connection for real-time message updates
-let socket: WebSocket | null = null;
-
 export default function MessagesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isConnected } = useWebSocketContext(); // Use the global WebSocket context
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('personal');
   const [newMessage, setNewMessage] = useState<NewMessageForm>({

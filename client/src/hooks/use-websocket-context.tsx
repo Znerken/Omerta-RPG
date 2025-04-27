@@ -36,29 +36,44 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const messageHandlerRef = useRef<() => void | null>(null);
 
-  // Create debounced versions of cache invalidation functions
+  // Create debounced versions of cache invalidation functions that won't cause page refreshes
   const debouncedInvalidateFriends = useCallback(
-    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/social/friends'] }), 1000),
+    debounce(() => queryClient.invalidateQueries({ 
+      queryKey: ['/api/social/friends'],
+      refetchType: "none" // Prevent auto-refresh
+    }), 1000),
     []
   );
   
   const debouncedInvalidateOnline = useCallback(
-    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/social/online'] }), 1000),
+    debounce(() => queryClient.invalidateQueries({ 
+      queryKey: ['/api/social/online'],
+      refetchType: "none" // Prevent auto-refresh
+    }), 1000),
     []
   );
   
   const debouncedInvalidateRequests = useCallback(
-    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/social/friends/requests'] }), 1000),
+    debounce(() => queryClient.invalidateQueries({ 
+      queryKey: ['/api/social/friends/requests'],
+      refetchType: "none" // Prevent auto-refresh
+    }), 1000),
     []
   );
   
   const debouncedInvalidateMessages = useCallback(
-    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/messages'] }), 1000),
+    debounce(() => queryClient.invalidateQueries({ 
+      queryKey: ['/api/messages'],
+      refetchType: "none" // Prevent auto-refresh
+    }), 1000),
     []
   );
   
   const debouncedInvalidateUnread = useCallback(
-    debounce(() => queryClient.invalidateQueries({ queryKey: ['/api/messages/unread'] }), 1000),
+    debounce(() => queryClient.invalidateQueries({ 
+      queryKey: ['/api/messages/unread'],
+      refetchType: "none" // Prevent auto-refresh
+    }), 1000),
     []
   );
 
