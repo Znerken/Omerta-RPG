@@ -276,15 +276,32 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   };
   
   // Function to apply generated photo gallery template
-  const handlePhotoGalleryGenerate = (htmlTemplate: string) => {
+  const handlePhotoGalleryGenerate = async (htmlTemplate: string) => {
     setHtmlProfile(htmlTemplate);
     setProfileTheme("dark");
     setIsPhotoGalleryOpen(false);
-    toast({
-      title: "Photo Gallery template applied",
-      description: "Your custom photo gallery has been set as your profile",
-      variant: "default"
-    });
+    
+    // Save the new profile to the server immediately
+    try {
+      await updateProfileMutation.mutateAsync({
+        bio,
+        htmlProfile: htmlTemplate,
+        showAchievements,
+        profileTheme: "dark",
+      });
+      
+      toast({
+        title: "Photo Gallery template applied",
+        description: "Your custom photo gallery has been saved to your profile",
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Error saving profile",
+        description: "The template was created but could not be saved to your profile",
+        variant: "destructive"
+      });
+    }
   };
   
   // All mutations must be defined before any conditional returns
