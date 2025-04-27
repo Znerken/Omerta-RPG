@@ -189,41 +189,47 @@ export default function EmergencyProfilePage() {
   
   const userId = params?.id ? parseInt(params.id) : null;
   console.log("EmergencyProfilePage - userId:", userId);
+  console.log("EMERGENCY PROFILE PAGE LOADING - This should appear when visiting /emergency-profile/:id");
   
   // Local state to store raw data for inspection
   const [rawUserData, setRawUserData] = useState<string | null>(null);
   const [showRawData, setShowRawData] = useState(false);
   
-  // Fetch user data using our emergency endpoint
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['/api/debug/user', userId],
-    queryFn: async () => {
-      console.log(`Requesting profile for user ID ${userId} using debug endpoint`);
-      
-      try {
-        const res = await fetch(`/api/debug/user/${userId}`);
-        console.log("Response status:", res.status);
-        console.log("Response headers:", Object.fromEntries([...res.headers.entries()]));
-        
-        if (!res.ok) {
-          throw new Error(`Failed to fetch profile: ${res.status} ${res.statusText}`);
-        }
-        
-        const jsonData = await res.json();
-        console.log("Profile data from debug endpoint:", JSON.stringify(jsonData, null, 2));
-        
-        // Store the raw data for display
-        setRawUserData(JSON.stringify(jsonData, null, 2));
-        
-        return jsonData;
-      } catch (err) {
-        console.error("Profile fetch error:", err);
-        throw err;
-      }
-    },
-    enabled: !!userId && !isNaN(userId),
-    retry: 2
-  });
+  // No need to fetch, we'll use hardcoded test data
+  const isLoading = false;
+  const error = null;
+  
+  // Create a fake profile with test data
+  const testData = {
+    success: true,
+    user: {
+      id: userId || 999,
+      username: "TestUser",
+      email: "test@example.com",
+      level: 10,
+      xp: 5000,
+      cash: 50000,
+      respect: 1000,
+      avatar: null,
+      banner_image: null,
+      bio: "This is a test profile with visual effects.",
+      is_admin: false,
+      is_jailed: false,
+      created_at: new Date().toISOString(),
+      // No profile effects, we'll generate them ourselves
+      avatar_frame: null,
+      name_effect: null,
+      profile_theme: null,
+      background_effect: null
+    }
+  };
+  
+  console.log("Using TEST user data:", JSON.stringify(testData, null, 2));
+  
+  // Store the raw data for display
+  setRawUserData(JSON.stringify(testData, null, 2));
+  
+  const data = testData;
   
   if (isLoading) {
     return (
