@@ -16,7 +16,10 @@ import {
   Brain,
   Boxes,
   Cherry,
-  Flask,
+  FlaskConical,
+  FlaskRound,
+  TestTube,
+  Beaker,
   ShoppingBag,
   Map,
   PlusCircle,
@@ -34,9 +37,7 @@ import {
   ThumbsUp,
   Timer,
   ArrowUpRight,
-  Skull,
-  Beaker,
-  TestTube
+  Skull
 } from "lucide-react";
 
 // Helper function to format timer display
@@ -241,7 +242,7 @@ export default function DrugsPage() {
             <span>Inventory</span>
           </TabsTrigger>
           <TabsTrigger value="labs" className="flex items-center space-x-2">
-            <Flask className="h-4 w-4" />
+            <FlaskConical className="h-4 w-4" />
             <span>Labs</span>
           </TabsTrigger>
           <TabsTrigger value="market" className="flex items-center space-x-2">
@@ -756,7 +757,7 @@ const LabsTab = React.memo(function LabsTab() {
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="flex items-center">
-                        <Flask className="h-4 w-4 mr-1 text-blue-500" /> Capacity
+                        <Flasks className="h-4 w-4 mr-1 text-blue-500" /> Capacity
                       </span>
                       <span className="font-medium">{lab.capacity} units</span>
                     </div>
