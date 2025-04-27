@@ -6,6 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   Tabs,
   TabsContent,
@@ -52,10 +54,9 @@ import {
 import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle, Code, WrenchIcon, Building2, Unlock } from "lucide-react";
 import PageHeader from "../components/layout/page-header";
 import { PageSection } from "../components/layout/page-section";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatCurrency } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -146,6 +147,95 @@ export default function AdminPage() {
   const [selectedLabId, setSelectedLabId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchValue, setSearchValue] = useState("");
+  
+  // Test user creation/deletion mutations
+  const createTestUserMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/dev/create-test-user");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to create test user");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Test User Created",
+        description: `Created user: ${data.user.username} with $500,000 cash, level 5, and 20 of each stat`,
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: Test User Created",
+        message: `Created user: ${data.user.username}`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to create test user",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to create test user: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
+  
+  const deleteTestUsersMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", "/api/dev/test-users");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to delete test users");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Test Users Deleted",
+        description: `Deleted ${data.count} test users`,
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: Test Users Deleted",
+        message: `Deleted ${data.count} test users`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete test users",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to delete test users: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
 
   // Forms
   const searchForm = useForm<UserSearchValues>({
