@@ -301,9 +301,9 @@ gangRouter.post("/:id/members/:userId/promote", isAuthenticated, async (req: Req
       return res.status(404).json({ message: "Target user is not a member of this gang" });
     }
     
-    // Determine new rank
+    // Determine new role
     let newRank = "Soldier";
-    switch (targetMembership.rank) {
+    switch (targetMembership.role) {
       case "Soldier":
         newRank = "Capo";
         break;
@@ -355,9 +355,9 @@ gangRouter.post("/:id/members/:userId/demote", isAuthenticated, async (req: Requ
       return res.status(404).json({ message: "Target user is not a member of this gang" });
     }
     
-    // Determine new rank
+    // Determine new role
     let newRank = "Soldier";
-    switch (targetMembership.rank) {
+    switch (targetMembership.role) {
       case "Underboss":
         newRank = "Capo";
         break;
