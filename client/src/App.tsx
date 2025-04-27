@@ -197,6 +197,12 @@ function AppRouter() {
         )}
       </Route>
       
+      <Route path="/test-gang">
+        {() => (
+          <ProtectedRoute path="/test-gang" component={() => <ProtectedPage component={TestGangPage} />} />
+        )}
+      </Route>
+      
       <Route path="/admin">
         {() => (
           <ProtectedRoute path="/admin" component={() => {
