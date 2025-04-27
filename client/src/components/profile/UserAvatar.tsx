@@ -53,10 +53,24 @@ export function UserAvatar({
     xl: "h-32 w-32 text-4xl",
   };
 
-  // Create custom size class if size is a number
+  // Handle size properly
   let sizeClass = "";
   if (typeof size === "number") {
-    sizeClass = `h-[${size}px] w-[${size}px] text-[${Math.max(16, size / 3)}px]`;
+    // Use direct Tailwind classes where possible or use style property later
+    if (size === 128) {
+      sizeClass = "h-32 w-32 text-4xl";
+    } else if (size === 64) {
+      sizeClass = "h-16 w-16 text-2xl";
+    } else if (size === 48) {
+      sizeClass = "h-12 w-12 text-base";
+    } else if (size === 40) {
+      sizeClass = "h-10 w-10 text-sm";
+    } else if (size === 32) {
+      sizeClass = "h-8 w-8 text-xs";
+    } else {
+      // Will use inline style instead
+      sizeClass = "";
+    }
   } else {
     sizeClass = sizeClasses[size] || sizeClasses.md;
   }
@@ -76,12 +90,12 @@ export function UserAvatar({
 
   // Create the avatar content (either image or fallback)
   const avatarContent = (
-    <Avatar className={avatarClasses}>
-      {avatarUrl ? (
-        <AvatarImage src={avatarUrl} alt={username} />
+    <Avatar className={avatarClasses} style={typeof size === "number" && !sizeClass ? { width: `${size}px`, height: `${size}px` } : undefined}>
+      {actualAvatarUrl ? (
+        <AvatarImage src={actualAvatarUrl} alt={actualUsername} />
       ) : (
         <AvatarFallback className="font-heading bg-primary/20">
-          {getInitials(username)}
+          {getInitials(actualUsername)}
         </AvatarFallback>
       )}
     </Avatar>

@@ -956,7 +956,28 @@ export function AnimatedProfileFrame({
 }
 
 // Helper function to get CSS for animated name effects
-export function getNameEffectStyles() {
+export function getNameEffectStyles(effect?: any) {
+  // CSS-in-JS mapping for specific effect IDs
+  if (effect) {
+    switch (effect.id) {
+      case 'gradient-red':
+        return { backgroundImage: 'linear-gradient(to right, #ff4d4d, #f9cb28)' };
+      case 'gradient-gold':
+        return { backgroundImage: 'linear-gradient(to right, #ffd700, #ff8c00)' };
+      case 'rainbow':
+        return { backgroundImage: 'linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet)' };
+      case 'neon-blue':
+        return { textShadow: '0 0 5px #0ff, 0 0 10px #0ff, 0 0 20px #0ff' };
+      case 'shadow':
+        return { textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)' };
+      case 'fire-text':
+        return { backgroundImage: 'linear-gradient(to right, #ff4d00, #f9cb28)' };
+      default:
+        return {};
+    }
+  }
+
+  // Return CSS styles for animations
   return (
     <style>{`
       @keyframes rainbow {
