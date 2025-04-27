@@ -25,7 +25,9 @@ import {
   Image,
   RefreshCw,
   CheckCircle2,
-  X 
+  X,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -49,9 +51,24 @@ export function PhotoGalleryGenerator({
   const [songTitle, setSongTitle] = useState('');
   const [artistName, setArtistName] = useState('');
   const [customQuote, setCustomQuote] = useState('');
+  const [photoCount, setPhotoCount] = useState(6); // Default to 6 photos
   const [photoUrls, setPhotoUrls] = useState<string[]>(Array(10).fill(''));
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+  // Update photo URLs array when photo count changes
+  useEffect(() => {
+    // Preserve existing URLs when changing count
+    const newUrls = [...photoUrls];
+    if (newUrls.length < photoCount) {
+      // Add empty strings if we need more photos
+      newUrls.push(...Array(photoCount - newUrls.length).fill(''));
+    } else if (newUrls.length > photoCount) {
+      // Remove extra photos if we need fewer
+      newUrls.splice(photoCount);
+    }
+    setPhotoUrls(newUrls);
+  }, [photoCount]);
 
   // Handle photo URL input change
   const handlePhotoUrlChange = (index: number, url: string) => {
@@ -60,13 +77,27 @@ export function PhotoGalleryGenerator({
     setPhotoUrls(newUrls);
   };
 
+  // Add one more photo input field
+  const addPhotoField = () => {
+    if (photoCount < 20) { // Set a reasonable max limit
+      setPhotoCount(photoCount + 1);
+    }
+  };
+
+  // Remove the last photo input field
+  const removePhotoField = () => {
+    if (photoCount > 1) { // Always keep at least one photo
+      setPhotoCount(photoCount - 1);
+    }
+  };
+
   // Check if form is valid
   const isFormValid = () => {
     return (
       albumCoverUrl.trim() !== '' &&
       songTitle.trim() !== '' &&
       artistName.trim() !== '' &&
-      photoUrls.filter(url => url.trim() !== '').length === 10
+      photoUrls.slice(0, photoCount).filter(url => url.trim() !== '').length === photoCount
     );
   };
 
@@ -75,7 +106,7 @@ export function PhotoGalleryGenerator({
     if (!isFormValid()) {
       toast({
         title: "Missing information",
-        description: "Please fill all required fields and add 10 photos",
+        description: `Please fill all required fields and add ${photoCount} photos`,
         variant: "destructive",
       });
       return;
@@ -85,6 +116,9 @@ export function PhotoGalleryGenerator({
 
     // Simulate API call delay
     setTimeout(() => {
+      // Only use the number of photos selected by the user
+      const selectedPhotoUrls = photoUrls.slice(0, photoCount);
+      
       const htmlTemplate = `
 <div style="font-family: 'Inter', sans-serif; background-color: #121212; color: #ffffff; padding: 20px; border-radius: 10px; max-width: 800px; margin: 0 auto;">
   <!-- Album Header Section -->
@@ -125,7 +159,7 @@ export function PhotoGalleryGenerator({
   
   <!-- Image Grid Gallery -->
   <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">
-    ${photoUrls.map((url, index) => `
+    ${selectedPhotoUrls.map((url, index) => `
     <div style="border-radius: 8px; overflow: hidden; aspect-ratio: 1/1; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
       <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Gallery Image ${index + 1}">
     </div>
@@ -207,7 +241,7 @@ export function PhotoGalleryGenerator({
 
                     {/* Photo Grid Preview */}
                     <div className="grid grid-cols-2 gap-2 mb-4">
-                      {photoUrls.map((url, index) => (
+                      {photoUrls.slice(0, photoCount).map((url, index) => (
                         <div 
                           key={index} 
                           className="aspect-square bg-zinc-800 rounded overflow-hidden relative"
@@ -284,13 +318,39 @@ export function PhotoGalleryGenerator({
                 </div>
               </div>
 
-              {/* Photo Grid */}
+              {/* Photo Count Control */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center">
-                  <Image className="w-4 h-4 mr-1" /> Photo Gallery (10 Images)
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium flex items-center">
+                    <Image className="w-4 h-4 mr-1" /> Photo Gallery (<span className="font-bold text-primary">{photoCount}</span> Images)
+                  </Label>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-8 w-8 p-0" 
+                      onClick={removePhotoField}
+                      disabled={photoCount <= 1}
+                    >
+                      <span className="sr-only">Remove photo</span>
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm font-medium w-8 text-center">{photoCount}</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="h-8 w-8 p-0" 
+                      onClick={addPhotoField}
+                      disabled={photoCount >= 20}
+                    >
+                      <span className="sr-only">Add photo</span>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                  {Array.from({ length: 10 }).map((_, index) => (
+                  {Array.from({ length: photoCount }).map((_, index) => (
                     <div key={index} className="flex items-center space-x-2">
                       <div className="w-8 h-8 flex items-center justify-center rounded bg-muted">
                         {index + 1}
@@ -336,7 +396,7 @@ export function PhotoGalleryGenerator({
             <span className="text-xs text-muted-foreground">
               {isFormValid()
                 ? "Ready to generate your template"
-                : "Please fill all fields and add 10 photos"}
+                : `Please fill all fields and add ${photoCount} photos`}
             </span>
           </div>
           <Button 
