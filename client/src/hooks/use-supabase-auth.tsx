@@ -140,6 +140,12 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         description: "Welcome back to OMERTÀ",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/user/profile'] });
+      
+      // Redirect to dashboard after successful login
+      console.log('Redirecting to dashboard after successful login');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000); // Short delay to allow toast to be seen
     },
     onError: (error: Error) => {
       toast({
@@ -181,6 +187,12 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         title: "Registration successful",
         description: "Welcome to OMERTÀ! Please check your email to confirm your account.",
       });
+      
+      // Redirect to dashboard after successful registration
+      console.log('Redirecting to dashboard after successful registration');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 2000); // Longer delay to allow the user to read the message
     },
     onError: (error: Error) => {
       toast({
@@ -202,6 +214,12 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         description: "You have been logged out",
       });
       queryClient.setQueryData(['/api/user/profile'], null);
+      
+      // Redirect to login page after successful logout
+      console.log('Redirecting to login page after successful logout');
+      setTimeout(() => {
+        window.location.href = '/auth';
+      }, 1000); // Short delay to allow toast to be seen
     },
     onError: (error: Error) => {
       toast({
