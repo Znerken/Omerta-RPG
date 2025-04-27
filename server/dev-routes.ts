@@ -427,4 +427,87 @@ export function registerDevRoutes(app: Express) {
       res.status(500).json({ message: "Error checking casino tables" });
     }
   });
+  
+  // Create casino tables manually if migration is failing
+  app.post("/api/dev/create-casino-tables", developmentOnly, async (req, res) => {
+    try {
+      // Create game_type enum
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'casino_game_type') THEN
+            CREATE TYPE casino_game_type AS ENUM ('dice', 'slots', 'roulette', 'blackjack');
+          END IF;
+        END
+        $$;
+      `);
+      
+      // Create bet_status enum
+      await db.execute(sql`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'casino_bet_status') THEN
+            CREATE TYPE casino_bet_status AS ENUM ('pending', 'won', 'lost', 'canceled', 'refunded');
+          END IF;
+        END
+        $$;
+      `);
+      
+      // Create casino_games table
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS casino_games (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL,
+          game_type TEXT NOT NULL,
+          description TEXT,
+          enabled BOOLEAN NOT NULL DEFAULT TRUE,
+          min_bet INTEGER NOT NULL DEFAULT 10,
+          max_bet INTEGER NOT NULL DEFAULT 10000,
+          house_edge REAL NOT NULL DEFAULT 0.05,
+          image_url TEXT
+        )
+      `);
+      
+      // Create casino_bets table
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS casino_bets (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id),
+          game_id INTEGER NOT NULL REFERENCES casino_games(id),
+          bet_amount INTEGER NOT NULL,
+          bet_details JSONB NOT NULL,
+          result JSONB,
+          status TEXT NOT NULL DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          settled_at TIMESTAMP
+        )
+      `);
+      
+      // Create casino_stats table
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS casino_stats (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id),
+          game_id INTEGER NOT NULL REFERENCES casino_games(id),
+          total_bets INTEGER NOT NULL DEFAULT 0,
+          total_wagered INTEGER NOT NULL DEFAULT 0,
+          total_won INTEGER NOT NULL DEFAULT 0,
+          total_lost INTEGER NOT NULL DEFAULT 0,
+          biggest_win INTEGER NOT NULL DEFAULT 0,
+          biggest_loss INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          UNIQUE(user_id, game_id)
+        )
+      `);
+      
+      res.json({ message: "Casino tables created successfully" });
+    } catch (error) {
+      console.error("Error creating casino tables:", error);
+      res.status(500).json({ 
+        message: "Error creating casino tables", 
+        error: error.message 
+      });
+    }
+  });
 }
