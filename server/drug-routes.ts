@@ -1017,6 +1017,58 @@ export function registerDrugRoutes(app: Express) {
     }
   });
   
+  // Seed test ingredients to the current user (for quick testing)
+  app.post("/api/dev/seed-my-ingredients", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const allIngredients = await drugStorage.getAllIngredients();
+      
+      if (allIngredients.length === 0) {
+        return res.status(400).json({ error: "No ingredients found. Seed drugs first." });
+      }
+      
+      // Give the user 10 of each ingredient
+      const results = [];
+      for (const ingredient of allIngredients) {
+        const userIngredient = await drugStorage.getUserIngredient(userId, ingredient.id);
+        
+        if (userIngredient) {
+          // Update existing ingredient quantity
+          const updatedIngredient = await drugStorage.updateUserIngredientQuantity(
+            userIngredient.id,
+            userIngredient.quantity + 10
+          );
+          results.push({
+            ingredient: ingredient.name,
+            quantity: updatedIngredient.quantity,
+            updated: true
+          });
+        } else {
+          // Add new ingredient to user
+          const newUserIngredient = await drugStorage.addIngredientToUser({
+            userId,
+            ingredientId: ingredient.id,
+            quantity: 10
+          });
+          results.push({
+            ingredient: ingredient.name,
+            quantity: newUserIngredient.quantity,
+            new: true
+          });
+        }
+      }
+      
+      res.json({
+        message: `Added ingredients to user ${userId}`,
+        userId,
+        results
+      });
+    } catch (error) {
+      console.error("Error seeding user ingredients:", error);
+      res.status(500).json({ error: "Failed to seed user ingredients" });
+    }
+  });
+  
   // New endpoint to create recipes only
   // Delete all productions for a lab (admin tool)
   app.delete("/api/admin/drug-labs/:id/productions", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
@@ -1039,6 +1091,86 @@ export function registerDrugRoutes(app: Express) {
     } catch (error) {
       console.error("Error deleting productions:", error);
       res.status(500).json({ error: "Failed to delete productions" });
+    }
+  });
+  
+  // Debug helper endpoint to check production prerequisites
+  app.get("/api/debug/check-production-readiness", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { drugId } = req.query;
+      const userId = req.user!.id;
+      
+      if (!drugId || isNaN(parseInt(drugId as string))) {
+        return res.status(400).json({ error: "Valid drugId query parameter is required" });
+      }
+      
+      const drugIdNum = parseInt(drugId as string);
+      
+      // Get drug details with recipes
+      const drugWithRecipe = await drugStorage.getDrugWithRecipe(drugIdNum);
+      if (!drugWithRecipe) {
+        return res.status(404).json({ error: "Drug not found" });
+      }
+      
+      // Check if drug has recipes
+      if (!drugWithRecipe.recipes || drugWithRecipe.recipes.length === 0) {
+        return res.status(400).json({ 
+          error: "This drug doesn't have any recipes",
+          drug: drugWithRecipe.name,
+          status: "missing_recipes",
+          drugId: drugIdNum
+        });
+      }
+      
+      // Check user ingredients
+      const ingredientStatus = [];
+      let allIngredientsAvailable = true;
+      
+      for (const recipe of drugWithRecipe.recipes) {
+        const userIngredient = await drugStorage.getUserIngredient(userId, recipe.ingredientId);
+        const requiredQuantity = recipe.quantity;
+        const available = userIngredient ? userIngredient.quantity : 0;
+        const hasEnough = available >= requiredQuantity;
+        
+        if (!hasEnough) {
+          allIngredientsAvailable = false;
+        }
+        
+        ingredientStatus.push({
+          ingredient: recipe.ingredient.name,
+          ingredientId: recipe.ingredientId,
+          required: requiredQuantity,
+          available,
+          hasEnough,
+        });
+      }
+      
+      // Check if user has a lab
+      const userLabs = await drugStorage.getUserLabs(userId);
+      const hasLab = userLabs && userLabs.length > 0;
+      
+      res.json({
+        drug: {
+          id: drugWithRecipe.id,
+          name: drugWithRecipe.name,
+          riskLevel: drugWithRecipe.riskLevel,
+        },
+        recipes: drugWithRecipe.recipes.map(r => ({
+          id: r.id,
+          ingredientId: r.ingredientId,
+          ingredientName: r.ingredient.name,
+          quantity: r.quantity,
+        })),
+        ingredientStatus,
+        allIngredientsAvailable,
+        hasLab,
+        labs: hasLab ? userLabs.map(l => ({ id: l.id, name: l.name })) : [],
+        readyForProduction: allIngredientsAvailable && hasLab,
+        userId
+      });
+    } catch (error) {
+      console.error("Error checking production readiness:", error);
+      res.status(500).json({ error: "Failed to check production readiness" });
     }
   });
   
@@ -1158,7 +1290,7 @@ export function registerDrugRoutes(app: Express) {
       let createdCount = 0;
       for (const recipe of recipes) {
         if (recipe.drugId && recipe.ingredientId) {
-          await drugStorage.createRecipe(recipe);
+          await drugStorage.createDrugRecipe(recipe);
           createdCount++;
         }
       }

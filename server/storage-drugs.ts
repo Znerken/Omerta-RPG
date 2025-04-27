@@ -113,18 +113,19 @@ export class DrugStorage {
       .leftJoin(drugIngredients, eq(drugRecipes.ingredientId, drugIngredients.id))
       .where(eq(drugRecipes.drugId, drugId));
   }
-
-  async createDrugRecipe(insertRecipe: InsertDrugRecipe): Promise<DrugRecipe> {
-    const [recipe] = await db.insert(drugRecipes).values(insertRecipe).returning();
-    return recipe;
-  }
   
+  // Get total recipe count - helper for debugging
   async getRecipeCount(): Promise<number> {
     const result = await db
       .select({ count: count() })
       .from(drugRecipes);
     
     return Number(result[0].count);
+  }
+
+  async createDrugRecipe(insertRecipe: InsertDrugRecipe): Promise<DrugRecipe> {
+    const [recipe] = await db.insert(drugRecipes).values(insertRecipe).returning();
+    return recipe;
   }
 
   async getDrugWithRecipe(drugId: number): Promise<DrugWithRecipe | undefined> {
@@ -260,6 +261,17 @@ export class DrugStorage {
       const [newIngredient] = await db.insert(userIngredients).values(insertUserIngredient).returning();
       return newIngredient;
     }
+  }
+  
+  // Helper method for updating user ingredient quantity
+  async updateUserIngredientQuantity(id: number, newQuantity: number): Promise<UserIngredient> {
+    const [updatedIngredient] = await db
+      .update(userIngredients)
+      .set({ quantity: newQuantity })
+      .where(eq(userIngredients.id, id))
+      .returning();
+      
+    return updatedIngredient;
   }
 
   async removeIngredientFromUser(userId: number, ingredientId: number, quantity: number = 1): Promise<boolean> {
