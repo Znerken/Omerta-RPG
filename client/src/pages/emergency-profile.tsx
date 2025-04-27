@@ -27,6 +27,16 @@ import { cn } from "@/lib/utils";
 
 // Define a conversion function for the database fields
 function convertDbUserToProfile(dbUser: any) {
+  console.log("Debug - Raw user data for profile effects:", {
+    avatarFrame: dbUser.avatar_frame,
+    nameEffect: dbUser.name_effect,
+    profileTheme: dbUser.profile_theme,
+    backgroundEffect: dbUser.background_effect
+  });
+
+  // Set some default effects for testing if no effects found
+  const hasNoEffects = !dbUser.avatar_frame && !dbUser.name_effect && !dbUser.profile_theme && !dbUser.background_effect;
+  
   // Default avatar frame
   const defaultFrame = AVATAR_FRAMES.find(frame => frame.id === 'classic') || AVATAR_FRAMES[0];
   
@@ -39,6 +49,59 @@ function convertDbUserToProfile(dbUser: any) {
   // Default background effect
   const defaultBgEffect = BACKGROUND_EFFECTS.find(effect => effect.id === 'none') || BACKGROUND_EFFECTS[0];
   
+  // If we have no effects, set some test ones
+  if (hasNoEffects) {
+    console.log("No profile effects found, using test effects for demonstration");
+    
+    // Use a random avatar frame for testing
+    const testFrames = ['rare-gold', 'epic-neon', 'legendary-fire'];
+    const randomFrameId = testFrames[Math.floor(Math.random() * testFrames.length)];
+    const testFrame = AVATAR_FRAMES.find(frame => frame.id === randomFrameId) || defaultFrame;
+    
+    // Use a random name effect for testing
+    const testNameEffects = ['gradient-red', 'gradient-gold', 'rainbow'];
+    const randomNameEffectId = testNameEffects[Math.floor(Math.random() * testNameEffects.length)];
+    const testNameEffect = NAME_EFFECTS.find(effect => effect.id === randomNameEffectId) || defaultNameEffect;
+    
+    // Use a specific profile theme for testing
+    const testTheme = PROFILE_THEMES.find(theme => theme.id === 'neon-crime') || defaultTheme;
+    
+    // Use a random background effect for testing
+    const testBgEffects = ['noise', 'matrix', 'rain'];
+    const randomBgEffectId = testBgEffects[Math.floor(Math.random() * testBgEffects.length)];
+    const testBgEffect = BACKGROUND_EFFECTS.find(effect => effect.id === randomBgEffectId) || defaultBgEffect;
+    
+    return {
+      id: dbUser.id,
+      username: dbUser.username,
+      level: dbUser.level || 1,
+      avatar: dbUser.avatar || null,
+      bannerImage: dbUser.banner_image || null,
+      bio: dbUser.bio || null,
+      htmlProfile: dbUser.html_profile || null,
+      showAchievements: dbUser.show_achievements === true,
+      createdAt: dbUser.created_at || new Date().toISOString(),
+      status: dbUser.status || "offline",
+      gang: dbUser.gang_id ? {
+        id: dbUser.gang_id,
+        name: "Unknown Gang",
+        tag: "???"
+      } : undefined,
+      // Add additional stats that our UI might need
+      cash: dbUser.cash || 0,
+      respect: dbUser.respect || 0,
+      xp: dbUser.xp || 0,
+      // Flag for special traits
+      isAdmin: dbUser.is_admin === true,
+      isJailed: dbUser.is_jailed === true,
+      // Use test profile customization
+      avatarFrame: testFrame,
+      profileTheme: testTheme,
+      nameEffect: testNameEffect,
+      backgroundEffect: testBgEffect
+    };
+  }
+
   // Get the profile theme from database or use default
   const profileThemeId = dbUser.profile_theme || 'dark';
   const profileTheme = PROFILE_THEMES.find(theme => theme.id === profileThemeId) || defaultTheme;
