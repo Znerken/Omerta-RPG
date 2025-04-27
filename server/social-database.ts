@@ -182,12 +182,19 @@ export async function acceptFriendRequest(requestId: number): Promise<{ request:
     throw new Error(`Friend request with ID ${requestId} not found`);
   }
   
+  // Handle both column name conventions
+  const senderIdValue = updatedRequest.sender_id !== undefined ? 
+                       updatedRequest.sender_id : updatedRequest.senderId;
+                       
+  const receiverIdValue = updatedRequest.receiver_id !== undefined ? 
+                         updatedRequest.receiver_id : updatedRequest.receiverId;
+  
   // 2. Create the friendship record
   const [friendship] = await db
     .insert(userFriends)
     .values({
-      userId: updatedRequest.senderId,
-      friendId: updatedRequest.receiverId,
+      userId: senderIdValue,
+      friendId: receiverIdValue,
       createdAt: new Date()
     })
     .returning();
@@ -246,7 +253,17 @@ export async function getPendingFriendRequests(userId: number): Promise<FriendRe
       )
     );
   
-  return requests;
+  // Map results to convert from snake_case to camelCase if needed
+  return requests.map(request => {
+    if (request.sender_id !== undefined && request.receiver_id !== undefined) {
+      return {
+        ...request,
+        senderId: request.sender_id,
+        receiverId: request.receiver_id
+      };
+    }
+    return request;
+  });
 }
 
 // Get sent friend requests by a user
@@ -261,7 +278,17 @@ export async function getSentFriendRequests(userId: number): Promise<FriendReque
       )
     );
   
-  return requests;
+  // Map results to convert from snake_case to camelCase if needed
+  return requests.map(request => {
+    if (request.sender_id !== undefined && request.receiver_id !== undefined) {
+      return {
+        ...request,
+        senderId: request.sender_id,
+        receiverId: request.receiver_id
+      };
+    }
+    return request;
+  });
 }
 
 // Status methods

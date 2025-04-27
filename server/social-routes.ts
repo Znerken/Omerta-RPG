@@ -421,7 +421,11 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Verify the current user is the recipient of the request
-      if (friendRequest.receiverId !== req.user.id) {
+      // Handle both column name conventions (receiverId vs receiver_id)
+      const receiverIdValue = friendRequest.receiver_id !== undefined ? 
+                            friendRequest.receiver_id : friendRequest.receiverId;
+      
+      if (receiverIdValue !== req.user.id) {
         return res.status(403).json({ message: "Not authorized to update this request" });
       }
       
@@ -430,9 +434,13 @@ export function registerSocialRoutes(app: Express) {
         const result = await acceptFriendRequest(requestId);
         
         // Notify the sender that request was accepted
-        const sender = await getUser(friendRequest.senderId);
+        // Handle both column name conventions
+        const senderIdValue = friendRequest.sender_id !== undefined ? 
+                             friendRequest.sender_id : friendRequest.senderId;
+                             
+        const sender = await getUser(senderIdValue);
         if (sender) {
-          notifyUser(friendRequest.senderId, "friend_accepted", {
+          notifyUser(senderIdValue, "friend_accepted", {
             userId: req.user.id,
             username: req.user.username,
             avatar: req.user.avatar
@@ -475,7 +483,11 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Verify the current user is the sender of the request
-      if (friendRequest.senderId !== req.user.id) {
+      // Handle both column name conventions (senderId vs sender_id)
+      const senderIdValue = friendRequest.sender_id !== undefined ? 
+                          friendRequest.sender_id : friendRequest.senderId;
+      
+      if (senderIdValue !== req.user.id) {
         return res.status(403).json({ message: "Not authorized to cancel this request" });
       }
       
@@ -487,7 +499,11 @@ export function registerSocialRoutes(app: Express) {
       }
       
       // Notify the recipient that the request was canceled
-      notifyUser(friendRequest.receiverId, "friend_request_canceled", {
+      // Handle both column name conventions
+      const receiverIdValue = friendRequest.receiver_id !== undefined ? 
+                              friendRequest.receiver_id : friendRequest.receiverId;
+                              
+      notifyUser(receiverIdValue, "friend_request_canceled", {
         requestId: friendRequest.id,
         from: {
           id: req.user.id,
