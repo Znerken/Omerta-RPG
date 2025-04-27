@@ -54,7 +54,8 @@ const registerSchema = z.object({
 // Auth page component
 export default function SupabaseAuthPage() {
   const [isLogin, setIsLogin] = useState(true);
-  const { signIn, signUp, isLoading, gameUser } = useSupabaseAuth();
+  const { loginMutation, signUpMutation, gameUser } = useSupabaseAuth();
+  const isLoading = loginMutation.isPending || signUpMutation.isPending;
   const { toast } = useToast();
 
   // Login form
@@ -79,28 +80,19 @@ export default function SupabaseAuthPage() {
 
   // Login form submission
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
-    try {
-      await signIn(values.email, values.password);
-    } catch (error: any) {
-      toast({
-        title: 'Login failed',
-        description: error.message || 'Something went wrong',
-        variant: 'destructive'
-      });
-    }
+    loginMutation.mutate({
+      email: values.email,
+      password: values.password
+    });
   };
 
   // Registration form submission
   const onRegisterSubmit = async (values: z.infer<typeof registerSchema>) => {
-    try {
-      await signUp(values.email, values.password, values.username, values.confirmPassword);
-    } catch (error: any) {
-      toast({
-        title: 'Registration failed',
-        description: error.message || 'Something went wrong',
-        variant: 'destructive'
-      });
-    }
+    signUpMutation.mutate({
+      email: values.email,
+      username: values.username,
+      password: values.password
+    });
   };
 
   // If user is already authenticated, redirect to home

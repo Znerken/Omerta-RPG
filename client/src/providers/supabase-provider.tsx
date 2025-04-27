@@ -15,13 +15,23 @@ const SupabaseContext = createContext<SupabaseContextType>({
   error: null
 });
 
+// Global reference to prevent multiple instances
+let globalSupabaseClient: SupabaseClient | null = null;
+
 // Provider component
 export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
-  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(globalSupabaseClient);
+  const [isLoading, setIsLoading] = useState(globalSupabaseClient === null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Skip if we already have a client
+    if (globalSupabaseClient !== null) {
+      setSupabase(globalSupabaseClient);
+      setIsLoading(false);
+      return;
+    }
+    
     const fetchConfig = async () => {
       try {
         const response = await fetch('/api/config');
@@ -36,13 +46,18 @@ export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
         
         console.log('Supabase configuration loaded successfully');
         
-        // Create Supabase client
-        const supabaseClient = createClient(
-          config.VITE_SUPABASE_URL,
-          config.VITE_SUPABASE_ANON_KEY
-        );
+        // Create Supabase client only if it doesn't exist
+        if (!globalSupabaseClient) {
+          globalSupabaseClient = createClient(
+            config.VITE_SUPABASE_URL,
+            config.VITE_SUPABASE_ANON_KEY
+          );
+          
+          // Set global window reference for other parts of the code
+          window.__SUPABASE_CLIENT = globalSupabaseClient;
+        }
         
-        setSupabase(supabaseClient);
+        setSupabase(globalSupabaseClient);
         setIsLoading(false);
       } catch (err) {
         console.error('Error initializing Supabase:', err);

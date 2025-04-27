@@ -1,33 +1,59 @@
 import { useSupabase } from '@/providers/supabase-provider';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// This file serves as a bridge between old code expecting a supabase export
-// and the new provider-based approach
+// Get access to the global Supabase client
+declare global {
+  interface Window {
+    __SUPABASE_CLIENT?: SupabaseClient;
+  }
+}
 
 /**
  * Gets the Supabase client from the context
  * @returns Supabase client or throws an error if not available
  */
 export function getSupabaseClient() {
-  const { supabase, isLoading, error } = useSupabase();
-  
-  if (isLoading) {
-    throw new Error('Supabase client is still loading');
+  try {
+    // First try to get from provider
+    const { supabase, isLoading, error } = useSupabase();
+    
+    if (isLoading) {
+      throw new Error('Supabase client is still loading');
+    }
+    
+    if (error) {
+      throw new Error(`Supabase client error: ${error}`);
+    }
+    
+    if (!supabase) {
+      throw new Error('Supabase client is not available');
+    }
+    
+    return supabase;
+  } catch (err) {
+    // Fallback to window global as a last resort
+    if (window.__SUPABASE_CLIENT) {
+      return window.__SUPABASE_CLIENT;
+    }
+    throw err;
   }
-  
-  if (error) {
-    throw new Error(`Supabase client error: ${error}`);
-  }
-  
-  if (!supabase) {
-    throw new Error('Supabase client is not available');
-  }
-  
-  return supabase;
 }
 
 // For compatibility with existing code using the direct export
-// This should be avoided in new code, but keeps existing code working
-export const supabase = null; // This will be overridden at runtime by the provider
+// This returns a proxy that will forward all calls to the global client when it's available
+export const supabase = new Proxy({} as SupabaseClient, {
+  get: function(target, prop) {
+    try {
+      if (window.__SUPABASE_CLIENT) {
+        return window.__SUPABASE_CLIENT[prop as keyof SupabaseClient];
+      }
+      throw new Error('Supabase client not initialized yet');
+    } catch (e) {
+      console.error('Error accessing Supabase client:', e);
+      return undefined;
+    }
+  }
+});
 
 /**
  * Get the current session
