@@ -428,15 +428,15 @@ export class GangStorage {
     try {
       console.log('[DEBUG] getGangMember called for userId:', userId);
       
-      // Use sql template literal for parameterized query
-      const query = sql`
+      // Use sql.raw for parameterized query
+      const queryText = `
         SELECT gm.*, g.* 
         FROM gang_members gm
         JOIN gangs g ON gm.gang_id = g.id
-        WHERE gm.user_id = ${userId}
+        WHERE gm.user_id = $1
       `;
       
-      const result = await db.execute(query);
+      const result = await db.execute(sql.raw(queryText, [userId]));
       
       if (!result.rows || result.rows.length === 0) {
         console.log(`[DEBUG] No gang membership found for user ${userId}`);
@@ -479,12 +479,12 @@ export class GangStorage {
       try {
         console.log('[DEBUG] Attempting fallback query for getGangMember');
         
-        // Use sql template literal for parameterized query
-        const fallbackQuery = sql`
-          SELECT * FROM gang_members WHERE user_id = ${userId}
+        // Use sql.raw for parameterized query
+        const fallbackQueryText = `
+          SELECT * FROM gang_members WHERE user_id = $1
         `;
         
-        const fallbackResult = await db.execute(fallbackQuery);
+        const fallbackResult = await db.execute(sql.raw(fallbackQueryText, [userId]));
         
         if (!fallbackResult.rows || fallbackResult.rows.length === 0) {
           console.log(`[DEBUG] Fallback: No gang membership found for user ${userId}`);
@@ -495,11 +495,11 @@ export class GangStorage {
         console.log(`[DEBUG] Fallback: Found gang membership:`, JSON.stringify(member));
         
         // Get gang info separately
-        const gangQuery = sql`
-          SELECT * FROM gangs WHERE id = ${member.gang_id}
+        const gangQueryText = `
+          SELECT * FROM gangs WHERE id = $1
         `;
         
-        const gangResult = await db.execute(gangQuery);
+        const gangResult = await db.execute(sql.raw(gangQueryText, [member.gang_id]));
         
         if (!gangResult.rows || gangResult.rows.length === 0) {
           console.log(`[DEBUG] Fallback: No gang found with ID ${member.gang_id}`);
@@ -545,36 +545,37 @@ export class GangStorage {
       console.log(`[DEBUG] Adding user ${data.userId} to gang ${data.gangId} with role ${data.role}`);
       
       // Begin transaction
-      await db.execute(sql`BEGIN`);
+      await db.execute(sql.raw(`BEGIN`));
       
       // Check if user is already in a gang
-      const checkQuery = sql`
-        SELECT * FROM gang_members WHERE user_id = ${data.userId}
+      const checkQueryText = `
+        SELECT * FROM gang_members WHERE user_id = $1
       `;
       
-      const checkResult = await db.execute(checkQuery);
+      const checkResult = await db.execute(sql.raw(checkQueryText, [data.userId]));
       
       if (checkResult.rows && checkResult.rows.length > 0) {
         console.log(`[DEBUG] User ${data.userId} is already in a gang, removing from previous gang`);
         
         // Remove from previous gang
-        await db.execute(sql`
-          DELETE FROM gang_members WHERE user_id = ${data.userId}
-        `);
+        const deleteQueryText = `
+          DELETE FROM gang_members WHERE user_id = $1
+        `;
+        await db.execute(sql.raw(deleteQueryText, [data.userId]));
       }
       
       // Add member to gang using parameterized query to avoid SQL injection
-      const insertQuery = sql`
+      const insertQueryText = `
         INSERT INTO gang_members (gang_id, user_id, role)
-        VALUES (${data.gangId}, ${data.userId}, ${data.role})
+        VALUES ($1, $2, $3)
         RETURNING *
       `;
       
-      const result = await db.execute(insertQuery);
+      const result = await db.execute(sql.raw(insertQueryText, [data.gangId, data.userId, data.role]));
       
       if (!result.rows || result.rows.length === 0) {
         console.log(`[DEBUG] Failed to add user ${data.userId} to gang ${data.gangId}`);
-        await db.execute(sql`ROLLBACK`);
+        await db.execute(sql.raw(`ROLLBACK`));
         throw new Error("Failed to add user to gang");
       }
       
@@ -582,12 +583,13 @@ export class GangStorage {
       console.log(`[DEBUG] Added user ${data.userId} to gang ${data.gangId}`, JSON.stringify(member));
       
       // Update user's gang_id
-      await db.execute(sql`
-        UPDATE users SET gang_id = ${data.gangId} WHERE id = ${data.userId}
-      `);
+      const updateQueryText = `
+        UPDATE users SET gang_id = $1 WHERE id = $2
+      `;
+      await db.execute(sql.raw(updateQueryText, [data.gangId, data.userId]));
       
       // Commit transaction
-      await db.execute(sql`COMMIT`);
+      await db.execute(sql.raw(`COMMIT`));
       
       console.log(`[DEBUG] Successfully added user ${data.userId} to gang ${data.gangId}`);
       
@@ -602,7 +604,7 @@ export class GangStorage {
       };
     } catch (error) {
       // Rollback on error
-      await db.execute(sql`ROLLBACK`);
+      await db.execute(sql.raw(`ROLLBACK`));
       console.error("Error adding gang member:", error);
       throw error;
     }
@@ -616,45 +618,45 @@ export class GangStorage {
       console.log(`[DEBUG] Removing user ${userId} from gang ${gangId}`);
       
       // Begin transaction
-      await db.execute(sql`BEGIN`);
+      await db.execute(sql.raw(`BEGIN`));
       
       // Check if user is actually in the gang first with a parameterized query
-      const checkQuery = sql`
-        SELECT * FROM gang_members WHERE user_id = ${userId} AND gang_id = ${gangId}
+      const checkQueryText = `
+        SELECT * FROM gang_members WHERE user_id = $1 AND gang_id = $2
       `;
       
-      const checkResult = await db.execute(checkQuery);
+      const checkResult = await db.execute(sql.raw(checkQueryText, [userId, gangId]));
       
       if (!checkResult.rows || checkResult.rows.length === 0) {
         console.log(`[DEBUG] User ${userId} is not a member of gang ${gangId}`);
-        await db.execute(sql`ROLLBACK`);
+        await db.execute(sql.raw(`ROLLBACK`));
         return false;
       }
       
       console.log(`[DEBUG] Found gang membership to remove:`, JSON.stringify(checkResult.rows[0]));
       
       // Remove member from gang using parameterized query to avoid SQL injection
-      const deleteQuery = sql`
-        DELETE FROM gang_members WHERE user_id = ${userId} AND gang_id = ${gangId}
+      const deleteQueryText = `
+        DELETE FROM gang_members WHERE user_id = $1 AND gang_id = $2
       `;
       
-      await db.execute(deleteQuery);
+      await db.execute(sql.raw(deleteQueryText, [userId, gangId]));
       
       // Update user's gang_id to null
-      const updateQuery = sql`
-        UPDATE users SET gang_id = NULL WHERE id = ${userId}
+      const updateQueryText = `
+        UPDATE users SET gang_id = NULL WHERE id = $1
       `;
       
-      await db.execute(updateQuery);
+      await db.execute(sql.raw(updateQueryText, [userId]));
       
       // Commit transaction
-      await db.execute(sql`COMMIT`);
+      await db.execute(sql.raw(`COMMIT`));
       
       console.log(`[DEBUG] Successfully removed user ${userId} from gang ${gangId}`);
       return true;
     } catch (error) {
       // Rollback on error
-      await db.execute(sql`ROLLBACK`);
+      await db.execute(sql.raw(`ROLLBACK`));
       console.error(`Error removing user ${userId} from gang ${gangId}:`, error);
       return false;
     }
