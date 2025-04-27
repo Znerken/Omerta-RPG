@@ -1025,6 +1025,19 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
               </Button>
             )}
             
+            {/* Photo Gallery Generator Button */}
+            {isViewingOwnProfile && (
+              <Button
+                size="sm"
+                onClick={() => setIsPhotoGalleryOpen(true)}
+                variant="secondary"
+                className="flex items-center gap-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 border-0 text-white shadow-lg"
+              >
+                <Image className="h-4 w-4" />
+                <MusicIcon className="h-4 w-4" /> Photo Gallery
+              </Button>
+            )}
+            
             {/* Edit Profile Button */}
             {isViewingOwnProfile && !isEditing && (
               <Button
