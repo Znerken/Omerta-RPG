@@ -295,6 +295,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
+  // Leaderboard API Routes
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      const type = req.query.type as string || 'level';
+      const timeFrame = req.query.timeFrame as string || 'all';
+      
+      // Get all users for the leaderboard
+      const users = await storage.getAllUsers();
+      
+      if (!users || users.length === 0) {
+        return res.json([]);
+      }
+      
+      // Sort users based on leaderboard type
+      let leaderboard = [];
+      
+      switch (type) {
+        case 'level':
+          // Sort by level, then by XP for tiebreaker
+          leaderboard = users
+            .sort((a, b) => {
+              if (b.level === a.level) {
+                return b.xp - a.xp;
+              }
+              return b.level - a.level;
+            })
+            .map(user => ({
+              id: user.id,
+              username: user.username,
+              level: user.level,
+              xp: user.xp,
+              gangId: user.gangId
+            }));
+          break;
+          
+        case 'cash':
+          // Sort by cash
+          leaderboard = users
+            .sort((a, b) => b.cash - a.cash)
+            .map(user => ({
+              id: user.id,
+              username: user.username,
+              level: user.level,
+              cash: user.cash,
+              gangId: user.gangId
+            }));
+          break;
+          
+        case 'respect':
+          // Sort by respect
+          leaderboard = users
+            .sort((a, b) => b.respect - a.respect)
+            .map(user => ({
+              id: user.id,
+              username: user.username,
+              level: user.level,
+              respect: user.respect,
+              gangId: user.gangId
+            }));
+          break;
+          
+        case 'gangs':
+          // Get all gangs for gang leaderboard
+          try {
+            const gangs = await storage.getAllGangs();
+            if (gangs && gangs.length > 0) {
+              // Sort gangs by bank balance for now (can add more complex ranking later)
+              leaderboard = gangs
+                .sort((a, b) => (b.bankBalance || 0) - (a.bankBalance || 0))
+                .map(gang => ({
+                  id: gang.id,
+                  name: gang.name,
+                  tag: gang.tag || gang.name.substring(0, 3).toUpperCase(),
+                  bankBalance: gang.bankBalance || 0,
+                  memberCount: gang.memberCount || 0
+                }));
+            }
+          } catch (error) {
+            console.error("Error getting gang leaderboard:", error);
+            leaderboard = []; // Return empty array if there's an error
+          }
+          break;
+          
+        default:
+          // Default to level leaderboard
+          leaderboard = users
+            .sort((a, b) => b.level - a.level)
+            .map(user => ({
+              id: user.id,
+              username: user.username,
+              level: user.level,
+              xp: user.xp,
+              gangId: user.gangId
+            }));
+      }
+      
+      // For now, we're not implementing time-based filtering since we don't track historical data
+      // In a future update, we could store daily/weekly snapshots for true historical leaderboards
+      
+      // Limit to top 100 to avoid sending too much data
+      const limitedLeaderboard = leaderboard.slice(0, 100);
+      
+      res.json(limitedLeaderboard);
+    } catch (error) {
+      console.error("Error getting leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboard data" });
+    }
+  });
+  
   // Player API Routes
   app.get("/api/dashboard", async (req, res) => {
     if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
