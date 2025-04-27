@@ -773,9 +773,17 @@ export default function AdminPage() {
   const handleCreateTestUser = () => {
     createTestUserMutation.mutate();
   };
+
+  const handleDeleteTestUser = (userId: number, username: string) => {
+    if (window.confirm(`Are you sure you want to delete the test user "${username}"? This cannot be undone.`)) {
+      deleteTestUserMutation.mutate(userId);
+    }
+  };
   
   const handleDeleteTestUsers = () => {
-    deleteTestUsersMutation.mutate();
+    if (window.confirm("Are you sure you want to delete ALL test users? This cannot be undone.")) {
+      deleteTestUsersMutation.mutate();
+    }
   };
 
   const onGiveCashSubmit = (data: GiveCashValues) => {
@@ -1088,13 +1096,24 @@ export default function AdminPage() {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleViewUser(user.id)}
-                              >
-                                View
-                              </Button>
+                              <div className="flex items-center justify-end space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewUser(user.id)}
+                                >
+                                  View
+                                </Button>
+                                {user.username.startsWith('tester_') && (
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeleteTestUser(user.id, user.username)}
+                                  >
+                                    Delete
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         )) || (
