@@ -17,6 +17,22 @@ declare global {
  * @param app Express app
  */
 export function setupAuthRoutes(app: Express) {
+  // Add a special logout route that clears all server-side session data
+  app.post('/api/logout', async (req: Request, res: Response) => {
+    console.log('Server-side logout requested');
+    
+    // Clear any server-side session data
+    req.user = undefined;
+    req.supabaseUser = undefined;
+    
+    // Send no-cache headers to prevent browser caching
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    res.status(200).json({ success: true, message: 'Logged out successfully' });
+  });
+  
   // Authentication middleware for all API routes
   app.use(async (req: Request, res: Response, next: NextFunction) => {
     // Skip auth for public routes

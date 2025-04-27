@@ -310,13 +310,43 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
   async function signOut() {
     console.log("Emergency sign out triggered");
     try {
+      // Call server-side logout route
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Cache-Control': 'no-cache, no-store',
+          'Pragma': 'no-cache'
+        }
+      });
+      
       if (supabase) {
-        await supabase.auth.signOut();
+        // Force clear all Supabase cookies
+        document.cookie.split(";").forEach(function(c) {
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+        });
+        
+        // Clear local storage and session storage
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Sign out from Supabase
+        await supabase.auth.signOut({ scope: 'global' });
+        
+        // Clear React Query cache
         queryClient.clear();
-        window.location.href = '/auth';
+        
+        // Remove the user from state
+        setSupabaseUser(null);
+        
+        console.log("Emergency sign out completed, redirecting to auth page");
+        
+        // Force a hard reload to clear any cached states
+        window.location.href = '/auth?logout=' + Date.now();
       }
     } catch (error) {
       console.error("Sign out error:", error);
+      // Force navigation in case of error
+      window.location.href = '/auth?error=1';
     }
   }
 
