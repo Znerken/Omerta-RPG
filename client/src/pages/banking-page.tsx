@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -12,12 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
@@ -50,7 +44,27 @@ import { Separator } from "@/components/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { BanknoteIcon, ArrowUpIcon, ArrowDownIcon, ArrowRightLeftIcon, PlusIcon, SendIcon } from "lucide-react";
+import { 
+  BanknoteIcon, 
+  ArrowUpIcon, 
+  ArrowDownIcon, 
+  ArrowRightLeftIcon, 
+  PlusIcon, 
+  SendIcon,
+  CreditCardIcon, 
+  DollarSignIcon,
+  HistoryIcon,
+  HomeIcon,
+  ChevronLeftIcon,
+  Users2Icon,
+  ShieldIcon,
+  Key,
+  BanIcon,
+  XIcon,
+  CheckIcon,
+  PrinterIcon,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 // Define schemas for the forms
 const createAccountSchema = z.object({
