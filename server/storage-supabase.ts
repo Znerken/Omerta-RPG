@@ -45,9 +45,12 @@ export class SupabaseStorage {
    */
   async getUser(id: number) {
     try {
-      return await db.query.users.findFirst({
-        where: eq(users.id, id),
-      });
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id));
+      
+      return result.length > 0 ? result[0] : undefined;
     } catch (error) {
       console.error('Error getting user:', error);
       return undefined;
@@ -61,9 +64,12 @@ export class SupabaseStorage {
    */
   async getUserByUsername(username: string) {
     try {
-      return await db.query.users.findFirst({
-        where: eq(users.username, username),
-      });
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.username, username));
+      
+      return result.length > 0 ? result[0] : undefined;
     } catch (error) {
       console.error('Error getting user by username:', error);
       return undefined;
@@ -77,9 +83,12 @@ export class SupabaseStorage {
    */
   async getUserByEmail(email: string) {
     try {
-      return await db.query.users.findFirst({
-        where: eq(users.email, email),
-      });
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email));
+      
+      return result.length > 0 ? result[0] : undefined;
     } catch (error) {
       console.error('Error getting user by email:', error);
       return undefined;
@@ -93,9 +102,12 @@ export class SupabaseStorage {
    */
   async getUserBySupabaseId(supabaseId: string) {
     try {
-      return await db.query.users.findFirst({
-        where: eq(users.supabaseId, supabaseId),
-      });
+      const result = await db
+        .select()
+        .from(users)
+        .where(eq(users.supabaseId, supabaseId));
+      
+      return result.length > 0 ? result[0] : undefined;
     } catch (error) {
       console.error('Error getting user by Supabase ID:', error);
       return undefined;
@@ -112,17 +124,14 @@ export class SupabaseStorage {
       // Only include fields that exist in the users table
       const { username, password, email, supabaseId } = user;
       
-      // Insert user without the status and lastSeen fields
-      const [insertedUser] = await db
-        .insert(users)
-        .values({
-          username,
-          password,
-          email,
-          supabaseId,
-          createdAt: new Date()
-        })
-        .returning();
+      // Use direct SQL to avoid issues with unknown columns
+      const insertQuery = await db.execute(sql`
+        INSERT INTO users (username, password, email, supabase_id, created_at)
+        VALUES (${username}, ${password}, ${email}, ${supabaseId}, NOW())
+        RETURNING *
+      `);
+      
+      const insertedUser = insertQuery.rows[0];
 
       // Create user status entry
       await db
