@@ -579,15 +579,21 @@ const LabsTab = React.memo(function LabsTab() {
   const createLabMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/user/drug-labs', {
-        name: `Lab #${(labs?.length || 0) + 1}`
+        name: `Lab #${(labs?.length || 0) + 1}`,
+        costToUpgrade: 5000, // Base cost for a new lab
+        location: "Abandoned Warehouse", // Default location
+        securityLevel: 1,
+        level: 1,
+        capacity: 10,
+        discoveryChance: 5
       });
       return await res.json();
     },
     onSuccess: (data) => {
-      if (data.success) {
+      if (data.lab) {
         toast({
           title: "Lab Created",
-          description: data.message,
+          description: data.message || "Your new drug lab has been set up successfully",
         });
         queryClient.invalidateQueries({ queryKey: ['/api/user/drug-labs'] });
       } else {
