@@ -55,24 +55,50 @@ export default function PublicProfilePage({ userId: propUserId }: PublicProfileP
   console.log("PublicProfilePage - urlUserId:", urlUserId);
   console.log("PublicProfilePage - final userId:", userId);
 
-  // Fetch public profile data - temporarily using the emergency endpoint
+  // Fetch public profile data - DEBUGGING APPROACH
   const { 
     data: rawData, 
     isLoading, 
     error 
   } = useQuery({
     queryKey: ['/api/users', userId, 'simple-profile'],
-    queryFn: () => fetch(`/api/users/${userId}/simple-profile`).then(res => {
-      if (!res.ok) throw new Error('Failed to fetch profile');
-      return res.json();
-    }),
+    queryFn: async () => {
+      console.log(`Requesting profile for user ID ${userId}`);
+      // Log complete fetch details for debugging
+      try {
+        const res = await fetch(`/api/users/${userId}/simple-profile`);
+        console.log("Response status:", res.status);
+        console.log("Response headers:", Object.fromEntries([...res.headers.entries()]));
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Error response body:", errorText);
+          throw new Error(`Failed to fetch profile: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        console.log("Profile data:", JSON.stringify(data, null, 2));
+        return data;
+      } catch (err) {
+        console.error("Fetch error:", err);
+        throw err;
+      }
+    },
     enabled: !!userId && !isNaN(userId),
+    // Enable retry on error
+    retry: 3,
+    retryDelay: 1000
   });
   
-  // Convert the raw DB data to the expected profile format
-  const profile = rawData?.success ? {
+  // Add extra debug render for response data
+  if (rawData && !rawData.success) {
+    console.error("Server reports error in profile data:", rawData);
+  }
+  
+  // Convert the raw DB data to the expected profile format with improved null handling
+  const profile = rawData?.success && rawData?.user ? {
     id: rawData.user.id,
-    username: rawData.user.username,
+    username: rawData.user.username || "Unknown User",
     level: rawData.user.level || 1,
     avatar: rawData.user.avatar,
     bannerImage: rawData.user.banner_image,

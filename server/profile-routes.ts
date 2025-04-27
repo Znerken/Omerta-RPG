@@ -93,28 +93,63 @@ export function registerProfileRoutes(app: Express) {
   app.get("/api/users/:id/simple-profile", async (req: Request, res: Response) => {
     try {
       const userId = parseInt(req.params.id);
-      console.log(`DIRECT DB QUERY for user ID ${userId} - EMERGENCY TEST ROUTE`);
       
-      const result = await db.execute(sql`
-        SELECT * FROM users WHERE id = ${userId}
-      `);
+      // Log each step for detailed debugging
+      console.log(`[PROFILE DEBUG] START - Simple profile lookup for user ID ${userId}`);
       
-      console.log("EMERGENCY ROUTE RESULT:", JSON.stringify(result.rows, null, 2));
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "User not found" });
+      try {
+        // Use direct database query to get the most basic data
+        console.log(`[PROFILE DEBUG] Executing direct SQL query for user ${userId}`);
+        
+        // Check if the user exists at all first
+        const checkResult = await db.execute(sql`
+          SELECT id, username FROM users WHERE id = ${userId} LIMIT 1
+        `);
+        
+        console.log(`[PROFILE DEBUG] User check query returned ${checkResult.rows.length} results`);
+        console.log("[PROFILE DEBUG] Check result:", JSON.stringify(checkResult.rows, null, 2));
+        
+        if (checkResult.rows.length === 0) {
+          console.log(`[PROFILE DEBUG] User with ID ${userId} not found in database`);
+          return res.status(404).json({ 
+            success: false, 
+            message: "User not found",
+            userId 
+          });
+        }
+        
+        // Now get all user data
+        const fullResult = await db.execute(sql`
+          SELECT * FROM users WHERE id = ${userId}
+        `);
+        
+        const userData = fullResult.rows[0];
+        console.log(`[PROFILE DEBUG] Full user data retrieved for ${userData.username}`);
+        
+        const response = {
+          success: true,
+          user: userData,
+          timestamp: new Date().toISOString()
+        };
+        
+        // Log the exact response for troubleshooting
+        console.log("[PROFILE DEBUG] Sending response:", JSON.stringify(response, null, 2));
+        
+        return res.json(response);
+      } catch (dbError) {
+        console.error("[PROFILE DEBUG] Database error:", dbError);
+        return res.status(500).json({ 
+          success: false,
+          message: "Database error",
+          error: dbError instanceof Error ? dbError.message : String(dbError)
+        });
       }
-      
-      // Return raw data without any transformations
-      return res.json({
-        success: true,
-        user: result.rows[0]
-      });
     } catch (error) {
-      console.error("EMERGENCY ROUTE ERROR:", error);
+      console.error("[PROFILE DEBUG] Unexpected error:", error);
       return res.status(500).json({ 
+        success: false,
         message: "Failed to fetch profile",
-        error: error instanceof Error ? error.message : String(error) 
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });
