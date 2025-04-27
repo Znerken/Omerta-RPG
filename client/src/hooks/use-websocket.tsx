@@ -6,22 +6,41 @@ export type WebSocketMessage = {
   data: any;
 };
 
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'failed';
+
 type MessageHandler = (message: WebSocketMessage) => void;
 
+// Connection errors that should trigger automatic reconnection
+const RECONNECTABLE_ERRORS = [
+  1000, // Normal closure (but reconnect in case of page navigation)
+  1001, // Going away
+  1006, // Abnormal closure - very common when server restarts
+  1012, // Service restart
+  1013, // Try again later
+  1014, // Bad gateway
+  1015  // TLS handshake error
+];
+
 /**
- * Hook for managing WebSocket connections with reconnection and message handling capabilities
+ * Enhanced hook for managing WebSocket connections with robust reconnection,
+ * error recovery, and efficient message handling
  */
 export function useWebSocket() {
   const { user } = useAuth();
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [lastError, setLastError] = useState<Error | null>(null);
   const messageHandlers = useRef<Set<MessageHandler>>(new Set());
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
   
+  // Connection configuration
   const MAX_RECONNECT_DELAY = 30000; // Maximum reconnect delay in ms (30 seconds)
   const BASE_RECONNECT_DELAY = 1000; // Base reconnect delay in ms (1 second)
+  const MAX_RECONNECT_ATTEMPTS = 20; // Maximum number of reconnection attempts
   
   // Function for adding message handlers
   const addMessageHandler = useCallback((handler: MessageHandler) => {
@@ -86,15 +105,25 @@ export function useWebSocket() {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }
+    
+    // Check if we've reached the maximum retry limit
+    if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      console.error(`Maximum WebSocket reconnection attempts (${MAX_RECONNECT_ATTEMPTS}) reached. Giving up.`);
+      setConnectionState('failed');
+      return;
+    }
+    
+    // Update connection state
+    setConnectionState('reconnecting');
 
     const delay = getReconnectDelay();
-    console.log(`WebSocket reconnecting in ${Math.round(delay / 1000)}s (attempt ${reconnectAttempt + 1})`);
+    console.log(`WebSocket reconnecting in ${Math.round(delay / 1000)}s (attempt ${reconnectAttempt + 1}/${MAX_RECONNECT_ATTEMPTS})`);
     
     reconnectTimeoutRef.current = setTimeout(() => {
       setReconnectAttempt(prev => prev + 1);
       // The dependency array will trigger a new connection
     }, delay);
-  }, [getReconnectDelay, reconnectAttempt]);
+  }, [getReconnectDelay, reconnectAttempt, MAX_RECONNECT_ATTEMPTS]);
 
   // Establish WebSocket connection
   useEffect(() => {

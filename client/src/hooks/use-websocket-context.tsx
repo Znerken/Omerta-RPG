@@ -251,6 +251,72 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     debouncedInvalidateUnread
   ]);
 
+  // Maintain connection status tracking
+  const [connectionStatus, setConnectionStatus] = useState<{
+    wasConnected: boolean;
+    disconnectTime: number | null;
+  }>({
+    wasConnected: false,
+    disconnectTime: null,
+  });
+
+  // Handle connection status changes
+  useEffect(() => {
+    // If we're connected now
+    if (isConnected) {
+      // If we were previously disconnected, this is a reconnection
+      if (connectionStatus.wasConnected && connectionStatus.disconnectTime) {
+        const downtime = Date.now() - connectionStatus.disconnectTime;
+        console.log(`Reconnected after ${downtime}ms downtime`);
+        
+        // If we were disconnected for more than 5 seconds, refresh key data
+        if (downtime > 5000) {
+          // Invalidate critical data but don't force a refresh
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/dashboard'],
+            refetchType: "none"
+          });
+          
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/crimes'],
+            refetchType: "none"
+          });
+          
+          queryClient.invalidateQueries({ 
+            queryKey: ['/api/social/friends'],
+            refetchType: "none"
+          });
+          
+          // Show a subtle notification to the user
+          toast({
+            title: 'Connection Restored',
+            description: 'Your connection was restored. Data has been updated.',
+            variant: 'default',
+          });
+        }
+      }
+      
+      // Update connection status
+      setConnectionStatus({
+        wasConnected: true,
+        disconnectTime: null,
+      });
+    } else if (connectionStatus.wasConnected && !connectionStatus.disconnectTime) {
+      // We were connected but now we're not - record disconnection time
+      setConnectionStatus({
+        ...connectionStatus,
+        disconnectTime: Date.now(),
+      });
+      
+      // Only show toast if this isn't initial load
+      toast({
+        title: 'Connection Issue',
+        description: 'Connection to server lost. Attempting to reconnect...',
+        variant: 'destructive',
+      });
+    }
+  }, [isConnected, connectionStatus, toast]);
+
   // Register message handler once
   useEffect(() => {
     if (messageHandlerRef.current) {
@@ -269,16 +335,70 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     };
   }, [handleWebSocketMessage, addMessageHandler]);
 
-  // Send heartbeat every 30 seconds to keep connection alive
+  // Send heartbeat more frequently and implement adaptive timing
   useEffect(() => {
     if (!user?.id) return;
     
-    const interval = setInterval(() => {
-      sendMessage('heartbeat', { userId: user.id });
-    }, 30000);
+    // Start with 15 second heartbeat interval
+    let heartbeatInterval = 15000;
+    
+    // If we're reconnecting after a disconnect, use more frequent heartbeats at first
+    if (connectionStatus.disconnectTime !== null) {
+      heartbeatInterval = 5000;
+    }
+    
+    // Adaptive heartbeat timer
+    let heartbeatRetries = 0;
+    let consecutiveSuccesses = 0;
+    
+    const sendHeartbeat = () => {
+      if (!isConnected) {
+        heartbeatRetries++;
+        // If we've failed multiple times, don't keep trying as frequently
+        if (heartbeatRetries > 3) {
+          heartbeatInterval = Math.min(heartbeatInterval * 1.5, 60000); // Increase up to 1 minute max
+        }
+        return; // Don't send if not connected
+      }
+      
+      // Send the heartbeat
+      const heartbeatSuccess = sendMessage('heartbeat', { 
+        userId: user.id,
+        timestamp: Date.now(),
+        clientInfo: {
+          url: window.location.pathname,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight
+        }
+      });
+      
+      if (heartbeatSuccess) {
+        heartbeatRetries = 0;
+        consecutiveSuccesses++;
+        
+        // If we've had several successful heartbeats, gradually increase interval
+        // to reduce unnecessary network traffic
+        if (consecutiveSuccesses > 5 && heartbeatInterval < 30000) {
+          heartbeatInterval = Math.min(heartbeatInterval * 1.2, 30000); // Increase up to 30 seconds max
+        }
+      } else {
+        heartbeatRetries++;
+        consecutiveSuccesses = 0;
+        // If we've failed multiple times, decrease interval to try more frequently
+        if (heartbeatRetries > 1) {
+          heartbeatInterval = Math.max(heartbeatInterval / 1.5, 5000); // Min 5 seconds
+        }
+      }
+    };
+    
+    // Send initial heartbeat immediately
+    sendHeartbeat();
+    
+    // Set up interval with adaptive timing
+    const interval = setInterval(sendHeartbeat, heartbeatInterval);
     
     return () => clearInterval(interval);
-  }, [sendMessage, user]);
+  }, [sendMessage, user, isConnected, connectionStatus.disconnectTime]);
 
   return (
     <WebSocketContext.Provider value={{ 
