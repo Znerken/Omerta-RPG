@@ -51,7 +51,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle, Code, WrenchIcon, Building2, Unlock } from "lucide-react";
+import { Loader2, UserCheck, Users, Database, Shield, Ban, DollarSign, TrendingUp, Trophy, AlertTriangle, Code, WrenchIcon, Building2, Unlock, Clock, UserPlus } from "lucide-react";
 import PageHeader from "../components/layout/page-header";
 import { PageSection } from "../components/layout/page-section";
 import { useQuery } from "@tanstack/react-query";
@@ -1268,7 +1268,7 @@ export default function AdminPage() {
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center text-center space-y-2">
                       <div className="p-2 bg-primary/20 rounded-full">
-                        <Clock4 className="h-6 w-6 text-primary" />
+                        <Clock className="h-6 w-6 text-primary" />
                       </div>
                       <CardTitle className="text-lg">Throttle Demo</CardTitle>
                       <CardDescription>Test rate limiting and throttling functionality</CardDescription>
