@@ -1,15 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Check environment variables
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.error('Missing Supabase credentials. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+// Initialize with placeholder that will be updated
+let supabaseUrl = '';
+let supabaseAnonKey = '';
+
+// Fetch Supabase config from server
+async function fetchSupabaseConfig() {
+  try {
+    const response = await fetch('/api/config');
+    const config = await response.json();
+    
+    if (config.VITE_SUPABASE_URL && config.VITE_SUPABASE_ANON_KEY) {
+      supabaseUrl = config.VITE_SUPABASE_URL;
+      supabaseAnonKey = config.VITE_SUPABASE_ANON_KEY;
+      console.log('Supabase configuration loaded successfully.');
+      
+      // Re-initialize the client with the new config
+      initializeSupabaseClient();
+      return true;
+    } else {
+      console.error('Invalid Supabase configuration received from server.');
+      return false;
+    }
+  } catch (error) {
+    console.error('Failed to fetch Supabase configuration:', error);
+    return false;
+  }
 }
 
-// Create a Supabase client
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || '',
-  import.meta.env.VITE_SUPABASE_ANON_KEY || ''
-);
+// Create a Supabase client (initial placeholder)
+export let supabase = createClient('', '');
+
+// Function to initialize or re-initialize the Supabase client
+function initializeSupabaseClient() {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+}
+
+// Fetch config immediately
+fetchSupabaseConfig();
 
 /**
  * Get the current session

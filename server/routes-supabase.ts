@@ -21,6 +21,14 @@ import { db } from './db-supabase';
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authenticate all requests with Supabase
   setupAuthRoutes(app);
+  
+  // Provide Supabase credentials to the client
+  app.get('/api/config', (req: Request, res: Response) => {
+    res.json({
+      VITE_SUPABASE_URL: process.env.SUPABASE_URL,
+      VITE_SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY
+    });
+  });
 
   // User-related routes
   app.get('/api/user/stats', authProtected, async (req: Request, res: Response) => {

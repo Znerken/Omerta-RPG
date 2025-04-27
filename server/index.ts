@@ -7,13 +7,14 @@ import dotenv from 'dotenv';
 import { initializeDatabase } from './db-supabase';
 import { registerRoutes } from './routes-supabase';
 import { setupAuthRoutes } from './auth-supabase';
+import { setupVite } from './vite';
 
 // Load environment variables
 dotenv.config();
 
 // Initialize Express app
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 5000;
 
 // Set up middleware
 app.use(cors({
@@ -52,6 +53,12 @@ async function startServer() {
 
     // Register API routes
     const server = await registerRoutes(app);
+    
+    // Set up Vite middleware for development
+    if (process.env.NODE_ENV === 'development') {
+      await setupVite(app, server);
+      console.log('Vite middleware initialized for development');
+    }
 
     // Start the server
     server.listen(port, '0.0.0.0', () => {
