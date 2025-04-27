@@ -1,6 +1,23 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
 import { Redirect, Route } from "wouter";
+import { memo } from "react";
+
+// Memorize the loading spinner component to prevent re-rendering
+const LoadingSpinner = memo(() => (
+  <div className="flex items-center justify-center min-h-screen bg-dark">
+    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+  </div>
+));
+LoadingSpinner.displayName = "LoadingSpinner";
+
+// Wrapped component that has memorization to reduce re-renders
+const MemoizedRouteWrapper = memo(({ 
+  Component 
+}: { 
+  Component: () => React.JSX.Element 
+}) => <Component />);
+MemoizedRouteWrapper.displayName = "MemoizedRouteWrapper";
 
 export function ProtectedRoute({
   path,
@@ -11,16 +28,16 @@ export function ProtectedRoute({
 }) {
   const { user, isLoading } = useAuth();
 
+  // Loading state
   if (isLoading) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen bg-dark">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
+        <LoadingSpinner />
       </Route>
     );
   }
 
+  // Not authenticated - redirect to login
   if (!user) {
     return (
       <Route path={path}>
@@ -29,5 +46,10 @@ export function ProtectedRoute({
     );
   }
 
-  return <Route path={path} component={Component} />;
+  // Authenticated - render component with memoization
+  return (
+    <Route path={path}>
+      <MemoizedRouteWrapper Component={Component} />
+    </Route>
+  );
 }
