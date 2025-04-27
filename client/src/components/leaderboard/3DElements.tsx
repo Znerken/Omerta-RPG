@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Text, Float, Environment, ContactShadows, PerspectiveCamera } from '@react-three/drei';
+import { Text, Float, ContactShadows, PerspectiveCamera } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
 import { User } from '@shared/schema';
@@ -287,7 +287,6 @@ export function LeaderboardScene({ players, activeTab }: { players: any[], activ
   return (
     <div className="relative h-[500px]" onError={handleError}>
       <Canvas shadows dpr={[1, 2]} style={{ height: '500px' }}>
-        <color attach="background" args={['#0d1117']} />
         <fog attach="fog" args={['#070b10', 5, 20]} />
         
         <PerspectiveCamera 
@@ -353,8 +352,6 @@ export function LeaderboardScene({ players, activeTab }: { players: any[], activ
           position={[5, 5, 5]}
           intensity={0.8}
           castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
         />
         
         <ContactShadows
@@ -365,7 +362,8 @@ export function LeaderboardScene({ players, activeTab }: { players: any[], activ
           far={4}
         />
         
-        <Environment preset="city" />
+        {/* Use a simpler environment that doesn't require loading external files */}
+        <color attach="background" args={['#0a0a0f']} />
       </Canvas>
     </div>
   );
