@@ -608,7 +608,7 @@ class MemStorage implements IStorage {
     return { 
       ...user, 
       gang: gangMembership.gang,
-      gangRank: gangMembership.rank
+      gangRank: gangMembership.role // Using role instead of rank
     };
   }
 

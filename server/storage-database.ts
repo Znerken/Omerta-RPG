@@ -1553,7 +1553,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
           createdAt: users.createdAt,
           isJailed: users.isJailed,
           jailTimeEnd: users.jailTimeEnd,
-          rank: gangMembers.rank,
+          rank: gangMembers.role, // Using role column instead of rank
           contribution: gangMembers.contribution,
         })
         .from(gangMembers)
