@@ -1,15 +1,15 @@
 import { Express, Request, Response, NextFunction } from 'express';
-import { verifyToken } from './supabase';
+import { validateAuthHeader } from './supabase';
 import { storage } from './storage-supabase';
 
-// Extend the Express.Request interface to include user properties
+// Extend Express Request type to include user data
 declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-      supabaseUser?: any;
+    namespace Express {
+        interface Request {
+            user?: any;
+            supabaseUser?: any;
+        }
     }
-  }
 }
 
 /**
@@ -17,110 +17,177 @@ declare global {
  * @param app Express app
  */
 export function setupAuthRoutes(app: Express) {
-  // Authentication middleware that checks for a valid JWT token
-  // and attaches the user to the request object
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Get token from authorization header
-      const authHeader = req.headers.authorization;
-      if (!authHeader) {
-        return next();
-      }
+    // Middleware to check authentication on all API routes
+    app.use(async (req: Request, res: Response, next: NextFunction) => {
+        // Skip auth for non-API routes or public routes
+        if (!req.path.startsWith('/api') || 
+            req.path === '/api/check-username-email' || 
+            req.path === '/api/register' ||
+            req.path.startsWith('/api/public')) {
+            return next();
+        }
 
-      // Verify token with Supabase
-      const supabaseUser = await verifyToken(authHeader);
-      if (!supabaseUser) {
-        return next();
-      }
+        // Get authorization header
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return next();
+        }
 
-      // Set Supabase user on request
-      req.supabaseUser = supabaseUser;
+        // Validate token
+        const supabaseUser = await validateAuthHeader(authHeader);
+        if (!supabaseUser) {
+            return next();
+        }
 
-      // Get user from our database
-      const user = await storage.getUserBySupabaseId(supabaseUser.id);
-      if (user) {
-        req.user = user;
-      }
+        // Get user from database
+        req.supabaseUser = supabaseUser;
+        const user = await storage.getUserBySupabaseId(supabaseUser.id);
+        
+        if (user) {
+            req.user = user;
+        }
 
-      next();
-    } catch (error) {
-      console.error('Auth middleware error:', error);
-      next();
-    }
-  });
+        next();
+    });
 
-  // User route to get the current user's data
-  app.use('/api/user', authProtected, (req: Request, res: Response) => {
-    res.json(req.user);
-  });
+    // Current user endpoint
+    app.use('/api/user', authProtected, (req: Request, res: Response) => {
+        res.json(req.user);
+    });
 
-  // Register route to create a new user
-  app.post('/api/register', async (req: Request, res: Response) => {
-    try {
-      const { username, email, password, confirmPassword, supabaseId } = req.body;
+    // Check if username or email is available
+    app.post('/api/check-username-email', async (req: Request, res: Response) => {
+        const { username, email } = req.body;
 
-      // Validate required fields
-      if (!username || !email || (!password && !supabaseId)) {
-        return res.status(400).json({ message: 'Missing required fields' });
-      }
+        if (!username || !email) {
+            return res.status(400).json({ message: 'Username and email are required' });
+        }
 
-      // Check if password matches confirm password
-      if (password && confirmPassword && password !== confirmPassword) {
-        return res.status(400).json({ message: 'Passwords do not match' });
-      }
+        // Check if username exists
+        const userByUsername = await storage.getUserByUsername(username);
+        if (userByUsername) {
+            return res.status(400).json({ message: 'Username is already taken' });
+        }
 
-      // Check if username already exists
-      const existingUser = await storage.getUserByUsername(username);
-      if (existingUser) {
-        return res.status(400).json({ message: 'Username already taken' });
-      }
+        // Check if email exists
+        const userByEmail = await storage.getUserByEmail(email);
+        if (userByEmail) {
+            return res.status(400).json({ message: 'Email is already registered' });
+        }
 
-      // Create user in our database
-      const user = await storage.createUser({
-        username,
-        email,
-        password: 'supabase-managed', // Password is managed by Supabase
-        supabaseId,
-        level: 1,
-        experience: 0,
-        cash: 1000,
-        respect: 0,
-        profileTheme: 'dark',
-        createdAt: new Date(),
-        lastSeen: new Date(),
-        status: 'offline',
-      });
+        res.status(200).json({ message: 'Username and email are available' });
+    });
 
-      // Return user data
-      res.status(201).json(user);
-    } catch (error) {
-      console.error('Register error:', error);
-      res.status(500).json({ message: 'Registration failed' });
-    }
-  });
+    // Register endpoint
+    app.post('/api/register', async (req: Request, res: Response) => {
+        const { username, email, password, confirmPassword, supabaseId } = req.body;
+
+        if (!username || !email || !password || !confirmPassword) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: 'Passwords do not match' });
+        }
+
+        try {
+            // Check if username exists
+            const userByUsername = await storage.getUserByUsername(username);
+            if (userByUsername) {
+                return res.status(400).json({ message: 'Username is already taken' });
+            }
+
+            // Check if email exists
+            const userByEmail = await storage.getUserByEmail(email);
+            if (userByEmail) {
+                return res.status(400).json({ message: 'Email is already registered' });
+            }
+
+            // Create user in database
+            const newUser = await storage.createUser({
+                username,
+                email,
+                password: 'SUPABASE_AUTH', // Dummy password, auth is handled by Supabase
+                level: 1,
+                xp: 0,
+                cash: 1000, // Starting cash
+                respect: 0,
+                supabaseId, // Link to Supabase auth
+                createdAt: new Date(),
+                isAdmin: false,
+                isJailed: false,
+                isBanned: false,
+                status: 'online',
+                lastSeen: new Date()
+            });
+
+            res.status(201).json(newUser);
+        } catch (error) {
+            console.error('Registration error:', error);
+            res.status(500).json({ message: 'Failed to register user' });
+        }
+    });
 }
 
 /**
  * Middleware to ensure user is authenticated
  */
 export function authProtected(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-  next();
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    next();
 }
 
 /**
  * Middleware to ensure user is an admin
  */
 export function adminProtected(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
-  
-  if (!req.user.isAdmin) {
-    return res.status(403).json({ message: 'Forbidden' });
-  }
-  
-  next();
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    if (!req.user.isAdmin) {
+        return res.status(403).json({ message: 'Admin privileges required' });
+    }
+    
+    next();
+}
+
+/**
+ * Middleware to redirect jailed users
+ */
+export function jailProtected(req: Request, res: Response, next: NextFunction) {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required' });
+    }
+    
+    if (req.user.isJailed) {
+        return res.status(403).json({ 
+            message: 'You are currently in jail',
+            jailTimeEnd: req.user.jailTimeEnd,
+            jailReason: req.user.jailReason
+        });
+    }
+    
+    next();
+}
+
+/**
+ * Check if a username or email is available
+ */
+export async function checkUsernameEmail(username: string, email: string): Promise<boolean> {
+    // Check if username exists
+    const userByUsername = await storage.getUserByUsername(username);
+    if (userByUsername) {
+        return false;
+    }
+    
+    // Check if email exists
+    const userByEmail = await storage.getUserByEmail(email);
+    if (userByEmail) {
+        return false;
+    }
+    
+    return true;
 }

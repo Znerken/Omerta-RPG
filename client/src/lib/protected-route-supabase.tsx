@@ -1,39 +1,29 @@
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
-import { Loader2 } from 'lucide-react';
-import { Redirect, Route } from 'wouter';
+import { Route, Redirect, useLocation } from 'wouter';
+import { ReactNode } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Loader2, UserCheck, AlertCircle, Shield } from 'lucide-react';
 
-/**
- * ProtectedRoute component for Supabase authentication
- * 
- * This component protects routes that require authentication
- * If the user is not authenticated, they are redirected to the auth page
- * If authentication is in progress (loading), a loading indicator is shown
- */
-export function ProtectedRoute({
-  path,
-  component: Component,
-}: {
+interface RouteProps {
   path: string;
-  component: React.ComponentType<any>;
-}) {
-  const { gameUser, isLoading } = useSupabaseAuth();
+  component: () => JSX.Element;
+}
 
-  // If authentication is still loading, show a loading indicator
+// Basic protected route - requires authentication
+export function ProtectedRoute({ path, component: Component }: RouteProps) {
+  const { isLoading, isAuthenticated, gameUser } = useSupabaseAuth();
+  const [, navigate] = useLocation();
+
   if (isLoading) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen bg-background">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Loading your credentials...</p>
-          </div>
-        </div>
+        <LoadingScreen message="Authenticating..." />
       </Route>
     );
   }
 
-  // If user is not authenticated, redirect to auth page
-  if (!gameUser) {
+  if (!isAuthenticated || !gameUser) {
     return (
       <Route path={path}>
         <Redirect to="/auth" />
@@ -41,41 +31,22 @@ export function ProtectedRoute({
     );
   }
 
-  // If user is authenticated, render the protected component
   return <Route path={path} component={Component} />;
 }
 
-/**
- * AdminProtectedRoute component for Supabase authentication
- * 
- * This component protects routes that require admin privileges
- * If the user is not authenticated or not an admin, they are redirected
- */
-export function AdminProtectedRoute({
-  path,
-  component: Component,
-}: {
-  path: string;
-  component: React.ComponentType<any>;
-}) {
-  const { gameUser, isLoading } = useSupabaseAuth();
+// Admin route - requires admin privileges
+export function AdminProtectedRoute({ path, component: Component }: RouteProps) {
+  const { isLoading, isAuthenticated, gameUser } = useSupabaseAuth();
 
-  // If authentication is still loading, show a loading indicator
   if (isLoading) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen bg-background">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Loading your credentials...</p>
-          </div>
-        </div>
+        <LoadingScreen message="Authenticating..." />
       </Route>
     );
   }
 
-  // If user is not authenticated, redirect to auth page
-  if (!gameUser) {
+  if (!isAuthenticated || !gameUser) {
     return (
       <Route path={path}>
         <Redirect to="/auth" />
@@ -83,50 +54,34 @@ export function AdminProtectedRoute({
     );
   }
 
-  // If user is authenticated but not an admin, redirect to dashboard
   if (!gameUser.isAdmin) {
     return (
       <Route path={path}>
-        <Redirect to="/" />
+        <AccessDeniedScreen
+          title="Admin Access Required"
+          message="You need administrative privileges to access this page."
+          icon={<Shield className="h-12 w-12 text-destructive" />}
+        />
       </Route>
     );
   }
 
-  // If user is authenticated and is an admin, render the protected component
   return <Route path={path} component={Component} />;
 }
 
-/**
- * JailProtectedRoute component
- * 
- * This component redirects users who are jailed to the jail page
- * Used to prevent jailed users from accessing certain pages
- */
-export function JailProtectedRoute({
-  path,
-  component: Component,
-}: {
-  path: string;
-  component: React.ComponentType<any>;
-}) {
-  const { gameUser, isLoading } = useSupabaseAuth();
+// Jail protected route - requires not being in jail
+export function JailProtectedRoute({ path, component: Component }: RouteProps) {
+  const { isLoading, isAuthenticated, gameUser } = useSupabaseAuth();
 
-  // If authentication is still loading, show a loading indicator
   if (isLoading) {
     return (
       <Route path={path}>
-        <div className="flex items-center justify-center min-h-screen bg-background">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Loading your credentials...</p>
-          </div>
-        </div>
+        <LoadingScreen message="Authenticating..." />
       </Route>
     );
   }
 
-  // If user is not authenticated, redirect to auth page
-  if (!gameUser) {
+  if (!isAuthenticated || !gameUser) {
     return (
       <Route path={path}>
         <Redirect to="/auth" />
@@ -134,7 +89,6 @@ export function JailProtectedRoute({
     );
   }
 
-  // If user is jailed, redirect to jail page
   if (gameUser.isJailed) {
     return (
       <Route path={path}>
@@ -143,6 +97,59 @@ export function JailProtectedRoute({
     );
   }
 
-  // If user is authenticated and not jailed, render the protected component
   return <Route path={path} component={Component} />;
+}
+
+// Loading screen component
+function LoadingScreen({ message = "Loading..." }: { message?: string }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+        <p className="text-xl font-medium">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// Access denied screen component
+interface AccessDeniedProps {
+  title: string;
+  message: string;
+  icon?: ReactNode;
+  buttonText?: string;
+  buttonAction?: () => void;
+}
+
+function AccessDeniedScreen({
+  title,
+  message,
+  icon = <AlertCircle className="h-12 w-12 text-destructive" />,
+  buttonText = "Go back",
+  buttonAction
+}: AccessDeniedProps) {
+  const [, navigate] = useLocation();
+
+  const handleButtonClick = () => {
+    if (buttonAction) {
+      buttonAction();
+    } else {
+      navigate("/");
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4">
+      <Card className="max-w-md w-full">
+        <CardContent className="pt-6 text-center space-y-4">
+          <div className="mx-auto flex justify-center">{icon}</div>
+          <h2 className="text-2xl font-bold">{title}</h2>
+          <p className="text-muted-foreground">{message}</p>
+          <Button onClick={handleButtonClick} className="mt-4">
+            {buttonText}
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }

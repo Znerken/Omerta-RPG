@@ -4,106 +4,122 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Validate Supabase credentials
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-  console.error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your .env file.');
+// Check for Supabase credentials in environment variables
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Missing Supabase credentials. Please set SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY environment variables.');
   process.exit(1);
 }
 
-// Create a regular Supabase client with anonymous key
+// Create a Supabase client with anonymous key for public operations
 export const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 );
 
-// Validate Supabase service role key for admin operations
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing SUPABASE_SERVICE_ROLE_KEY. Some admin operations may not work.');
-}
-
-// Create an admin Supabase client with service role key
+// Create a Supabase admin client with service role key for admin operations
 export const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 );
 
 /**
- * Verify a Supabase JWT token and return the user if valid
- * @param token JWT token from the client
- * @returns User object if token is valid, null otherwise
+ * Verify a JWT token from Supabase Auth
+ * @param token JWT token
+ * @returns User data if token is valid, null otherwise
  */
-export async function verifySupabaseToken(token: string) {
+export async function verifyToken(token: string) {
   try {
-    const { data, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error) {
-      console.error('Error verifying token:', error.message);
+      console.error('Token verification error:', error.message);
       return null;
     }
     
-    return data.user;
+    return user;
   } catch (error) {
-    console.error('Exception verifying token:', error);
+    console.error('Token verification exception:', error);
     return null;
   }
 }
 
 /**
- * Check connection to Supabase
- * @returns {Promise<boolean>} True if connected, false otherwise
+ * Validate an authentication token from request headers
+ * @param authHeader Authorization header
+ * @returns User data if token is valid, null otherwise
  */
-export async function checkSupabaseConnection(): Promise<boolean> {
-  try {
-    const { error } = await supabase.from('test_connection').select('*').limit(1);
-    
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 is "relation does not exist" which is expected if the table doesn't exist
-      console.error('Supabase connection error:', error);
-      return false;
-    }
-    
-    // Test auth service
-    const { data, error: authError } = await supabaseAdmin.auth.getUser();
-    
-    if (authError) {
-      console.error('Supabase auth service error:', authError);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Error checking Supabase connection:', error);
-    return false;
+export async function validateAuthHeader(authHeader: string) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
   }
+  
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return null;
+  }
+  
+  return await verifyToken(token);
 }
 
 /**
- * Fetch user from Supabase Auth by email
- * @param email User's email
- * @returns Supabase Auth user if found, null otherwise
+ * Get all users from Supabase Auth
+ * @returns List of users or null if error
  */
-export async function getUserByEmail(email: string) {
+export async function getAllSupabaseUsers() {
   try {
     const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching Supabase users:', error.message);
       return null;
     }
     
-    return data.users.find(user => user.email === email) || null;
+    return data.users;
   } catch (error) {
-    console.error('Exception fetching user by email:', error);
+    console.error('Exception fetching Supabase users:', error);
+    return null;
+  }
+}
+
+/**
+ * Get a user from Supabase Auth by ID
+ * @param userId Supabase user ID
+ * @returns User data if found, null otherwise
+ */
+export async function getSupabaseUser(userId: string) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+    
+    if (error) {
+      console.error('Error fetching Supabase user:', error.message);
+      return null;
+    }
+    
+    return data.user;
+  } catch (error) {
+    console.error('Exception fetching Supabase user:', error);
     return null;
   }
 }
 
 /**
  * Create a new user in Supabase Auth
- * @param email User's email
- * @param password User's password
- * @param metadata Additional metadata
- * @returns Created user if successful, null otherwise
+ * @param email User email
+ * @param password User password
+ * @param metadata Additional user metadata
+ * @returns User data if created, null otherwise
  */
 export async function createSupabaseUser(email: string, password: string, metadata: any = {}) {
   try {
@@ -115,43 +131,22 @@ export async function createSupabaseUser(email: string, password: string, metada
     });
     
     if (error) {
-      console.error('Error creating user:', error);
+      console.error('Error creating Supabase user:', error.message);
       return null;
     }
     
     return data.user;
   } catch (error) {
-    console.error('Exception creating user:', error);
+    console.error('Exception creating Supabase user:', error);
     return null;
   }
 }
 
 /**
- * Delete a user from Supabase Auth
- * @param userId User's Supabase Auth ID
- * @returns True if successful, false otherwise
- */
-export async function deleteSupabaseUser(userId: string) {
-  try {
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
-    
-    if (error) {
-      console.error('Error deleting user:', error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error('Exception deleting user:', error);
-    return false;
-  }
-}
-
-/**
  * Update a user in Supabase Auth
- * @param userId User's Supabase Auth ID
+ * @param userId Supabase user ID
  * @param userData User data to update
- * @returns Updated user if successful, null otherwise
+ * @returns Updated user data if successful, null otherwise
  */
 export async function updateSupabaseUser(userId: string, userData: any) {
   try {
@@ -161,13 +156,34 @@ export async function updateSupabaseUser(userId: string, userData: any) {
     );
     
     if (error) {
-      console.error('Error updating user:', error);
+      console.error('Error updating Supabase user:', error.message);
       return null;
     }
     
     return data.user;
   } catch (error) {
-    console.error('Exception updating user:', error);
+    console.error('Exception updating Supabase user:', error);
     return null;
+  }
+}
+
+/**
+ * Delete a user from Supabase Auth
+ * @param userId Supabase user ID
+ * @returns True if successful, false otherwise
+ */
+export async function deleteSupabaseUser(userId: string) {
+  try {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (error) {
+      console.error('Error deleting Supabase user:', error.message);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exception deleting Supabase user:', error);
+    return false;
   }
 }

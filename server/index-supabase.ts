@@ -1,107 +1,81 @@
 import express from 'express';
-import session from 'express-session';
-import path from 'path';
-import { initializeDatabase, closeDatabase, syncSupabaseUsers } from './db-supabase';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import bodyParser from 'body-parser';
+import cookieParser from 'cookie-parser';
+import { initializeDatabase, createTables, syncSupabaseUsers } from './db-supabase';
 import { registerRoutes } from './routes-supabase';
 import { setupAuthRoutes } from './auth-supabase';
 import { storage } from './storage-supabase';
-import dotenv from 'dotenv';
+import { createWebSocketServer } from './websocket-supabase';
+import { createServer as createViteServer, ViteDevServer } from 'vite';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
 
-// Create Express app
+// Initialize Express app
 const app = express();
 
-// Validate session secret
-if (!process.env.SESSION_SECRET) {
-  console.error('SESSION_SECRET environment variable is required');
-  process.exit(1);
-}
+// Base middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
 
-// Enable JSON body parsing
-app.use(express.json());
+// Create uploads directory for user files
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
-// Configure session middleware
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    },
-    store: storage.sessionStore,
-  })
-);
-
-// Setup authentication routes
-setupAuthRoutes(app);
-
-// Set up API routes
-const httpServer = registerRoutes(app);
-
-// Serve static files in production or development
-if (process.env.NODE_ENV === 'production') {
-  // In production, serve the built client files
-  app.use(express.static(path.join(__dirname, '../client')));
-} else {
-  // In development, use Vite server
-  import('./vite').then(({ createViteServer }) => {
-    createViteServer();
-  });
-}
-
-// Default route that will be handled by client-side routing
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
-  res.sendFile(path.join(__dirname, '../client/index.html'));
-});
-
-// Determine port
-const PORT = process.env.PORT || 5000;
-
-// Initialize database and start server
-async function startServer() {
+// Main entry point
+async function main() {
   try {
-    // Initialize database connection
-    const dbInitialized = await initializeDatabase();
-    if (!dbInitialized) {
-      console.error('Failed to initialize database, exiting...');
+    // Initialize database
+    console.log('Initializing database connection...');
+    const dbConnected = await initializeDatabase();
+    if (!dbConnected) {
+      console.error('Failed to connect to database. Exiting.');
       process.exit(1);
     }
 
-    // Sync Supabase users with database
+    // Create tables if they don't exist
+    console.log('Ensuring database tables exist...');
+    await createTables();
+
+    // Sync users from Supabase Auth
+    console.log('Synchronizing users from Supabase Auth...');
     await syncSupabaseUsers();
 
-    // Start HTTP server
+    // Set up authentication routes
+    console.log('Setting up authentication routes...');
+    setupAuthRoutes(app);
+
+    // Register API routes
+    console.log('Registering API routes...');
+    const httpServer = await registerRoutes(app);
+
+    // Set up WebSocket server
+    console.log('Setting up WebSocket server...');
+    createWebSocketServer(httpServer);
+
+    // Determine port
+    const PORT = process.env.PORT || 5000;
+
+    // Start server
     httpServer.listen(PORT, () => {
       console.log(`[express] serving on port ${PORT}`);
     });
 
-    // Handle graceful shutdown
-    process.on('SIGTERM', shutdown);
-    process.on('SIGINT', shutdown);
+    // Handle shutdown
+    process.on('SIGINT', async () => {
+      console.log('Shutting down gracefully...');
+      httpServer.close();
+      process.exit(0);
+    });
   } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);
   }
 }
 
-// Shutdown function
-async function shutdown() {
-  console.log('Shutting down server...');
-  
-  // Close database connection
-  await closeDatabase();
-  
-  // Exit process
-  process.exit(0);
-}
-
-// Start server
-startServer();
+// Start the server
+main().catch(console.error);

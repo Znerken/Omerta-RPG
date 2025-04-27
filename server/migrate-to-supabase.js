@@ -1,75 +1,60 @@
-#!/usr/bin/env node
-
 /**
  * This script is a simple launcher for the migration process
  * It ensures we have compiled TypeScript before running the migration
  */
 
-const { execSync } = require('child_process');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
 
-// Function to check if a path exists
 function exists(filePath) {
   return fs.existsSync(filePath);
 }
 
-// Directory where build files are stored
-const buildDir = path.join(__dirname, '..', 'build');
-
-// Path to the compiled migration script
-const migrationScript = path.join(buildDir, 'server', 'migration.js');
-
-// Function to run a command and display its output
 function runCommand(command, label = '') {
-  console.log(`\n> ${label || command}`);
+  console.log(`Running ${label || command}...`);
   try {
-    execSync(command, { stdio: 'inherit' });
-    return true;
+    const output = execSync(command, { 
+      encoding: 'utf-8',
+      stdio: 'inherit'
+    });
+    return { success: true, output };
   } catch (error) {
-    console.error(`Error executing command: ${command}`);
-    console.error(error.message);
-    return false;
+    console.error(`Error running command ${command}: ${error.message}`);
+    return { success: false, error };
   }
 }
 
-// Check if we need to build TypeScript files
-if (!exists(migrationScript)) {
-  console.log('Compiled migration script not found, building TypeScript files...');
+async function main() {
+  console.log('Starting migration process');
   
-  // Check if tsc is available
-  try {
-    execSync('npx tsc --version', { stdio: 'ignore' });
-  } catch (error) {
-    console.error('TypeScript compiler not found. Please install it with:');
-    console.error('npm install -g typescript');
-    process.exit(1);
+  // Check if we need to compile TypeScript first
+  const migrationCompiledPath = path.join(__dirname, 'migration.js');
+  
+  if (!exists(migrationCompiledPath)) {
+    console.log('TypeScript files need to be compiled first');
+    
+    // Use tsx directly to avoid having to compile TypeScript first
+    const { success } = runCommand('npx tsx server/migration.ts', 'migration with tsx');
+    
+    if (!success) {
+      console.error('Migration failed');
+      process.exit(1);
+    }
+  } else {
+    // Run the compiled JavaScript file
+    const { success } = runCommand('node server/migration.js', 'migration');
+    
+    if (!success) {
+      console.error('Migration failed');
+      process.exit(1);
+    }
   }
   
-  // Compile TypeScript files
-  if (!runCommand('npx tsc', 'Compiling TypeScript files')) {
-    console.error('Failed to compile TypeScript files');
-    process.exit(1);
-  }
+  console.log('Migration process completed successfully');
 }
 
-// Ensure the compiled script exists
-if (!exists(migrationScript)) {
-  console.error(`Migration script not found at: ${migrationScript}`);
-  console.error('Make sure TypeScript compilation is working correctly');
+main().catch(error => {
+  console.error('Migration process failed:', error);
   process.exit(1);
-}
-
-console.log('\n=======================================');
-console.log('Starting Supabase migration process...');
-console.log('=======================================\n');
-
-// Run the migration script
-if (!runCommand(`node ${migrationScript}`, 'Running migration script')) {
-  console.error('Migration failed');
-  process.exit(1);
-}
-
-console.log('\n=======================================');
-console.log('Migration completed successfully!');
-console.log('=======================================\n');
+});
