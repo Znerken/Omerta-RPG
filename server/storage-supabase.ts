@@ -45,12 +45,12 @@ export class SupabaseStorage {
    */
   async getUser(id: number) {
     try {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id));
+      // Use raw SQL to avoid ORM issues with unknown columns
+      const result = await db.execute(sql`
+        SELECT * FROM users WHERE id = ${id}
+      `);
       
-      return result.length > 0 ? result[0] : undefined;
+      return result.rows.length > 0 ? result.rows[0] : undefined;
     } catch (error) {
       console.error('Error getting user:', error);
       return undefined;
@@ -64,12 +64,12 @@ export class SupabaseStorage {
    */
   async getUserByUsername(username: string) {
     try {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username));
+      // Use raw SQL to avoid ORM issues with unknown columns
+      const result = await db.execute(sql`
+        SELECT * FROM users WHERE username = ${username}
+      `);
       
-      return result.length > 0 ? result[0] : undefined;
+      return result.rows.length > 0 ? result.rows[0] : undefined;
     } catch (error) {
       console.error('Error getting user by username:', error);
       return undefined;
@@ -83,12 +83,12 @@ export class SupabaseStorage {
    */
   async getUserByEmail(email: string) {
     try {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email));
+      // Use raw SQL to avoid ORM issues with unknown columns
+      const result = await db.execute(sql`
+        SELECT * FROM users WHERE email = ${email}
+      `);
       
-      return result.length > 0 ? result[0] : undefined;
+      return result.rows.length > 0 ? result.rows[0] : undefined;
     } catch (error) {
       console.error('Error getting user by email:', error);
       return undefined;
@@ -102,12 +102,12 @@ export class SupabaseStorage {
    */
   async getUserBySupabaseId(supabaseId: string) {
     try {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.supabaseId, supabaseId));
+      // Use raw SQL to avoid ORM issues with unknown columns
+      const result = await db.execute(sql`
+        SELECT * FROM users WHERE supabase_id = ${supabaseId}
+      `);
       
-      return result.length > 0 ? result[0] : undefined;
+      return result.rows.length > 0 ? result.rows[0] : undefined;
     } catch (error) {
       console.error('Error getting user by Supabase ID:', error);
       return undefined;
@@ -133,25 +133,17 @@ export class SupabaseStorage {
       
       const insertedUser = insertQuery.rows[0];
 
-      // Create user status entry
-      await db
-        .insert(userStatus)
-        .values({
-          userId: insertedUser.id,
-          status: 'offline',
-          lastActive: new Date()
-        });
+      // Create user status entry using raw SQL
+      await db.execute(sql`
+        INSERT INTO user_status (user_id, status, last_active)
+        VALUES (${insertedUser.id}, 'offline', NOW())
+      `);
 
-      // Create user stats entry
-      await db
-        .insert(stats)
-        .values({
-          userId: insertedUser.id,
-          strength: 10,
-          stealth: 10,
-          charisma: 10,
-          intelligence: 10
-        });
+      // Create user stats entry using raw SQL
+      await db.execute(sql`
+        INSERT INTO stats (user_id, strength, stealth, charisma, intelligence)
+        VALUES (${insertedUser.id}, 10, 10, 10, 10)
+      `);
 
       return insertedUser;
     } catch (error) {
