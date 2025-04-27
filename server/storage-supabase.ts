@@ -315,6 +315,21 @@ export class SupabaseStorage {
       return undefined;
     }
   }
+  
+  /**
+   * Get user profile - compatibility method for the old API
+   * @param userId User ID
+   * @returns Full user profile or undefined
+   */
+  async getUserProfile(userId: number) {
+    console.log('getUserProfile called for user ID:', userId);
+    try {
+      return await this.getUserWithProfile(userId);
+    } catch (error) {
+      console.error('Error in getUserProfile compatibility method:', error);
+      return undefined;
+    }
+  }
 
   /**
    * Get user's friends

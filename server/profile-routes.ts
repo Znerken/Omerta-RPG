@@ -1,5 +1,5 @@
 import { Express, Request, Response } from "express";
-import { storage } from "./storage";
+import { storage } from "./storage-supabase";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
