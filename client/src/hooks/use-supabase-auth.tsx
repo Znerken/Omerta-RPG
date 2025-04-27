@@ -192,33 +192,14 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         description: "Welcome to OMERTÀ! Please check your email to confirm your account.",
       });
       
-      console.log('Registration successful, preparing for redirect');
+      console.log('Registration successful, preparing for reload with new session');
       
       // Give time for the Supabase session to be established and for the toast to be read
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Try to fetch the profile to ensure proper authentication
-      try {
-        const res = await apiRequest('GET', '/api/user/profile');
-        if (res.ok) {
-          const gameUserData = await res.json();
-          console.log('Successfully fetched game user profile after registration');
-          
-          // Set the data directly in the cache to ensure it's available immediately
-          queryClient.setQueryData(['/api/user/profile'], gameUserData);
-          
-          // Redirect to dashboard
-          window.location.href = '/';
-        } else {
-          console.error('Failed to fetch game user profile after registration:', await res.text());
-          // We'll still redirect to dashboard, as registration was successful
-          window.location.href = '/';
-        }
-      } catch (error) {
-        console.error('Error after registration:', error);
-        // Still redirect to dashboard as the registration was successful
-        window.location.href = '/';
-      }
+      // Force a full page reload to completely refresh auth state
+      // This is the most reliable way to ensure proper authentication flow
+      window.location.href = '/?reload=' + Date.now();
     },
     onError: (error: Error) => {
       toast({
@@ -240,19 +221,18 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
         description: "You have been logged out",
       });
       
-      console.log('Logout successful, clearing cache and redirecting');
+      console.log('Logout successful, preparing for reload with cleared session');
       
-      // Clear user data from cache
-      queryClient.setQueryData(['/api/user/profile'], null);
+      // Clear local storage and session storage for good measure
+      localStorage.clear();
+      sessionStorage.clear();
       
-      // Small delay to ensure the session is properly cleared
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Small delay to ensure the session is properly cleared and toast is shown
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Clear all queries from cache to ensure a clean state
-      queryClient.clear();
-      
-      // Redirect to login page
-      window.location.href = '/auth';
+      // Force a full page reload to the auth page with a timestamp to prevent caching issues
+      // This is the most reliable way to ensure proper session termination
+      window.location.href = '/auth?logout=' + Date.now();
     },
     onError: (error: Error) => {
       toast({

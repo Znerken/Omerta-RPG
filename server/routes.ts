@@ -308,6 +308,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // A simple route to check auth state
+  app.get('/api/debug/auth-check', async (req: Request, res: Response) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const hasAuthHeader = !!authHeader;
+      
+      // Return information about the request's auth state
+      res.json({
+        hasAuthHeader,
+        authHeaderValue: hasAuthHeader ? `${authHeader?.substring(0, 10)}...` : null,
+        isAuthenticated: req.isAuthenticated(),
+        user: req.isAuthenticated() ? {
+          id: req.user?.id,
+          username: req.user?.username,
+          supabaseId: req.user?.supabaseId,
+          hasSupabaseId: !!req.user?.supabaseId
+        } : null
+      });
+    } catch (error) {
+      console.error('Error in auth check route:', error);
+      res.status(500).json({ message: 'Error checking auth state' });
+    }
+  });
+  
   // Debug route to check Supabase auth and game database link
   app.get('/api/debug/auth-link', async (req: Request, res: Response) => {
     try {
@@ -375,6 +399,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Route to check if a supabase ID is already linked to a game account
+  app.get('/api/debug/check-supabase-id/:supabaseId', async (req: Request, res: Response) => {
+    try {
+      const { supabaseId } = req.params;
+      
+      if (!supabaseId) {
+        return res.status(400).json({ message: 'Supabase ID is required' });
+      }
+      
+      // Check if this Supabase ID is already linked to a game account
+      const user = await storage.getUserBySupabaseId(supabaseId);
+      
+      if (user) {
+        return res.json({
+          linked: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email
+          }
+        });
+      } else {
+        return res.json({ linked: false });
+      }
+    } catch (error) {
+      console.error('Error checking Supabase ID:', error);
+      res.status(500).json({ message: 'Server error checking Supabase ID' });
+    }
+  });
+
   // Route to force update a user's Supabase ID based on email
   app.post('/api/debug/update-supabase-id', async (req: Request, res: Response) => {
     try {
