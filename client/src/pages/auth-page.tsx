@@ -56,35 +56,7 @@ export default function AuthPage() {
     },
   });
   
-  // Create test user mutation
-  const createTestUserMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/dev/create-test-user");
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to create test user");
-      }
-      return await res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Test User Created",
-        description: `Created user: ${data.user.username} with $500,000 cash, level 5, and 20 of each stat`,
-      });
-      
-      // The backend automatically logs the user in, we need to refresh data
-      // This will trigger a redirect in the component once user is set
-      queryClient.setQueryData(["/api/user"], data.user);
-      queryClient.invalidateQueries({queryKey: ["/api/user"]});
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to create test user",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  // Test user creation functionality has been moved to the admin panel
   
   const onLoginSubmit = (data: LoginFormData) => {
     loginMutation.mutate(data);
@@ -95,9 +67,7 @@ export default function AuthPage() {
     registerMutation.mutate({ username, email, password });
   };
   
-  const handleCreateTestUser = () => {
-    createTestUserMutation.mutate();
-  };
+  // Handler function for test user creation has been removed
   
   // Redirect to home if logged in
   if (user) {
