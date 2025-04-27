@@ -195,7 +195,7 @@ export default function AdminPage() {
   
   const deleteTestUsersMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("DELETE", "/api/dev/test-users");
+      const res = await apiRequest("DELETE", "/api/admin/delete-test-users");
       if (!res.ok) {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to delete test users");
@@ -723,6 +723,14 @@ export default function AdminPage() {
   const onSearchSubmit = (data: UserSearchValues) => {
     setSearchValue(data.search || "");
     setCurrentPage(1);
+  };
+  
+  const handleCreateTestUser = () => {
+    createTestUserMutation.mutate();
+  };
+  
+  const handleDeleteTestUsers = () => {
+    deleteTestUsersMutation.mutate();
   };
 
   const onGiveCashSubmit = (data: GiveCashValues) => {
