@@ -65,10 +65,11 @@ export function MiniProfile({
   const { username, level, cash, respect, isAdmin, avatar, xp } = profile;
   
   // Calculate XP progress for leveling up
-  const xpRequired = level * 100;
-  // Use current XP and not total XP for level progress calculation
-  const currentLevelXP = xp - ((level - 1) * 100);
-  const xpProgress = Math.min(100, Math.round((currentLevelXP / xpRequired) * 100)) || 0;
+  const xpForNextLevel = 100; // Each level requires 100 XP
+  // For current level progress, we only care about XP beyond previous level
+  const totalXpForPreviousLevel = (level - 1) * 100;
+  const currentLevelXP = xp - totalXpForPreviousLevel;
+  const xpProgress = Math.min(100, Math.round((currentLevelXP / xpForNextLevel) * 100)) || 0;
   
   // Format currency helper function
   const formatCurrency = (amount: number) => {
@@ -118,7 +119,7 @@ export function MiniProfile({
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p className="text-xs">Level Progress: {currentLevelXP}/{xpRequired} XP ({xpProgress}%)</p>
+                  <p className="text-xs">Level Progress: {currentLevelXP}/{xpForNextLevel} XP ({xpProgress}%)</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -248,7 +249,7 @@ export function MiniProfile({
               </div>
             </TooltipTrigger>
             <TooltipContent side="top">
-              <p className="text-xs">Level Progress: {currentLevelXP}/{xpRequired} XP ({xpProgress}%)</p>
+              <p className="text-xs">Level Progress: {currentLevelXP}/{xpForNextLevel} XP ({xpProgress}%)</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

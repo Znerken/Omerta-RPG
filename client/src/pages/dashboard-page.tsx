@@ -237,10 +237,11 @@ export default function DashboardPage() {
   if (!user) return null;
 
   // Calculate XP progress for leveling up
-  const xpRequired = user.level * 100;
-  // Use current XP and not total XP for level progress calculation
-  const currentLevelXP = user.xp - ((user.level - 1) * 100);
-  const xpProgress = Math.min(100, Math.round((currentLevelXP / xpRequired) * 100)) || 0;
+  const xpForNextLevel = 100; // Each level requires 100 XP
+  // For current level progress, we only care about XP beyond previous level
+  const totalXpForPreviousLevel = (user.level - 1) * 100;
+  const currentLevelXP = user.xp - totalXpForPreviousLevel;
+  const xpProgress = Math.min(100, Math.round((currentLevelXP / xpForNextLevel) * 100)) || 0;
   
   // Calculate wealth rank
   const wealthRank = user.cash > 100000 ? "High Roller" : user.cash > 10000 ? "Made Man" : "Small Timer";
@@ -419,7 +420,7 @@ export default function DashboardPage() {
               {/* XP progress bar */}
               <div className="mt-3 max-w-md">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-zinc-400">Level Progress: {formatNumber(currentLevelXP)} / {xpRequired} XP</span>
+                  <span className="text-zinc-400">Level Progress: {formatNumber(currentLevelXP)} / {xpForNextLevel} XP</span>
                   <span className="text-zinc-400">{xpProgress}%</span>
                 </div>
                 <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
