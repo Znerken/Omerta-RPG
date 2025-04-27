@@ -82,7 +82,7 @@ export function setupAuthRoutes(app: Express) {
       if (isAvailable) {
         return res.json({ available: true });
       } else {
-        return res.status(400).json({ message: 'Username or email is already taken' });
+        return res.status(409).json({ message: 'Username or email is already taken' });
       }
     } catch (error) {
       console.error('Error checking username/email:', error);
@@ -102,7 +102,7 @@ export function setupAuthRoutes(app: Express) {
       // Check if username or email already exists
       const isAvailable = await checkUsernameEmail(username, email);
       if (!isAvailable) {
-        return res.status(400).json({ message: 'Username or email is already taken' });
+        return res.status(409).json({ message: 'Username or email is already taken' });
       }
       
       // Create user in Supabase Auth
