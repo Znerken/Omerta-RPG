@@ -124,8 +124,19 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
     );
   }
 
+  // Handle case where user is authenticated with Supabase but doesn't have a game user
+  if (isAuthenticated && !gameUser && !hasDirectAuth) {
+    console.log('User authenticated with Supabase but no game user - redirecting to account linking page');
+    return (
+      <Route path={path}>
+        <Redirect to="/link-account" />
+      </Route>
+    );
+  }
+  
+  // Handle case where user is not authenticated at all
   if ((!isAuthenticated && !hasDirectAuth) || (!gameUser && !hasDirectAuth)) {
-    console.log('Redirecting to auth from protected route');
+    console.log('User not authenticated - redirecting to auth page');
     return (
       <Route path={path}>
         <Redirect to="/auth" />
@@ -148,7 +159,19 @@ export function AdminProtectedRoute({ path, component: Component }: RouteProps) 
     );
   }
 
-  if (!isAuthenticated || !gameUser) {
+  // Handle case where user is authenticated with Supabase but doesn't have a game user
+  if (isAuthenticated && !gameUser) {
+    console.log('Admin route - authenticated with Supabase but no game user - redirecting to account linking page');
+    return (
+      <Route path={path}>
+        <Redirect to="/link-account" />
+      </Route>
+    );
+  }
+  
+  // Handle case where user is not authenticated at all
+  if (!isAuthenticated) {
+    console.log('Admin route - not authenticated - redirecting to auth page');
     return (
       <Route path={path}>
         <Redirect to="/auth" />
@@ -183,7 +206,19 @@ export function JailProtectedRoute({ path, component: Component }: RouteProps) {
     );
   }
 
-  if (!isAuthenticated || !gameUser) {
+  // Handle case where user is authenticated with Supabase but doesn't have a game user
+  if (isAuthenticated && !gameUser) {
+    console.log('Jail route - authenticated with Supabase but no game user - redirecting to account linking page');
+    return (
+      <Route path={path}>
+        <Redirect to="/link-account" />
+      </Route>
+    );
+  }
+  
+  // Handle case where user is not authenticated at all
+  if (!isAuthenticated) {
+    console.log('Jail route - not authenticated - redirecting to auth page');
     return (
       <Route path={path}>
         <Redirect to="/auth" />
