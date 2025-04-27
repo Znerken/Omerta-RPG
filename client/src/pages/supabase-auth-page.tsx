@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 
 // Login form schema
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
+  emailOrUsername: z.string().min(3, { message: 'Please enter a valid email or username' }),
   password: z.string().min(8, {
     message: 'Password must be at least 8 characters long'
   })
@@ -62,7 +62,7 @@ export default function SupabaseAuthPage() {
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
+      emailOrUsername: '',
       password: ''
     }
   });
@@ -81,7 +81,7 @@ export default function SupabaseAuthPage() {
   // Login form submission
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     loginMutation.mutate({
-      email: values.email,
+      emailOrUsername: values.emailOrUsername,
       password: values.password
     });
   };
@@ -133,12 +133,12 @@ export default function SupabaseAuthPage() {
                     <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                       <FormField
                         control={loginForm.control}
-                        name="email"
+                        name="emailOrUsername"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email</FormLabel>
+                            <FormLabel>Email or Username</FormLabel>
                             <FormControl>
-                              <Input placeholder="your.email@example.com" {...field} />
+                              <Input placeholder="your.email@example.com or username" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

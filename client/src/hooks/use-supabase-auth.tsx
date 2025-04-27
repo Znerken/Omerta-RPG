@@ -12,7 +12,7 @@ type AuthContextType = {
   gameUser: any | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  loginMutation: UseMutationResult<any, Error, { email: string; password: string }>;
+  loginMutation: UseMutationResult<any, Error, { emailOrUsername: string; password: string }>;
   signUpMutation: UseMutationResult<any, Error, { email: string; username: string; password: string }>;
   logoutMutation: UseMutationResult<boolean, Error, void>;
   checkEmailAndUsername: (email: string, username: string) => Promise<{ available: boolean, message?: string }>;
