@@ -71,14 +71,44 @@ export function registerDevRoutes(app: Express) {
       
       // Handle gang-related data first
       try {
-        // Use raw SQL to delete gang memberships
+        // Check if user is a gang leader
+        const leaderOfGangs = await db.execute(sql`
+          SELECT id, name FROM gangs 
+          WHERE owner_id = ${userId}
+        `);
+        
+        if (leaderOfGangs.rowCount > 0) {
+          console.log(`User ${userId} is a leader of gang(s):`, leaderOfGangs.rows);
+          
+          // For each gang the user leads
+          for (const gang of leaderOfGangs.rows) {
+            const gangId = gang.id;
+            console.log(`Handling gang ${gangId} (${gang.name})`);
+            
+            // Delete all memberships for this gang
+            await db.execute(sql`
+              DELETE FROM gang_members 
+              WHERE gang_id = ${gangId}
+            `);
+            
+            // Delete the gang itself
+            await db.execute(sql`
+              DELETE FROM gangs 
+              WHERE id = ${gangId}
+            `);
+            
+            console.log(`Successfully deleted gang ${gangId} (${gang.name})`);
+          }
+        }
+        
+        // Delete user's gang memberships
         await db.execute(sql`
           DELETE FROM gang_members 
           WHERE user_id = ${userId}
         `);
         console.log(`Successfully deleted gang memberships for user ${userId}`);
       } catch (err) {
-        console.warn(`Error deleting gang memberships for user ${userId}:`, err);
+        console.warn(`Error deleting gang-related data for user ${userId}:`, err);
       }
       
       // Delete drug-related data
@@ -246,7 +276,38 @@ export function registerDevRoutes(app: Express) {
       
       // Handle gang-related data
       try {
-        // Use raw SQL to delete gang memberships
+        // First, check if any test users are gang leaders
+        const leaderOfGangs = await db.execute(sql`
+          SELECT g.id, g.name, g.owner_id
+          FROM gangs g
+          WHERE g.owner_id IN (${sql.join(userIds, sql`, `)})
+        `);
+        
+        if (leaderOfGangs.rowCount > 0) {
+          console.log(`Found ${leaderOfGangs.rowCount} gangs led by test users`);
+          
+          // For each gang that has a test user as the leader
+          for (const gang of leaderOfGangs.rows) {
+            const gangId = gang.id;
+            console.log(`Handling gang ${gangId} (${gang.name}) led by user ${gang.owner_id}`);
+            
+            // Delete all memberships for this gang
+            await db.execute(sql`
+              DELETE FROM gang_members 
+              WHERE gang_id = ${gangId}
+            `);
+            
+            // Delete the gang itself
+            await db.execute(sql`
+              DELETE FROM gangs 
+              WHERE id = ${gangId}
+            `);
+            
+            console.log(`Successfully deleted gang ${gangId} (${gang.name})`);
+          }
+        }
+        
+        // Delete gang memberships for all test users
         await db.execute(sql`
           DELETE FROM gang_members 
           WHERE user_id IN (${sql.join(userIds, sql`, `)})
