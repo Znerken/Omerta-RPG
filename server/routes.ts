@@ -335,33 +335,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Route to force link the current authenticated Supabase user with a game user
   app.post('/api/link-supabase-user', async (req: Request, res: Response) => {
     try {
+      console.log('Attempting to link Supabase user to game account');
+      
       // Extract the token and validate it
       const authHeader = req.headers.authorization;
       if (!authHeader) {
+        console.log('Linking failed: No auth header present');
         return res.status(401).json({ message: 'No auth header present' });
       }
       
       // Get the Supabase user from the token
       const supabaseUser = await extractAndValidateToken(req);
       if (!supabaseUser) {
+        console.log('Linking failed: Invalid token');
         return res.status(401).json({ message: 'Invalid token' });
       }
+      
+      console.log(`Authenticated Supabase user: ${supabaseUser.id} (${supabaseUser.email})`);
       
       // Get the game username from the request body
       const { username, password } = req.body;
       if (!username || !password) {
+        console.log('Linking failed: Username and password are required');
         return res.status(400).json({ message: 'Username and password are required' });
       }
+      
+      console.log(`Attempting to find game user with username: ${username}`);
       
       // Find the game user by username
       const gameUser = await storage.getUserByUsername(username);
       if (!gameUser) {
+        console.log(`Linking failed: Game user not found with username: ${username}`);
         return res.status(404).json({ message: 'Game user not found' });
       }
       
+      console.log(`Found game user: ${gameUser.username} (ID: ${gameUser.id})`);
+      
       // Check if the password is correct (basic check for now)
       if (gameUser.password !== password) {
+        console.log(`Linking failed: Invalid password for user: ${username}`);
         return res.status(401).json({ message: 'Invalid password' });
+      }
+      
+      // Check if this game account is already linked to a different Supabase ID
+      if (gameUser.supabaseId && gameUser.supabaseId !== supabaseUser.id) {
+        console.log(`Linking failed: Game user is already linked to a different Supabase ID: ${gameUser.supabaseId}`);
+        return res.status(409).json({ 
+          message: 'This game account is already linked to a different Supabase account' 
+        });
       }
       
       // Update the user with the Supabase ID
@@ -462,10 +483,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Supabase ID is required' });
       }
       
+      console.log(`Checking if Supabase ID ${supabaseId} is linked to a game account`);
+      
       // Check if this Supabase ID is already linked to a game account
       const user = await storage.getUserBySupabaseId(supabaseId);
       
       if (user) {
+        console.log(`Supabase ID ${supabaseId} is linked to game user: ${user.username} (ID: ${user.id})`);
         return res.json({
           linked: true,
           user: {
@@ -475,6 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       } else {
+        console.log(`Supabase ID ${supabaseId} is NOT linked to any game account`);
         return res.json({ linked: false });
       }
     } catch (error) {

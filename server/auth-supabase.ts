@@ -95,9 +95,12 @@ export function setupAuthRoutes(app: Express) {
   // Get current user endpoint
   app.use('/api/user', async (req: Request, res: Response) => {
     try {
+      console.log('[/api/user] Getting current user data');
+      
       // Extract token from Authorization header
       const authHeader = req.headers.authorization;
       if (!authHeader) {
+        console.log('[/api/user] No authorization header found');
         return res.status(401).json({ 
           message: 'No authorization header',
           needsAuth: true 
@@ -107,19 +110,38 @@ export function setupAuthRoutes(app: Express) {
       // Validate JWT token with Supabase
       const supabaseUser = await extractAndValidateToken(req);
       if (!supabaseUser) {
+        console.log('[/api/user] Invalid token or token validation failed');
         return res.status(401).json({ 
           message: 'Invalid token',
           needsAuth: true 
         });
       }
       
-      // Get user from database using Supabase ID
-      const user = await storage.getUserBySupabaseId(supabaseUser.id);
+      console.log(`[/api/user] Valid Supabase user: ${supabaseUser.id} (${supabaseUser.email})`);
+      
+      // First, try to get user from database using Supabase ID
+      let user = await storage.getUserBySupabaseId(supabaseUser.id);
+      
+      // If not found by Supabase ID, try to find by email
+      if (!user && supabaseUser.email) {
+        console.log(`[/api/user] User not found by Supabase ID, trying email: ${supabaseUser.email}`);
+        user = await storage.getUserByEmail(supabaseUser.email);
+        
+        // If found by email but supabaseId is not set, automatically update it
+        if (user && (!user.supabaseId || user.supabaseId !== supabaseUser.id)) {
+          console.log(`[/api/user] User found by email, updating supabaseId from ${user.supabaseId} to ${supabaseUser.id}`);
+          user = await storage.updateUser(user.id, { supabaseId: supabaseUser.id });
+          console.log(`[/api/user] User updated with new supabaseId`);
+        }
+      }
       
       // If user exists in game database, return it
       if (user) {
+        console.log(`[/api/user] Found game user: ${user.username} (ID: ${user.id})`);
         return res.json(user);
       }
+      
+      console.log(`[/api/user] No game user found for Supabase user ${supabaseUser.id}, needs account linking`);
       
       // If user is authenticated with Supabase but doesn't have a game account,
       // return a special response indicating they need to link their account
