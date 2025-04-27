@@ -4,12 +4,20 @@ import { Button } from "@/components/ui/button";
 import { useNotification } from "@/hooks/use-notification";
 import { Notification, NotificationType } from "@/types";
 import { format } from "date-fns";
-import { Check, Ban, AlertCircle, DollarSign, UserPlus, Users, UserMinus } from "lucide-react";
+import { Check, Ban, AlertCircle, DollarSign, UserPlus, Users, UserMinus, Bell, BellOff, Settings } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { FriendNotification } from "@/components/social/FriendNotification";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 export const NotificationList: React.FC = () => {
   const { notifications, markAsRead, markAllAsRead, clearNotifications } = useNotification();

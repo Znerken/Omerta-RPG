@@ -8,6 +8,8 @@ import { queryClient } from "@/lib/queryClient";
 interface NotificationContextType {
   notifications: Notification[];
   unreadCount: number;
+  notificationsEnabled: boolean;
+  toggleNotifications: () => void;
   addNotification: (titleOrNotification: string | Partial<Notification>, message?: string, type?: NotificationType, data?: any) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
@@ -18,9 +20,18 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true); // Default to enabled
   const { toast } = useToast();
   const { user } = useAuth();
   const [socket, setSocket] = useState<WebSocket | null>(null);
+
+  // Load user preference from localStorage on mount
+  useEffect(() => {
+    const storedPreference = localStorage.getItem('notificationsEnabled');
+    if (storedPreference !== null) {
+      setNotificationsEnabled(storedPreference === 'true');
+    }
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
   
@@ -197,19 +208,21 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     
     setNotifications(prev => [newNotification, ...prev]);
     
-    // Show toast notification
-    toast({
-      title: newNotification.title,
-      description: newNotification.message,
-      variant: newNotification.type === "error" ? "destructive" : "default"
-    });
+    // Only show toast notification if notifications are enabled
+    if (notificationsEnabled) {
+      toast({
+        title: newNotification.title,
+        description: newNotification.message,
+        variant: newNotification.type === "error" ? "destructive" : "default"
+      });
+    }
     
     // Different icons based on notification type
     // (We don't use this in the toast due to type constraints,
     // but we use it in the notification list component)
     
     return newNotification.id;
-  }, [toast]);
+  }, [toast, notificationsEnabled]);
 
   const markAsRead = useCallback((id: string) => {
     setNotifications(prev => 
@@ -228,12 +241,29 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   const clearNotifications = useCallback(() => {
     setNotifications([]);
   }, []);
+  
+  const toggleNotifications = useCallback(() => {
+    const newValue = !notificationsEnabled;
+    setNotificationsEnabled(newValue);
+    localStorage.setItem('notificationsEnabled', newValue.toString());
+    
+    // Inform the user about the change
+    toast({
+      title: newValue ? "Notifications Enabled" : "Notifications Disabled",
+      description: newValue 
+        ? "You will now receive notifications" 
+        : "You will no longer receive notifications",
+      variant: "default"
+    });
+  }, [notificationsEnabled, toast]);
 
   return (
     <NotificationContext.Provider 
       value={{ 
         notifications, 
         unreadCount,
+        notificationsEnabled,
+        toggleNotifications,
         addNotification, 
         markAsRead, 
         markAllAsRead,
