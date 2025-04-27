@@ -18,13 +18,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register WebSocket server
   registerWebSocketServer(httpServer);
   
-  // Set up WebSocket connection handler
-  import('./websocket-supabase-clean').then(({ registerWebSocketServer }) => {
-    registerWebSocketServer(httpServer);
-  }).catch(error => {
-    console.error('Failed to initialize WebSocket server:', error);
-  });
-  
   // Set up Supabase authentication routes
   setupAuthRoutes(app);
 
