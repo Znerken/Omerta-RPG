@@ -76,16 +76,25 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
               // Reload the page to pick up the new game user data, but only once
               // Set a flag in localStorage to avoid reload loops
               const hasReloaded = localStorage.getItem('auth_reload_done');
-              if (!hasReloaded && !gameUser) {
-                console.log('Setting reload flag and refreshing to update game user data');
-                localStorage.setItem('auth_reload_done', 'true');
-                
-                // Give a short delay to avoid interrupting any pending operations
-                setTimeout(() => {
-                  window.location.reload();
-                }, 100);
+              const currentUserId = localStorage.getItem('current_user_id');
+              
+              // Check if we have userData and don't need to reload
+              if (hasReloaded || gameUser) {
+                console.log('Already authenticated, no need to reload');
                 return;
               }
+              
+              // Only reload once per session to break the loop
+              console.log('Setting reload flag and refreshing to update game user data');
+              localStorage.setItem('auth_reload_done', 'true');
+              localStorage.setItem('current_user_id', userData.id.toString());
+                
+              // Give a short delay to avoid interrupting any pending operations
+              setTimeout(() => {
+                // Navigate to dashboard to avoid reload loops
+                navigate('/dashboard');
+              }, 100);
+              return;
             } else {
               console.error('Failed to prefetch game user profile:', res.status, res.statusText);
               // Try to get the error message from the response
