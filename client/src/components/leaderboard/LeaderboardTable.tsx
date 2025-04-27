@@ -84,15 +84,19 @@ export function LeaderboardTable({ defaultTab = "level" }: LeaderboardTableProps
                         <div className={cn(
                           "absolute inset-0 rounded-full",
                           isCurrentUser 
-                            ? "bg-gradient-to-r from-gold-400 to-gold-600 animate-pulse-slow" 
-                            : index < 3 
-                              ? "bg-gradient-to-r from-primary to-secondary animate-pulse-slow"
-                              : "bg-gradient-to-r from-slate-700 to-slate-900"
+                            ? "bg-gradient-to-r from-gold-400 to-gold-600 animate-pulse-slow animate-glow" 
+                            : index === 0 
+                              ? "bg-gradient-to-r from-gold-400 to-gold-600 animate-pulse-slow"
+                              : index === 1 
+                                ? "bg-gradient-to-r from-silver-300 to-silver-500 animate-pulse-slow"
+                                : index === 2 
+                                  ? "bg-gradient-to-r from-bronze-300 to-bronze-600 animate-pulse-slow"
+                                  : "bg-gradient-to-r from-slate-700 to-slate-900"
                         )} 
                         style={{ 
                           filter: isCurrentUser ? "blur(6px)" : index < 3 ? "blur(4px)" : "blur(2px)",
-                          opacity: isCurrentUser ? 0.8 : index < 3 ? 0.6 : 0.3,
-                          transform: "scale(1.15)",
+                          opacity: isCurrentUser ? 0.8 : index < 3 ? 0.7 : 0.3,
+                          transform: "scale(1.2)",
                         }}/>
                         
                         {/* Avatar Frame */}
@@ -111,16 +115,16 @@ export function LeaderboardTable({ defaultTab = "level" }: LeaderboardTableProps
                         style={{ transform: "scale(1.05)" }}/>
                         
                         {/* Avatar Image */}
-                        <Avatar className="h-10 w-10 relative z-10 rounded-full">
+                        <div className="h-10 w-10 relative z-10 overflow-hidden rounded-full">
                           {player.avatar ? (
-                            <AvatarImage 
+                            <img 
                               src={player.avatar} 
                               alt={player.username} 
-                              className="rounded-full object-cover"
+                              className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <AvatarFallback className={cn(
-                              "rounded-full",
+                            <div className={cn(
+                              "h-full w-full flex items-center justify-center rounded-full text-white",
                               index === 0 
                                 ? "bg-gradient-to-br from-gold-400 to-gold-600" 
                                 : index === 1 
@@ -130,9 +134,9 @@ export function LeaderboardTable({ defaultTab = "level" }: LeaderboardTableProps
                                     : "bg-gradient-to-br from-slate-700 to-slate-900"
                             )}>
                               {getInitials(player.username)}
-                            </AvatarFallback>
+                            </div>
                           )}
-                        </Avatar>
+                        </div>
                       </motion.div>
                     </Link>
                     <Link href={`/player/${player.id}`} className="ml-2 hover:underline">
