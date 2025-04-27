@@ -27,12 +27,6 @@ import {
   type BackgroundEffect,
   getNameEffectStyles 
 } from "@/components/profile/ProfileCustomization";
-import {
-  PROFILE_WIDGETS,
-  ProfileWidget,
-  type WidgetPosition,
-  WidgetContainer
-} from "@/components/profile/ProfileWidgets";
 import { 
   User, 
   DollarSign, 
@@ -160,42 +154,11 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         ? BACKGROUND_EFFECTS.find(effect => effect.id === savedBgEffectId) 
         : BACKGROUND_EFFECTS.find(effect => effect.id === 'none');
       
-      // Widgets
-      const savedWidgetsData = localStorage.getItem('profile-widgets');
-      let widgetsToUse: ProfileWidget[] = [];
-      
-      if (savedWidgetsData) {
-        try {
-          const parsedWidgets = JSON.parse(savedWidgetsData);
-          
-          if (Array.isArray(parsedWidgets)) {
-            widgetsToUse = parsedWidgets.map((widgetData: any) => {
-              const baseWidget = PROFILE_WIDGETS.find(w => w.id === widgetData.id);
-              if (!baseWidget) return null;
-              return { ...baseWidget, position: widgetData.position as WidgetPosition };
-            }).filter(Boolean) as ProfileWidget[];
-          }
-        } catch (e) {
-          console.error("Error parsing widgets data:", e);
-        }
-      }
-      
-      // If no widgets loaded, set up defaults
-      if (widgetsToUse.length === 0) {
-        widgetsToUse = [
-          { ...PROFILE_WIDGETS.find(w => w.id === 'cash')!, position: 'top' },
-          { ...PROFILE_WIDGETS.find(w => w.id === 'respect')!, position: 'top' },
-          { ...PROFILE_WIDGETS.find(w => w.id === 'rank')!, position: 'left' },
-          { ...PROFILE_WIDGETS.find(w => w.id === 'crew')!, position: 'right' }
-        ].filter(Boolean) as ProfileWidget[];
-      }
-      
       return {
         frame: frameToUse || AVATAR_FRAMES[0],
         theme: themeToUse || PROFILE_THEMES[0],
         nameEffect: nameEffectToUse || NAME_EFFECTS[0],
-        bgEffect: bgEffectToUse || BACKGROUND_EFFECTS[0],
-        widgets: widgetsToUse
+        bgEffect: bgEffectToUse || BACKGROUND_EFFECTS[0]
       };
     } catch (error) {
       console.error("Error loading customization settings:", error);
@@ -216,9 +179,6 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
   );
   const [selectedBgEffect, setSelectedBgEffect] = useState<BackgroundEffect>(
     savedSettings?.bgEffect || BACKGROUND_EFFECTS.find(effect => effect.id === 'none') || BACKGROUND_EFFECTS[0]
-  );
-  const [selectedWidgets, setSelectedWidgets] = useState<ProfileWidget[]>(
-    savedSettings?.widgets || []
   );
   const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
   
@@ -260,13 +220,6 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
     
     // Until we set up the API endpoints, we'll use localStorage for persistence
     localStorage.setItem('userCustomization', JSON.stringify(customizationData));
-    
-    // Save widgets configuration separately (so it's easier to maintain)
-    const widgetsData = selectedWidgets.map(widget => ({
-      id: widget.id,
-      position: widget.position
-    }));
-    localStorage.setItem('profile-widgets', JSON.stringify(widgetsData));
     
     toast({
       title: "Profile customization saved",
@@ -1074,31 +1027,9 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
       </div>
       
       {/* Main content grid */}
-      {/* Top Widgets Area */}
-      {selectedWidgets.filter(w => w.position === 'top').length > 0 && (
-        <div className="mb-6">
-          <WidgetContainer 
-            widgets={selectedWidgets.filter(widget => widget.position === 'top')} 
-            userData={userProfile}
-            position="top"
-          />
-        </div>
-      )}
-      
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-        {/* Left Widgets Area */}
-        {selectedWidgets.filter(w => w.position === 'left').length > 0 && (
-          <div className="xl:col-span-3">
-            <WidgetContainer
-              widgets={selectedWidgets.filter(widget => widget.position === 'left')}
-              userData={userProfile}
-              position="left"
-            />
-          </div>
-        )}
-        
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
         {/* Left Column - User Bio and Stats */}
-        <div className="xl:col-span-3 space-y-6">
+        <div className="xl:col-span-1 space-y-6">
           {/* Bio Card */}
           <Card className="bg-dark-surface border-primary/20 overflow-hidden">
             <CardHeader className="pb-2 border-b border-border/30">
@@ -1260,21 +1191,10 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         </div>
         
         {/* Main showcase area */}
-        <div className="xl:col-span-9 space-y-8">
-        
-          {/* Right Widgets Area */}
-          {selectedWidgets.filter(w => w.position === 'right').length > 0 && (
-            <div className="w-full mb-6">
-              <WidgetContainer
-                widgets={selectedWidgets.filter(widget => widget.position === 'right')}
-                userData={userProfile}
-                position="right"
-              />
-            </div>
-          )}
+        <div className="xl:col-span-3 space-y-8">
           
           {/* HTML Profile Showcase */}
-          <Card className="bg-dark-surface border-primary/20 overflow-hidden w-full">
+          <Card className="bg-dark-surface border-primary/20 overflow-hidden">
             <CardHeader className="pb-2 border-b border-border/30">
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -1299,11 +1219,11 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
               ) : (
                 htmlProfile ? (
                   <div 
-                    className="profile-html-content p-6 min-h-[300px]"
+                    className="profile-html-content p-6"
                     dangerouslySetInnerHTML={{ __html: htmlProfile }}
                   />
                 ) : (
-                  <div className="p-8 text-center text-muted-foreground min-h-[300px] flex flex-col items-center justify-center">
+                  <div className="p-8 text-center text-muted-foreground">
                     <PenTool className="h-12 w-12 mx-auto mb-3 opacity-20" />
                     <h3 className="text-lg font-medium mb-2">Your Custom Showcase</h3>
                     <p>This is where you can display your custom showcase. Click "Edit Profile" to personalize it.</p>
@@ -1429,17 +1349,6 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
         </div>
       </div>
       
-      {/* Bottom Widgets Area */}
-      {selectedWidgets.filter(w => w.position === 'bottom').length > 0 && (
-        <div className="mt-6">
-          <WidgetContainer
-            widgets={selectedWidgets.filter(widget => widget.position === 'bottom')}
-            userData={userProfile}
-            position="bottom"
-          />
-        </div>
-      )}
-      
       {/* Custom CSS for the HTML showcase */}
       <style>{`
         .profile-html-content {
@@ -1484,18 +1393,33 @@ export default function ProfilePage({ userId }: ProfilePageProps) {
           selectedTheme={selectedProfileTheme}
           selectedNameEffect={selectedNameEffect}
           selectedBackgroundEffect={selectedBgEffect}
-          selectedWidgets={selectedWidgets}
           userAvatar={avatarPreview || userProfile?.avatar || undefined}
           userName={username}
           onFrameChange={setSelectedFrame}
           onThemeChange={setSelectedProfileTheme}
           onNameEffectChange={setSelectedNameEffect}
           onBgEffectChange={setSelectedBgEffect}
-          onWidgetsChange={setSelectedWidgets}
           onClose={() => {
             setIsCustomizationOpen(false);
-            // Save customization to localStorage and show toast
-            saveCustomization();
+            // Save current selections to localStorage for persistence
+            localStorage.setItem('profile-frame', selectedFrame.id);
+            localStorage.setItem('profile-theme', selectedProfileTheme.id);
+            localStorage.setItem('profile-name-effect', selectedNameEffect.id);
+            localStorage.setItem('profile-bg-effect', selectedBgEffect.id);
+            
+            // Also save combined data for easier loading
+            const customizationData = {
+              frameId: selectedFrame.id,
+              themeId: selectedProfileTheme.id,
+              nameEffectId: selectedNameEffect.id,
+              backgroundEffectId: selectedBgEffect.id
+            };
+            localStorage.setItem('userCustomization', JSON.stringify(customizationData));
+            
+            toast({
+              title: "Profile customization saved",
+              description: "Your profile style has been updated",
+            });
           }}
         />
       )}
