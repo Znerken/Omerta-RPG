@@ -597,45 +597,39 @@ export class GangStorage {
       console.log(`[DEBUG] Removing user ${userId} from gang ${gangId}`);
       
       // Begin transaction
-      await db.execute(sql.raw(`BEGIN`));
+      await db.execute(sql`BEGIN`);
       
-      // Check if user is actually in the gang first with a parameterized query
-      const checkQueryText = `
-        SELECT * FROM gang_members WHERE user_id = $1 AND gang_id = $2
-      `;
-      
-      const checkResult = await db.execute(sql.raw(checkQueryText, [userId, gangId]));
+      // Check if user is actually in the gang first
+      const checkResult = await db.execute(sql`
+        SELECT * FROM gang_members WHERE user_id = ${userId} AND gang_id = ${gangId}
+      `);
       
       if (!checkResult.rows || checkResult.rows.length === 0) {
         console.log(`[DEBUG] User ${userId} is not a member of gang ${gangId}`);
-        await db.execute(sql.raw(`ROLLBACK`));
+        await db.execute(sql`ROLLBACK`);
         return false;
       }
       
       console.log(`[DEBUG] Found gang membership to remove:`, JSON.stringify(checkResult.rows[0]));
       
-      // Remove member from gang using parameterized query to avoid SQL injection
-      const deleteQueryText = `
-        DELETE FROM gang_members WHERE user_id = $1 AND gang_id = $2
-      `;
-      
-      await db.execute(sql.raw(deleteQueryText, [userId, gangId]));
+      // Remove member from gang
+      await db.execute(sql`
+        DELETE FROM gang_members WHERE user_id = ${userId} AND gang_id = ${gangId}
+      `);
       
       // Update user's gang_id to null
-      const updateQueryText = `
-        UPDATE users SET gang_id = NULL WHERE id = $1
-      `;
-      
-      await db.execute(sql.raw(updateQueryText, [userId]));
+      await db.execute(sql`
+        UPDATE users SET gang_id = NULL WHERE id = ${userId}
+      `);
       
       // Commit transaction
-      await db.execute(sql.raw(`COMMIT`));
+      await db.execute(sql`COMMIT`);
       
       console.log(`[DEBUG] Successfully removed user ${userId} from gang ${gangId}`);
       return true;
     } catch (error) {
       // Rollback on error
-      await db.execute(sql.raw(`ROLLBACK`));
+      await db.execute(sql`ROLLBACK`);
       console.error(`Error removing user ${userId} from gang ${gangId}:`, error);
       return false;
     }
@@ -678,13 +672,11 @@ export class GangStorage {
     try {
       console.log(`[DEBUG] Updating contribution for user ${userId} in gang ${gangId} by ${amount}`);
       
-      // Get current contribution with parameterized query
-      const findQueryText = `
+      // Get current contribution
+      const findResult = await db.execute(sql`
         SELECT * FROM gang_members 
-        WHERE user_id = $1 AND gang_id = $2
-      `;
-      
-      const findResult = await db.execute(sql.raw(findQueryText, [userId, gangId]));
+        WHERE user_id = ${userId} AND gang_id = ${gangId}
+      `);
       
       if (!findResult.rows || findResult.rows.length === 0) {
         console.log(`[DEBUG] No gang membership found for user ${userId} in gang ${gangId}`);
@@ -698,15 +690,13 @@ export class GangStorage {
       const newContribution = currentContribution + amount;
       console.log(`[DEBUG] Updating contribution from ${currentContribution} to ${newContribution}`);
       
-      // Update contribution with parameterized query
-      const updateQueryText = `
+      // Update contribution
+      const updateResult = await db.execute(sql`
         UPDATE gang_members 
-        SET contribution = $1
-        WHERE user_id = $2 AND gang_id = $3
+        SET contribution = ${newContribution}
+        WHERE user_id = ${userId} AND gang_id = ${gangId}
         RETURNING *
-      `;
-      
-      const updateResult = await db.execute(sql.raw(updateQueryText, [newContribution, userId, gangId]));
+      `);
       
       if (!updateResult.rows || updateResult.rows.length === 0) {
         console.log(`[DEBUG] Failed to update contribution for user ${userId} in gang ${gangId}`);
@@ -974,12 +964,12 @@ export class GangStorage {
   async endGangWar(warId: number, winnerId: number): Promise<GangWar | undefined> {
     try {
       // Begin transaction
-      await db.execute(sql.raw(`BEGIN`));
+      await db.execute(sql`BEGIN`);
       
       // Get the war
       const war = await this.getGangWar(warId);
       if (!war) {
-        await db.execute(sql.raw(`ROLLBACK`));
+        await db.execute(sql`ROLLBACK`);
         return undefined;
       }
       
@@ -1000,12 +990,12 @@ export class GangStorage {
       }
       
       // Commit transaction
-      await db.execute(sql.raw(`COMMIT`));
+      await db.execute(sql`COMMIT`);
       
       return updatedWar;
     } catch (error) {
       // Rollback on error
-      await db.execute(sql.raw(`ROLLBACK`));
+      await db.execute(sql`ROLLBACK`);
       console.error(`Error ending gang war with ID ${warId}:`, error);
       return undefined;
     }
@@ -1321,26 +1311,26 @@ export class GangStorage {
   }> {
     try {
       // Begin transaction
-      await db.execute(sql.raw(`BEGIN`));
+      await db.execute(sql`BEGIN`);
       
       // Check if mission is complete
       const { complete, attempt, mission } = await this.checkMissionCompletion(attemptId);
       
       if (!complete || !attempt || !mission) {
-        await db.execute(sql.raw(`ROLLBACK`));
+        await db.execute(sql`ROLLBACK`);
         return { success: false, error: "Mission is not complete yet" };
       }
       
       // Check if mission is already collected
       if (attempt.status !== "completed") {
-        await db.execute(sql.raw(`ROLLBACK`));
+        await db.execute(sql`ROLLBACK`);
         return { success: false, error: "Mission rewards already collected" };
       }
       
       // Get the gang
       const gang = await this.getGang(attempt.gangId);
       if (!gang) {
-        await db.execute(sql.raw(`ROLLBACK`));
+        await db.execute(sql`ROLLBACK`);
         return { success: false, error: "Gang not found" };
       }
       
@@ -1361,7 +1351,7 @@ export class GangStorage {
         .where(eq(gangMissionAttempts.id, attemptId));
       
       // Commit transaction
-      await db.execute(sql.raw(`COMMIT`));
+      await db.execute(sql`COMMIT`);
       
       return {
         success: true,
@@ -1373,7 +1363,7 @@ export class GangStorage {
       };
     } catch (error) {
       // Rollback on error
-      await db.execute(sql.raw(`ROLLBACK`));
+      await db.execute(sql`ROLLBACK`);
       console.error(`Error collecting rewards for mission attempt ${attemptId}:`, error);
       return { success: false, error: "Unknown error occurred" };
     }
