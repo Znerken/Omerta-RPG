@@ -1171,6 +1171,68 @@ export default function AdminPage() {
                     </div>
                   </CardContent>
                 </Card>
+                
+                <Card className="bg-dark-lighter hover:bg-dark-surface transition-colors">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="p-2 bg-primary/20 rounded-full">
+                        <Clock4 className="h-6 w-6 text-primary" />
+                      </div>
+                      <CardTitle className="text-lg">Throttle Demo</CardTitle>
+                      <CardDescription>Test rate limiting and throttling functionality</CardDescription>
+                      <Link href="/throttle-demo">
+                        <Button 
+                          variant="default" 
+                          className="mt-4 w-full"
+                        >
+                          Open Demo
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-dark-lighter hover:bg-dark-surface transition-colors">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="p-2 bg-primary/20 rounded-full">
+                        <UserPlus className="h-6 w-6 text-primary" />
+                      </div>
+                      <CardTitle className="text-lg">Test User Management</CardTitle>
+                      <CardDescription>Create and manage test users for development</CardDescription>
+                      
+                      <div className="flex flex-col gap-2 mt-4 w-full">
+                        <Button
+                          variant="default"
+                          onClick={handleCreateTestUser}
+                          disabled={createTestUserMutation.isPending}
+                          className="w-full"
+                        >
+                          {createTestUserMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating...
+                            </>
+                          ) : "Create Test User"}
+                        </Button>
+                        
+                        <Button
+                          variant="destructive"
+                          onClick={handleDeleteTestUsers}
+                          disabled={deleteTestUsersMutation.isPending}
+                          className="w-full"
+                        >
+                          {deleteTestUsersMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : "Delete All Test Users"}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </CardContent>
           </Card>
