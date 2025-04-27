@@ -93,8 +93,46 @@ export function setupAuthRoutes(app: Express) {
   });
 
   // Get current user endpoint
-  app.use('/api/user', authProtected, (req: Request, res: Response) => {
-    res.json(req.user);
+  app.use('/api/user', async (req: Request, res: Response) => {
+    try {
+      // Extract token from Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+        return res.status(401).json({ 
+          message: 'No authorization header',
+          needsAuth: true 
+        });
+      }
+      
+      // Validate JWT token with Supabase
+      const supabaseUser = await extractAndValidateToken(req);
+      if (!supabaseUser) {
+        return res.status(401).json({ 
+          message: 'Invalid token',
+          needsAuth: true 
+        });
+      }
+      
+      // Get user from database using Supabase ID
+      const user = await storage.getUserBySupabaseId(supabaseUser.id);
+      
+      // If user exists in game database, return it
+      if (user) {
+        return res.json(user);
+      }
+      
+      // If user is authenticated with Supabase but doesn't have a game account,
+      // return a special response indicating they need to link their account
+      return res.status(200).json({
+        message: 'Supabase account not linked to game account',
+        needsLinking: true,
+        supabaseId: supabaseUser.id,
+        email: supabaseUser.email
+      });
+    } catch (error) {
+      console.error('Error in /api/user endpoint:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
   });
 
   // Check if username or email is already taken

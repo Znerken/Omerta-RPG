@@ -53,15 +53,25 @@ export function ProtectedRoute({ path, component: Component }: RouteProps) {
           try {
             console.log('Attempting to prefetch game user profile with token:', session.access_token.substring(0, 10) + '...');
             
-            const res = await fetch('/api/user/profile', {
+            const res = await fetch('/api/user', {
               headers: {
                 'Authorization': `Bearer ${session.access_token}`
               }
             });
             
             if (res.ok) {
-              const gameUserData = await res.json();
-              console.log('Successfully prefetched game user profile:', gameUserData ? 'Data found' : 'No data returned');
+              const userData = await res.json();
+              console.log('Successfully fetched user API response:', userData);
+              
+              // Check if this is a "needs linking" response
+              if (userData.needsLinking) {
+                console.log('User needs account linking - redirecting to link account page');
+                navigate('/link-account');
+                return;
+              }
+              
+              // Otherwise it's a normal game user profile
+              console.log('Successfully prefetched game user profile');
               
               // Reload the page to pick up the new game user data, but only once
               // Set a flag in localStorage to avoid reload loops
