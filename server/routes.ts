@@ -64,6 +64,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // TEMPORARY ENDPOINT - create a test gang without authentication
+  app.get("/api/debug/create-gang", async (req, res) => {
+    try {
+      console.log("[DEBUG] Creating a test gang directly into the gangs table");
+      
+      // Explicitly set content type to JSON
+      res.setHeader('Content-Type', 'application/json');
+      
+      // Direct SQL query to create a gang
+      const gangInsertQuery = `
+        INSERT INTO gangs (name, tag, description, logo, owner_id, level, experience, respect, strength, defense) 
+        VALUES ('Black Hand Society', 'BHS', 'A powerful criminal enterprise', '', 1, 1, 0, 0, 10, 10)
+        RETURNING *
+      `;
+      
+      try {
+        const result = await db.execute(sql.raw(gangInsertQuery));
+        console.log("[DEBUG] Gang insert result:", JSON.stringify(result.rows, null, 2));
+        
+        return res.json({
+          success: true,
+          gang: result.rows[0],
+          timestamp: new Date().toISOString()
+        });
+      } catch (sqlError) {
+        console.error("[DEBUG] SQL Error:", sqlError);
+        return res.status(500).json({ 
+          success: false,
+          error: String(sqlError)
+        });
+      }
+    } catch (error) {
+      console.error("[DEBUG] Gang creation error:", error);
+      return res.status(500).json({ 
+        success: false,
+        error: String(error)
+      });
+    }
+  });
+  
   // sets up /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
   
