@@ -264,60 +264,60 @@ export function FallbackLeaderboard({ players, activeTab }: { players: any[], ac
             <div className="flex flex-1 items-center">
               {/* Profile image - will use avatar if available, otherwise a placeholder */}
               <div 
-                className={`h-16 w-16 rounded-md overflow-hidden mr-4 border cursor-pointer ${
-                  i === 0 ? 'border-amber-500/60' :
-                  i === 1 ? 'border-slate-400/60' :
-                  i === 2 ? 'border-amber-700/60' :
+                className={`h-16 w-16 rounded-full overflow-hidden mr-4 border cursor-pointer ${
+                  i === 0 ? 'border-amber-500/60 shadow-[0_0_15px_rgba(245,158,11,0.3)]' :
+                  i === 1 ? 'border-slate-400/60 shadow-[0_0_10px_rgba(148,163,184,0.2)]' :
+                  i === 2 ? 'border-amber-700/60 shadow-[0_0_10px_rgba(180,83,9,0.2)]' :
                   'border-gray-700/40'
                 } hover:ring-2 hover:ring-primary/50 transition-all duration-200`}
                 onClick={() => goToProfile(player.id)}
                 title={`View ${player.username}'s profile`}
               >
-                <div className="h-full w-full bg-dark-surface flex items-center justify-center">
+                <div className="h-full w-full bg-dark-surface flex items-center justify-center rounded-full">
                   {player.avatar ? (
                     <img 
                       src={player.avatar} 
                       alt={`${player.username}'s avatar`} 
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover rounded-full"
                     />
                   ) : player.id === 1 ? (
                     // Show extortionist avatar for player id 1
-                    <div className="h-full w-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                    <div className="h-full w-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center rounded-full">
                       <div className="text-2xl font-bold text-amber-500">
                         {player.username.charAt(0).toUpperCase()}
                       </div>
                     </div>
                   ) : player.id === 7 ? (
                     // Show tester avatar for player id 7
-                    <div className="h-full w-full bg-gradient-to-br from-red-900 to-gray-900 flex items-center justify-center">
+                    <div className="h-full w-full bg-gradient-to-br from-red-900 to-gray-900 flex items-center justify-center rounded-full">
                       <div className="text-2xl font-bold text-red-400">
                         {player.username.charAt(0).toUpperCase()}
                       </div>
                     </div>
                   ) : player.id === 9 ? (
                     // Show Toffe avatar for player id 9
-                    <div className="h-full w-full bg-gradient-to-br from-blue-900 to-gray-900 flex items-center justify-center">
+                    <div className="h-full w-full bg-gradient-to-br from-blue-900 to-gray-900 flex items-center justify-center rounded-full">
                       <div className="text-2xl font-bold text-blue-400">
                         {player.username.charAt(0).toUpperCase()}
                       </div>
                     </div>
                   ) : player.id === 10 ? (
                     // Show yaboi avatar for player id 10
-                    <div className="h-full w-full bg-gradient-to-br from-purple-900 to-gray-900 flex items-center justify-center">
+                    <div className="h-full w-full bg-gradient-to-br from-purple-900 to-gray-900 flex items-center justify-center rounded-full">
                       <div className="text-2xl font-bold text-purple-400">
                         {player.username.charAt(0).toUpperCase()}
                       </div>
                     </div>
                   ) : player.id === 11 ? (
                     // Show TEST123 avatar for player id 11
-                    <div className="h-full w-full bg-gradient-to-br from-green-900 to-gray-900 flex items-center justify-center">
+                    <div className="h-full w-full bg-gradient-to-br from-green-900 to-gray-900 flex items-center justify-center rounded-full">
                       <div className="text-2xl font-bold text-green-400">
                         {player.username.charAt(0).toUpperCase()}
                       </div>
                     </div>
                   ) : (
                     // Default placeholder for other players
-                    <div className={`text-3xl font-bold ${
+                    <div className={`text-3xl font-bold rounded-full ${
                       i === 0 ? 'text-amber-500' :
                       i === 1 ? 'text-slate-400' :
                       i === 2 ? 'text-amber-700' :
