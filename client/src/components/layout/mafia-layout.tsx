@@ -40,6 +40,7 @@ import { NotificationList } from "@/components/notification/notification-list";
 import { ConnectionStatus } from "@/components/social/ConnectionStatus";
 import { SocialSidebar } from "@/components/social/SocialSidebar";
 import { MiniProfile } from "@/components/profile/MiniProfile";
+import UserStatsDisplay from "@/components/user/user-stats-display";
 
 // Organize nav items into categories
 const personalItems = [
@@ -124,6 +125,9 @@ export function MafiaLayout({ children, title, description }: MafiaLayoutProps) 
             <div className="mb-5">
               <div className="w-full">
                 <MiniProfile variant="sidebar" className="w-full" />
+                <div className="mt-3">
+                  <UserStatsDisplay compact={true} className="px-2 py-2" />
+                </div>
               </div>
             </div>
           )}
@@ -285,6 +289,13 @@ export function MafiaLayout({ children, title, description }: MafiaLayoutProps) 
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-30 bg-background/95 pt-16">
           <div className="px-4 py-4 overflow-y-auto scrollbar-hide h-[calc(100%-4rem)]">
+            
+            {/* User Stats (Mobile) */}
+            {user && (
+              <div className="mb-4 bg-muted/30 rounded-lg px-3 py-2">
+                <UserStatsDisplay compact={true} className="my-2" />
+              </div>
+            )}
             {/* Personal Category */}
             <div className="mb-5">
               <h3 className="text-[11px] uppercase tracking-wider font-medium text-primary/70 mb-3 px-1.5">

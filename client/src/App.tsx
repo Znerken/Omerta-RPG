@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./hooks/use-auth";
 import { WebSocketProvider } from "./hooks/use-websocket-context";
+import { GlobalStatsProvider } from "./hooks/use-global-stats";
 import { NotificationProvider } from "./hooks/use-notification";
 import { AchievementsProvider } from "./hooks/use-achievements";
 import { MessagesProvider } from "./hooks/use-messages";
@@ -260,13 +261,15 @@ function App() {
         <Toaster />
         <AuthProvider>
           <WebSocketProvider>
-            <NotificationProvider>
-              <AchievementsProvider>
-                <MessagesProvider>
-                  <AppRouter />
-                </MessagesProvider>
-              </AchievementsProvider>
-            </NotificationProvider>
+            <GlobalStatsProvider>
+              <NotificationProvider>
+                <AchievementsProvider>
+                  <MessagesProvider>
+                    <AppRouter />
+                  </MessagesProvider>
+                </AchievementsProvider>
+              </NotificationProvider>
+            </GlobalStatsProvider>
           </WebSocketProvider>
         </AuthProvider>
       </QueryClientProvider>

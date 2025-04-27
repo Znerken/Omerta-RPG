@@ -92,6 +92,21 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // Create a debounced function to update user stats in the cache without refetching
+  const debouncedUpdateUserStats = useCallback(
+    debounce((newStats: Partial<UserStats>) => {
+      // Update user data in cache directly without refetching
+      queryClient.setQueryData(['/api/user'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          ...newStats,
+        };
+      });
+    }, 300),
+    []
+  );
+
   // Handle WebSocket messages
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
     if (!message) return;
@@ -101,6 +116,62 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     
     // Handle different message types
     switch (message.type) {
+      // USER STATS RELATED EVENTS
+      case 'stats_update':
+        // User stats were updated - update directly in the cache
+        if (message.data) {
+          debouncedUpdateUserStats(message.data);
+        }
+        break;
+        
+      case 'cash_transaction':
+        // Cash amount changed - update directly in the cache
+        if (message.data && typeof message.data.newBalance === 'number') {
+          debouncedUpdateUserStats({ cash: message.data.newBalance });
+          
+          // Only show toast for significant transactions
+          if (Math.abs(message.data.amount) >= 100) {
+            const isPositive = message.data.amount > 0;
+            toast({
+              title: isPositive ? 'Cash Received' : 'Cash Spent',
+              description: `${isPositive ? '+' : ''}$${message.data.amount.toLocaleString()}`,
+              variant: isPositive ? 'default' : 'secondary',
+            });
+          }
+        }
+        break;
+        
+      case 'xp_gain':
+        // XP was gained - update directly in the cache
+        if (message.data) {
+          const updates: Partial<UserStats> = { 
+            xp: message.data.newXp 
+          };
+          
+          // If level changed, update that too
+          if (message.data.newLevel && message.data.newLevel > 0) {
+            updates.level = message.data.newLevel;
+            
+            // Show level up toast
+            toast({
+              title: 'Level Up!',
+              description: `You've reached level ${message.data.newLevel}`,
+              variant: 'default',
+            });
+          }
+          
+          debouncedUpdateUserStats(updates);
+        }
+        break;
+        
+      case 'respect_change':
+        // Respect changed - update directly in the cache
+        if (message.data && typeof message.data.newRespect === 'number') {
+          debouncedUpdateUserStats({ respect: message.data.newRespect });
+        }
+        break;
+        
+      // SOCIAL RELATED EVENTS
       case 'friend_status':
         // Friend status update received - invalidate friend lists
         // Only show toast notification if we have the username and status
@@ -146,6 +217,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         debouncedInvalidateFriends();
         break;
       
+      // MESSAGING RELATED EVENTS  
       case 'newMessage':
       case 'newGangMessage':
       case 'globalMessage':
@@ -171,6 +243,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [
     toast, 
     dispatchWebSocketEvent,
+    debouncedUpdateUserStats,
     debouncedInvalidateFriends, 
     debouncedInvalidateOnline, 
     debouncedInvalidateRequests, 
