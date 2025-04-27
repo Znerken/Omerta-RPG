@@ -514,13 +514,14 @@ export class GangStorage {
   }
 
   /**
-   * Update a member's rank
+   * Update a member's role
    */
   async updateMemberRank(userId: number, gangId: number, rank: string): Promise<GangMember | undefined> {
     try {
+      // Using role column instead of rank
       const [updatedMember] = await db
         .update(gangMembers)
-        .set({ rank })
+        .set({ role: rank })
         .where(
           and(
             eq(gangMembers.userId, userId),
@@ -529,9 +530,15 @@ export class GangStorage {
         )
         .returning();
       
+      // For compatibility with existing code:
+      if (updatedMember) {
+        // @ts-ignore
+        updatedMember.rank = updatedMember.role;
+      }
+      
       return updatedMember;
     } catch (error) {
-      console.error(`Error updating rank for user ${userId} in gang ${gangId}:`, error);
+      console.error(`Error updating role for user ${userId} in gang ${gangId}:`, error);
       return undefined;
     }
   }
