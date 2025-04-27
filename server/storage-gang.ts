@@ -431,25 +431,40 @@ export class GangStorage {
       // Use parameterized query to avoid SQL injection
       const query = {
         text: `
-          SELECT * FROM gang_members 
-          WHERE user_id = $1
+          SELECT gm.*, g.* 
+          FROM gang_members gm
+          JOIN gangs g ON gm.gang_id = g.id
+          WHERE gm.user_id = $1
         `,
         args: [userId]
       };
       
       const result = await db.execute(query);
+      
+      if (!result.rows || result.rows.length === 0) {
+        console.log(`[DEBUG] No gang membership found for user ${userId}`);
+        return undefined;
+      }
+      
       const member = result.rows[0];
+      console.log(`[DEBUG] Found gang membership for user ${userId}:`, JSON.stringify(member));
       
-      if (!member) {
-        return undefined;
-      }
-      
-      // Get gang info
-      const gang = await this.getGang(member.gang_id);
-      
-      if (!gang) {
-        return undefined;
-      }
+      // Get gang info from the joined query
+      const gang = {
+        id: member.id,
+        name: member.name,
+        tag: member.tag,
+        description: member.description,
+        logo: member.logo,
+        bankBalance: member.bank_balance,
+        level: member.level,
+        experience: member.experience,
+        respect: member.respect,
+        strength: member.strength,
+        defense: member.defense,
+        createdAt: member.created_at,
+        ownerId: member.owner_id
+      };
       
       // Convert snake_case to camelCase for consistency
       return {
@@ -462,7 +477,66 @@ export class GangStorage {
       };
     } catch (error) {
       console.error(`Error in getGangMember:`, error);
-      return undefined;
+      
+      // Fallback to a simpler query if the JOIN fails
+      try {
+        console.log('[DEBUG] Attempting fallback query for getGangMember');
+        const fallbackQuery = {
+          text: `SELECT * FROM gang_members WHERE user_id = $1`,
+          args: [userId]
+        };
+        
+        const fallbackResult = await db.execute(fallbackQuery);
+        
+        if (!fallbackResult.rows || fallbackResult.rows.length === 0) {
+          console.log(`[DEBUG] Fallback: No gang membership found for user ${userId}`);
+          return undefined;
+        }
+        
+        const member = fallbackResult.rows[0];
+        console.log(`[DEBUG] Fallback: Found gang membership:`, JSON.stringify(member));
+        
+        // Get gang info separately
+        const gangQuery = {
+          text: `SELECT * FROM gangs WHERE id = $1`,
+          args: [member.gang_id]
+        };
+        
+        const gangResult = await db.execute(gangQuery);
+        
+        if (!gangResult.rows || gangResult.rows.length === 0) {
+          console.log(`[DEBUG] Fallback: No gang found with ID ${member.gang_id}`);
+          return undefined;
+        }
+        
+        const gang = gangResult.rows[0];
+        
+        return {
+          id: member.id,
+          gangId: member.gang_id,
+          userId: member.user_id,
+          role: member.role,
+          joinedAt: member.joined_at,
+          gang: {
+            id: gang.id,
+            name: gang.name,
+            tag: gang.tag,
+            description: gang.description,
+            logo: gang.logo,
+            bankBalance: gang.bank_balance,
+            level: gang.level,
+            experience: gang.experience,
+            respect: gang.respect,
+            strength: gang.strength,
+            defense: gang.defense,
+            createdAt: gang.created_at,
+            ownerId: gang.owner_id
+          }
+        };
+      } catch (fallbackError) {
+        console.error(`Error in getGangMember fallback:`, fallbackError);
+        return undefined;
+      }
     }
   }
 
