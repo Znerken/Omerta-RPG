@@ -4,6 +4,7 @@ import { Text, Float, ContactShadows, PerspectiveCamera } from '@react-three/dre
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
 import { User } from '@shared/schema';
+import { useLocation } from 'wouter';
 
 // Trophy component that floats and rotates
 export function Trophy(props: { position: [number, number, number], scale?: number, color?: string }) {
@@ -220,6 +221,13 @@ export function PlayerCard(props: {
 
 // Enhanced 2D Leaderboard
 export function FallbackLeaderboard({ players, activeTab }: { players: any[], activeTab: string }) {
+  const [, navigate] = useLocation();
+
+  // Function to navigate to player profile
+  const goToProfile = (playerId: number) => {
+    navigate(`/player/${playerId}`);
+  };
+
   return (
     <div className="bg-dark-surface/90 p-5 rounded-md h-[calc(100vh-14rem)] overflow-auto border border-dark-lighter/50 shadow-xl">
       <h2 className="text-2xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-amber-500 to-red-600 uppercase tracking-wider">
@@ -255,12 +263,16 @@ export function FallbackLeaderboard({ players, activeTab }: { players: any[], ac
             {/* Profile & player info - main content */}
             <div className="flex flex-1 items-center">
               {/* Profile image - will use avatar if available, otherwise a placeholder */}
-              <div className={`h-16 w-16 rounded-md overflow-hidden mr-4 border ${
-                i === 0 ? 'border-amber-500/60' :
-                i === 1 ? 'border-slate-400/60' :
-                i === 2 ? 'border-amber-700/60' :
-                'border-gray-700/40'
-              }`}>
+              <div 
+                className={`h-16 w-16 rounded-md overflow-hidden mr-4 border cursor-pointer ${
+                  i === 0 ? 'border-amber-500/60' :
+                  i === 1 ? 'border-slate-400/60' :
+                  i === 2 ? 'border-amber-700/60' :
+                  'border-gray-700/40'
+                } hover:ring-2 hover:ring-primary/50 transition-all duration-200`}
+                onClick={() => goToProfile(player.id)}
+                title={`View ${player.username}'s profile`}
+              >
                 <div className="h-full w-full bg-dark-surface flex items-center justify-center">
                   {player.avatar ? (
                     <img 
@@ -268,7 +280,43 @@ export function FallbackLeaderboard({ players, activeTab }: { players: any[], ac
                       alt={`${player.username}'s avatar`} 
                       className="h-full w-full object-cover"
                     />
+                  ) : player.id === 1 ? (
+                    // Show extortionist avatar for player id 1
+                    <img 
+                      src="/images/avatars/mobster1.jpg" 
+                      alt={`${player.username}'s avatar`} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : player.id === 7 ? (
+                    // Show tester avatar for player id 7
+                    <img 
+                      src="/images/avatars/mobster2.jpg" 
+                      alt={`${player.username}'s avatar`} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : player.id === 9 ? (
+                    // Show Toffe avatar for player id 9
+                    <img 
+                      src="/images/avatars/mobster3.jpg" 
+                      alt={`${player.username}'s avatar`} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : player.id === 10 ? (
+                    // Show yaboi avatar for player id 10
+                    <img 
+                      src="/images/avatars/mobster4.jpg" 
+                      alt={`${player.username}'s avatar`} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : player.id === 11 ? (
+                    // Show TEST123 avatar for player id 11
+                    <img 
+                      src="/images/avatars/mobster5.jpg" 
+                      alt={`${player.username}'s avatar`} 
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
+                    // Default placeholder for other players
                     <div className={`text-3xl font-bold ${
                       i === 0 ? 'text-amber-500' :
                       i === 1 ? 'text-slate-400' :
@@ -283,12 +331,16 @@ export function FallbackLeaderboard({ players, activeTab }: { players: any[], ac
               
               {/* Player details */}
               <div className="flex-1">
-                <div className={`text-lg font-bold ${
-                  i === 0 ? 'text-amber-400' :
-                  i === 1 ? 'text-slate-300' :
-                  i === 2 ? 'text-amber-600' :
-                  'text-gray-300'
-                }`}>
+                <div 
+                  className={`text-lg font-bold cursor-pointer hover:underline ${
+                    i === 0 ? 'text-amber-400' :
+                    i === 1 ? 'text-slate-300' :
+                    i === 2 ? 'text-amber-600' :
+                    'text-gray-300'
+                  }`}
+                  onClick={() => goToProfile(player.id)}
+                  title={`View ${player.username}'s profile`}
+                >
                   {player.username}
                 </div>
                 <div className="text-xs text-gray-500 mt-1 flex items-center flex-wrap gap-2">
