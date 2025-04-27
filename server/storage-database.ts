@@ -219,10 +219,21 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
   
   async getAllGangs(): Promise<Gang[]> {
     try {
-      return await db
-        .select()
-        .from(gangs)
-        .orderBy(desc(gangs.level));
+      // The gangs table might not have all expected columns in the current schema
+      // Return empty array until the database is fully migrated
+      console.log("Getting all gangs - handling potential schema issues");
+      let results = [];
+      
+      try {
+        results = await db
+          .select()
+          .from(gangs)
+          .orderBy(desc(gangs.level));
+      } catch (err) {
+        console.warn("Error querying gangs, likely schema mismatch. Returning empty array:", err);
+      }
+      
+      return results;
     } catch (error) {
       console.error("Error in getAllGangs:", error);
       return [];
@@ -231,11 +242,22 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
 
   async getTopGangs(limit: number = 10): Promise<Gang[]> {
     try {
-      return await db
-        .select()
-        .from(gangs)
-        .orderBy(desc(gangs.level))
-        .limit(limit);
+      // The gangs table might not have all expected columns in the current schema
+      // Handle potential schema mismatches similar to getAllGangs
+      console.log("Getting top gangs - handling potential schema issues");
+      let results = [];
+      
+      try {
+        results = await db
+          .select()
+          .from(gangs)
+          .orderBy(desc(gangs.level))
+          .limit(limit);
+      } catch (err) {
+        console.warn("Error querying top gangs, likely schema mismatch. Returning empty array:", err);
+      }
+      
+      return results;
     } catch (error) {
       console.error("Error in getTopGangs:", error);
       return [];

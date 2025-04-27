@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Text, Float, Environment, ContactShadows, PerspectiveCamera, useTexture } from '@react-three/drei';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Vector3, MathUtils } from 'three';
+import { Text, Float, Environment, ContactShadows, PerspectiveCamera } from '@react-three/drei';
+import { motion } from 'framer-motion';
+import * as THREE from 'three';
 import { User } from '@shared/schema';
 
 // Trophy component that floats and rotates
@@ -60,8 +60,8 @@ export function PlayerCard(props: {
   const { player, index, position, selected, onClick, delay = 0 } = props;
   const groupRef = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
-  const targetPos = useRef(new Vector3(...position));
-  const initialPos = useRef(new Vector3(position[0], position[1] - 10, position[2]));
+  const targetPos = useRef(new THREE.Vector3(...position));
+  const initialPos = useRef(new THREE.Vector3(position[0], position[1] - 10, position[2]));
   
   // Create a spotlight effect for the selected card
   useEffect(() => {
@@ -82,23 +82,23 @@ export function PlayerCard(props: {
       
       // Slight hover effect
       if (hovered && !selected) {
-        groupRef.current.rotation.y = MathUtils.lerp(
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(
           groupRef.current.rotation.y,
           0.2,
           0.1
         );
-        groupRef.current.position.z = MathUtils.lerp(
+        groupRef.current.position.z = THREE.MathUtils.lerp(
           groupRef.current.position.z,
           position[2] + 0.2,
           0.1
         );
       } else if (!selected) {
-        groupRef.current.rotation.y = MathUtils.lerp(
+        groupRef.current.rotation.y = THREE.MathUtils.lerp(
           groupRef.current.rotation.y,
           0,
           0.1
         );
-        groupRef.current.position.z = MathUtils.lerp(
+        groupRef.current.position.z = THREE.MathUtils.lerp(
           groupRef.current.position.z,
           position[2],
           0.1
@@ -130,10 +130,10 @@ export function PlayerCard(props: {
       
       // Animate in with delay based on rank
       setTimeout(() => {
-        targetPos.current = new Vector3(...position);
+        targetPos.current = new THREE.Vector3(...position);
       }, delay);
     }
-  }, []);
+  }, [delay, position]);
   
   // Calculate a simple glow intensity based on rank
   const glowIntensity = Math.max(0, 3 - index) * 0.5;
@@ -163,7 +163,6 @@ export function PlayerCard(props: {
         position={[-1, 0, 0.06]}
         fontSize={0.4}
         color={getRankColor(index)}
-        font="/assets/fonts/Oswald-Bold.ttf"
         anchorX="center"
         anchorY="middle"
       >
@@ -175,7 +174,6 @@ export function PlayerCard(props: {
         position={[0.5, 0.2, 0.06]}
         fontSize={0.2}
         color="#FFFFFF"
-        font="/assets/fonts/Roboto-Bold.ttf"
         anchorX="center"
         anchorY="middle"
         maxWidth={1.5}
@@ -188,7 +186,6 @@ export function PlayerCard(props: {
         position={[0.2, -0.1, 0.06]}
         fontSize={0.15}
         color="#BBBBBB"
-        font="/assets/fonts/Roboto-Regular.ttf"
         anchorX="center"
         anchorY="middle"
       >
@@ -200,7 +197,6 @@ export function PlayerCard(props: {
         position={[0.7, -0.1, 0.06]}
         fontSize={0.15}
         color="#8BC34A"
-        font="/assets/fonts/RobotoMono-Bold.ttf"
         anchorX="center"
         anchorY="middle"
       >
@@ -222,97 +218,155 @@ export function PlayerCard(props: {
   );
 }
 
+// Simple alternative for when 3D fails to load
+export function FallbackLeaderboard({ players, activeTab }: { players: any[], activeTab: string }) {
+  return (
+    <div className="bg-dark-surface p-6 rounded-lg h-[400px] overflow-auto">
+      <h2 className="text-xl font-bold mb-4 text-center">{activeTab.toUpperCase()} LEADERBOARD</h2>
+      
+      <div className="space-y-4">
+        {players.slice(0, 10).map((player, i) => (
+          <motion.div 
+            key={player.id}
+            className={`flex items-center justify-between p-3 rounded-lg ${
+              i === 0 ? 'bg-amber-900/20 border border-amber-600/30' :
+              i === 1 ? 'bg-slate-700/20 border border-slate-400/30' :
+              i === 2 ? 'bg-amber-800/20 border border-amber-700/30' :
+              'bg-dark-lighter'
+            }`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+          >
+            <div className="flex items-center">
+              <div className={`w-8 h-8 flex items-center justify-center rounded-full mr-3 font-bold ${
+                i === 0 ? 'bg-amber-600/30 text-amber-300' :
+                i === 1 ? 'bg-slate-600/30 text-slate-300' :
+                i === 2 ? 'bg-amber-700/30 text-amber-600' :
+                'bg-gray-800/50 text-gray-400'
+              }`}>
+                {i + 1}
+              </div>
+              <div>
+                <div className="font-medium">{player.username}</div>
+                <div className="text-xs text-gray-400">Level {player.level}</div>
+              </div>
+            </div>
+            
+            <div className="text-right">
+              <div className="font-mono font-medium">${player.cash?.toLocaleString()}</div>
+              <div className="text-xs text-gray-400">{player.xp?.toLocaleString()} XP</div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // 3D Leaderboard Scene
 export function LeaderboardScene({ players, activeTab }: { players: any[], activeTab: string }) {
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
+  const [hasError, setHasError] = useState(false);
   
   // Reset the selection when tab changes
   useEffect(() => {
     setSelectedPlayer(null);
   }, [activeTab]);
 
+  // Error handler for 3D Canvas
+  const handleError = () => {
+    console.error("Error rendering 3D leaderboard, falling back to 2D");
+    setHasError(true);
+  };
+
+  if (hasError) {
+    return <FallbackLeaderboard players={players} activeTab={activeTab} />;
+  }
+
   return (
-    <Canvas shadows dpr={[1, 2]} style={{ height: '500px' }}>
-      <color attach="background" args={['#0d1117']} />
-      <fog attach="fog" args={['#070b10', 5, 20]} />
-      
-      <PerspectiveCamera 
-        makeDefault 
-        position={[0, 0, 5]} 
-        fov={45}
-      />
-      
-      {/* Top 3 Trophies */}
-      {players.length > 0 && (
-        <>
-          <Trophy position={[0, 2, 0]} scale={0.3} color="#FFD700" />
-          {players.length > 1 && (
-            <Trophy position={[-2, 1.6, 0]} scale={0.2} color="#C0C0C0" />
-          )}
-          {players.length > 2 && (
-            <Trophy position={[2, 1.6, 0]} scale={0.2} color="#CD7F32" />
-          )}
-        </>
-      )}
-      
-      {/* Leaderboard Title */}
-      <Text
-        position={[0, 3, 0]}
-        fontSize={0.5}
-        color="#FFFFFF"
-        font="/assets/fonts/Anton-Regular.ttf"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {activeTab.toUpperCase()} LEADERBOARD
-      </Text>
-      
-      {/* Player Cards */}
-      <group>
-        {players.slice(0, Math.min(10, players.length)).map((player, i) => (
-          <PlayerCard
-            key={player.id}
-            player={player}
-            index={i}
-            position={[
-              // Arrange in a curved formation
-              3.5 * Math.sin((i / Math.min(10, players.length)) * Math.PI),
-              -0.6 * i + 1,
-              -2 * Math.cos((i / Math.min(10, players.length)) * 0.5 * Math.PI)
-            ]}
-            selected={selectedPlayer === i}
-            onClick={() => setSelectedPlayer(i === selectedPlayer ? null : i)}
-            delay={i * 200}
-          />
-        ))}
-      </group>
-      
-      {/* Environment and lighting */}
-      <ambientLight intensity={0.4} />
-      <spotLight 
-        position={[0, 10, 0]} 
-        intensity={0.6} 
-        angle={0.3} 
-        penumbra={1} 
-        castShadow 
-      />
-      <directionalLight
-        position={[5, 5, 5]}
-        intensity={0.8}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-      />
-      
-      <ContactShadows
-        position={[0, -2, 0]}
-        opacity={0.4}
-        scale={10}
-        blur={1.5}
-        far={4}
-      />
-      
-      <Environment preset="city" />
-    </Canvas>
+    <div className="relative h-[500px]" onError={handleError}>
+      <Canvas shadows dpr={[1, 2]} style={{ height: '500px' }}>
+        <color attach="background" args={['#0d1117']} />
+        <fog attach="fog" args={['#070b10', 5, 20]} />
+        
+        <PerspectiveCamera 
+          makeDefault 
+          position={[0, 0, 5]} 
+          fov={45}
+        />
+        
+        {/* Top 3 Trophies */}
+        {players.length > 0 && (
+          <>
+            <Trophy position={[0, 2, 0]} scale={0.3} color="#FFD700" />
+            {players.length > 1 && (
+              <Trophy position={[-2, 1.6, 0]} scale={0.2} color="#C0C0C0" />
+            )}
+            {players.length > 2 && (
+              <Trophy position={[2, 1.6, 0]} scale={0.2} color="#CD7F32" />
+            )}
+          </>
+        )}
+        
+        {/* Leaderboard Title */}
+        <Text
+          position={[0, 3, 0]}
+          fontSize={0.5}
+          color="#FFFFFF"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {activeTab.toUpperCase()} LEADERBOARD
+        </Text>
+        
+        {/* Player Cards */}
+        <group>
+          {players.slice(0, Math.min(10, players.length)).map((player, i) => (
+            <PlayerCard
+              key={player.id}
+              player={player}
+              index={i}
+              position={[
+                // Arrange in a curved formation
+                3.5 * Math.sin((i / Math.min(10, players.length || 1)) * Math.PI),
+                -0.6 * i + 1,
+                -2 * Math.cos((i / Math.min(10, players.length || 1)) * 0.5 * Math.PI)
+              ]}
+              selected={selectedPlayer === i}
+              onClick={() => setSelectedPlayer(i === selectedPlayer ? null : i)}
+              delay={i * 200}
+            />
+          ))}
+        </group>
+        
+        {/* Environment and lighting */}
+        <ambientLight intensity={0.4} />
+        <spotLight 
+          position={[0, 10, 0]} 
+          intensity={0.6} 
+          angle={0.3} 
+          penumbra={1} 
+          castShadow 
+        />
+        <directionalLight
+          position={[5, 5, 5]}
+          intensity={0.8}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+        />
+        
+        <ContactShadows
+          position={[0, -2, 0]}
+          opacity={0.4}
+          scale={10}
+          blur={1.5}
+          far={4}
+        />
+        
+        <Environment preset="city" />
+      </Canvas>
+    </div>
   );
 }

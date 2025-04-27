@@ -40,7 +40,16 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws?userId=${user.id}`;
+    // Make sure the user ID is a valid number to avoid 400 errors
+    const userId = typeof user.id === 'number' ? user.id : parseInt(String(user.id), 10);
+    
+    if (isNaN(userId)) {
+      console.error("Invalid user ID for WebSocket connection:", user.id);
+      return;
+    }
+    
+    const wsUrl = `${protocol}//${window.location.host}/ws?userId=${userId}`;
+    console.log("Messages: Connecting to WebSocket:", wsUrl);
 
     // Close existing connection if any
     if (socket) {
