@@ -2,6 +2,7 @@ import { Express, Request, Response } from "express";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { users, userFriends, friendRequests, userStatus, stats, userDrugs, drugs } from "@shared/schema";
+import { casinoGames, casinoBets, casinoStats } from "@shared/schema-casino";
 import { eq, and } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
@@ -314,6 +315,116 @@ export function registerDevRoutes(app: Express) {
     } catch (error) {
       console.error("Error creating test user:", error);
       res.status(500).json({ message: "Failed to create test user" });
+    }
+  });
+  
+  // Create casino games for testing
+  app.post("/api/dev/seed-casino-games", developmentOnly, async (req, res) => {
+    try {
+      // Check if casino games table exists
+      const casinoTableExists = await db.execute(sql`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'casino_games'
+        ) as exists
+      `);
+      
+      if (!casinoTableExists.rows[0].exists) {
+        return res.status(404).json({ message: "Casino games table doesn't exist. Run db:push first." });
+      }
+      
+      // Sample casino games
+      const sampleGames = [
+        {
+          name: "Lucky Dice",
+          type: "dice",
+          description: "Predict if the dice will roll higher, lower, or exactly your target number.",
+          minBet: 10,
+          maxBet: 10000,
+          houseEdge: 0.05,
+          isActive: true,
+          imageUrl: "https://i.imgur.com/jYCFwkP.png"
+        },
+        {
+          name: "Mafia Slots",
+          type: "slots",
+          description: "Match symbols to win big in this classic slot machine game.",
+          minBet: 25,
+          maxBet: 5000,
+          houseEdge: 0.08,
+          isActive: true,
+          imageUrl: "https://i.imgur.com/S1JbRQ1.png"
+        },
+        {
+          name: "Family Roulette",
+          type: "roulette",
+          description: "Place your bets on where the ball will land.",
+          minBet: 50,
+          maxBet: 20000,
+          houseEdge: 0.053,
+          isActive: true,
+          imageUrl: "https://i.imgur.com/PZTJnhY.png"
+        },
+        {
+          name: "Consigliere Blackjack",
+          type: "blackjack",
+          description: "Beat the dealer's hand without going over 21.",
+          minBet: 100,
+          maxBet: 50000,
+          houseEdge: 0.02,
+          isActive: true,
+          imageUrl: "https://i.imgur.com/Q2pXfDY.png"
+        }
+      ];
+      
+      // Insert games
+      const insertedGames = [];
+      for (const game of sampleGames) {
+        try {
+          const [insertedGame] = await db.insert(casinoGames)
+            .values(game)
+            .returning();
+          
+          insertedGames.push(insertedGame);
+          console.log(`Created casino game: ${game.name} (ID: ${insertedGame.id})`);
+        } catch (error) {
+          console.error(`Error creating casino game ${game.name}:`, error);
+        }
+      }
+      
+      res.json({
+        message: `Created ${insertedGames.length} casino games`,
+        games: insertedGames
+      });
+    } catch (error) {
+      console.error("Error seeding casino games:", error);
+      res.status(500).json({ message: "Error seeding casino games" });
+    }
+  });
+
+  // Check if casino tables exist
+  app.get("/api/dev/check-casino-tables", developmentOnly, async (req, res) => {
+    try {
+      // Check if tables exist
+      const tableResults = await db.execute(sql`
+        SELECT 
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'casino_games') as games_exists,
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'casino_bets') as bets_exists,
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'casino_stats') as stats_exists
+      `);
+      
+      const result = tableResults.rows[0];
+      
+      const tableStatus = [
+        { table: "casino_games", exists: result.games_exists },
+        { table: "casino_bets", exists: result.bets_exists },
+        { table: "casino_stats", exists: result.stats_exists }
+      ];
+
+      res.json(tableStatus);
+    } catch (error) {
+      console.error("Error checking casino tables:", error);
+      res.status(500).json({ message: "Error checking casino tables" });
     }
   });
 }
