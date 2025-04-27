@@ -62,7 +62,13 @@ export function MiniProfile({
   // Calculate total bank balance across all accounts
   const totalBankBalance = accounts?.reduce((total: number, account: { balance: number }) => total + account.balance, 0) || 0;
 
-  const { username, level, cash, respect, isAdmin, avatar } = profile;
+  const { username, level, cash, respect, isAdmin, avatar, xp } = profile;
+  
+  // Calculate XP progress for leveling up
+  const xpRequired = level * 100;
+  // Use current XP and not total XP for level progress calculation
+  const currentLevelXP = xp - ((level - 1) * 100);
+  const xpProgress = Math.min(100, Math.round((currentLevelXP / xpRequired) * 100)) || 0;
   
   // Format currency helper function
   const formatCurrency = (amount: number) => {
@@ -97,6 +103,25 @@ export function MiniProfile({
           <div className="flex items-center text-xs text-muted-foreground">
             <Medal className="h-3.5 w-3.5 mr-1 text-gold" />
             Level {level}
+          </div>
+          
+          {/* XP progress bar */}
+          <div className="w-full mt-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="h-1.5 w-full bg-black/50 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full"
+                      style={{ width: `${xpProgress}%` }}
+                    />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="text-xs">Level Progress: {currentLevelXP}/{xpRequired} XP ({xpProgress}%)</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           
           {/* Money info */}
@@ -208,6 +233,25 @@ export function MiniProfile({
             </Button>
           </div>
         </div>
+      </div>
+      
+      {/* XP progress bar */}
+      <div className="mt-2">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-red-700 to-red-500 rounded-full"
+                  style={{ width: `${xpProgress}%` }}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="text-xs">Level Progress: {currentLevelXP}/{xpRequired} XP ({xpProgress}%)</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
       {/* Money Info */}
