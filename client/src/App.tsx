@@ -27,6 +27,7 @@ import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";
 import LeaderboardPage from "@/pages/leaderboard-page";
 import BankingPage from "@/pages/banking-page";
+import ATMBankingPage from "@/pages/atm-banking-page";
 import ChallengesPage from "@/pages/challenges-page";
 import AchievementsPage from "@/pages/achievements-page";
 import AdminPage from "@/pages/admin-page";
@@ -149,7 +150,13 @@ function AppRouter() {
       
       <Route path="/banking">
         {() => (
-          <ProtectedRoute path="/banking" component={() => <ProtectedPage component={BankingPage} />} />
+          <ProtectedRoute path="/banking" component={() => <ProtectedPage component={ATMBankingPage} />} />
+        )}
+      </Route>
+
+      <Route path="/banking-classic">
+        {() => (
+          <ProtectedRoute path="/banking-classic" component={() => <ProtectedPage component={BankingPage} />} />
         )}
       </Route>
       
