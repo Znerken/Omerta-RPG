@@ -90,8 +90,36 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
   // Handle login mutation
   const loginMutation = useMutation({
-    mutationFn: async ({ email, password }: { email: string; password: string }) => {
-      const { data, error } = await signInWithPassword(email, password);
+    mutationFn: async ({ emailOrUsername, password }: { emailOrUsername: string; password: string }) => {
+      // Determine if input is an email or username
+      const isEmail = emailOrUsername.includes('@');
+      
+      let data, error;
+      
+      if (isEmail) {
+        // Login with email
+        ({ data, error } = await signInWithPassword(emailOrUsername, password));
+      } else {
+        // Login with username - we need to get the email for this username first
+        try {
+          const res = await apiRequest('POST', '/api/get-email-by-username', { username: emailOrUsername });
+          
+          if (!res.ok) {
+            throw new Error('User not found');
+          }
+          
+          const { email } = await res.json();
+          
+          if (!email) {
+            throw new Error('User not found');
+          }
+          
+          // Now sign in with the retrieved email
+          ({ data, error } = await signInWithPassword(email, password));
+        } catch (err: any) {
+          throw new Error(err.message || 'Login failed');
+        }
+      }
       
       if (error) {
         throw new Error(error);

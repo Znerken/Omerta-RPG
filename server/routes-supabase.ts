@@ -65,6 +65,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to check username/email availability' });
     }
   });
+  
+  // Get email by username (for dual login functionality)
+  app.post('/api/get-email-by-username', async (req: Request, res: Response) => {
+    try {
+      const { username } = req.body;
+      
+      if (!username) {
+        return res.status(400).json({ message: 'Username is required' });
+      }
+      
+      // Look up the user by username
+      const user = await db.select({ email: users.email })
+        .from(users)
+        .where(eq(users.username, username))
+        .limit(1);
+      
+      if (!user.length) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      
+      // Return the email
+      res.json({ email: user[0].email });
+    } catch (error) {
+      console.error('Error retrieving email by username:', error);
+      res.status(500).json({ message: 'Failed to retrieve email' });
+    }
+  });
 
   // Training routes
   app.post('/api/stats/train/:stat', authProtected, jailProtected, async (req: Request, res: Response) => {
