@@ -375,39 +375,35 @@ export class GangStorage {
    */
   async getGangMembers(gangId: number): Promise<any[]> {
     try {
-      // Get the member records
-      const memberRecords = await db
-        .select()
-        .from(gangMembers)
-        .where(eq(gangMembers.gangId, gangId));
+      // Use raw SQL to avoid schema issues
+      const rawQuery = `
+        SELECT gm.id, gm.gang_id, gm.user_id, gm.role, gm.joined_at, 
+               u.id as user_id, u.username, u.level, u.avatar
+        FROM gang_members gm
+        JOIN users u ON gm.user_id = u.id
+        WHERE gm.gang_id = $1
+      `;
       
-      // Fetch user details for each member
-      const membersWithDetails = await Promise.all(
-        memberRecords.map(async (member) => {
-          // Get user details
-          const [user] = await db
-            .select()
-            .from(users)
-            .where(eq(users.id, member.userId));
-          
-          if (!user) {
-            return null;
+      const result = await db.execute(sql.raw(rawQuery), [gangId]);
+      
+      // Format the results
+      const membersWithDetails = result.rows.map(row => {
+        return {
+          id: row.id,
+          gangId: row.gang_id,
+          userId: row.user_id,
+          role: row.role,
+          joinedAt: row.joined_at,
+          user: {
+            id: row.user_id,
+            username: row.username,
+            level: row.level,
+            avatar: row.avatar
           }
-          
-          return {
-            ...member,
-            user: {
-              id: user.id,
-              username: user.username,
-              level: user.level,
-              avatar: user.avatar
-            }
-          };
-        })
-      );
+        };
+      });
       
-      // Remove null entries (users that don't exist anymore)
-      return membersWithDetails.filter(Boolean);
+      return membersWithDetails;
     } catch (error) {
       console.error(`Error getting members for gang with ID ${gangId}:`, error);
       return [];

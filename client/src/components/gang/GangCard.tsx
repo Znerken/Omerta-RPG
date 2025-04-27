@@ -35,7 +35,7 @@ import { Gang } from "@shared/schema";
 import { useNotification } from "@/hooks/use-notification";
 
 interface GangCardProps {
-  gang: Gang & { members?: { id: number; username: string; rank: string; contribution?: number }[] };
+  gang: Gang & { members?: { id: number; username: string; role: string; user?: any; contribution?: number }[] };
   isUserInGang: boolean;
   userRank?: string;
   userId: number;
@@ -257,40 +257,54 @@ export function GangCard({ gang, isUserInGang, userRank, userId }: GangCardProps
             <TabsContent value="members" className="mt-0">
               <div className="space-y-1">
                 {/* User is highlighted in the member list if they're in the gang */}
-                {gang.members?.map((member) => (
-                  <div 
-                    key={member.id} 
-                    className={`flex justify-between items-center p-3 rounded-md ${member.id === userId ? 'bg-primary/10 border border-primary/20' : 'bg-gray-900/70 border border-gray-800'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getRankColor(member.rank).bg}`}>
-                        <span className="text-xs text-white">{getInitials(member.username)}</span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white">{member.username}</span>
-                          {member.id === userId && (
-                            <Badge variant="outline" className="text-xs h-5 px-1.5 bg-primary/20 border-primary/30 text-primary">
-                              You
-                            </Badge>
+                {gang.members?.map((member) => {
+                  // Get username from user object if available, or directly from member
+                  const username = member.user?.username || member.username || "Unknown";
+                  // Get member ID from user object if available, or directly from member
+                  const memberId = member.user?.id || member.userId;
+                  return (
+                    <div 
+                      key={member.id} 
+                      className={`flex justify-between items-center p-3 rounded-md ${memberId === userId ? 'bg-primary/10 border border-primary/20' : 'bg-gray-900/70 border border-gray-800'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getRankColor(member.role).bg}`}>
+                          {member.user?.avatar ? (
+                            <img 
+                              src={member.user.avatar} 
+                              alt={username} 
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-xs text-white">{getInitials(username)}</span>
                           )}
                         </div>
-                        {member.contribution !== undefined && (
-                          <span className="text-xs text-gray-400">
-                            Contribution: {formatCurrency(member.contribution)}
-                          </span>
-                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white">{username}</span>
+                            {memberId === userId && (
+                              <Badge variant="outline" className="text-xs h-5 px-1.5 bg-primary/20 border-primary/30 text-primary">
+                                You
+                              </Badge>
+                            )}
+                          </div>
+                          {member.contribution !== undefined && (
+                            <span className="text-xs text-gray-400">
+                              Contribution: {formatCurrency(member.contribution)}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`${getRankColor(member.role).badge} py-1`}
+                      >
+                        {getRankIcon(member.role)}
+                        {member.role}
+                      </Badge>
                     </div>
-                    <Badge 
-                      variant="outline" 
-                      className={`${getRankColor(member.rank).badge} py-1`}
-                    >
-                      {getRankIcon(member.rank)}
-                      {member.rank}
-                    </Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </TabsContent>
             
