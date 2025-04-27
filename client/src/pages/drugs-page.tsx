@@ -201,10 +201,17 @@ type Territory = {
 };
 
 export default function DrugsPage() {
+  // Check if user is admin
+  const { data: user } = useQuery({
+    queryKey: ['/api/user'],
+  });
+  
+  const isAdmin = user?.isAdmin || false;
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <Tabs defaultValue="inventory" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full mb-8">
+        <TabsList className={`grid ${isAdmin ? 'grid-cols-6' : 'grid-cols-5'} w-full mb-8`}>
           <TabsTrigger value="inventory" className="text-lg py-3">
             <Pill className="mr-2 h-5 w-5" /> Inventory
           </TabsTrigger>
@@ -220,6 +227,12 @@ export default function DrugsPage() {
           <TabsTrigger value="effects" className="text-lg py-3">
             <Activity className="mr-2 h-5 w-5" /> Effects
           </TabsTrigger>
+          
+          {isAdmin && (
+            <TabsTrigger value="admin" className="text-lg py-3">
+              <BadgeInfo className="mr-2 h-5 w-5" /> Admin
+            </TabsTrigger>
+          )}
         </TabsList>
         
         <TabsContent value="inventory" className="space-y-6">
@@ -241,6 +254,12 @@ export default function DrugsPage() {
         <TabsContent value="effects" className="space-y-6">
           <EffectsTab />
         </TabsContent>
+        
+        {isAdmin && (
+          <TabsContent value="admin" className="space-y-6">
+            <AdminTab />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
@@ -2110,4 +2129,620 @@ function getSeverityBadgeVariant(severity: number): "default" | "secondary" | "d
   if (severity <= 3) return "default";
   if (severity <= 7) return "secondary";
   return "destructive";
+}
+
+// AdminTab component for drug management
+function AdminTab() {
+  const [activeSection, setActiveSection] = useState<'drugs' | 'ingredients' | 'recipes'>('drugs');
+  const { toast } = useToast();
+  
+  // Fetch data
+  const { data: drugs, isLoading: drugsLoading, refetch: refetchDrugs } = useQuery<Drug[]>({
+    queryKey: ['/api/drugs'],
+  });
+  
+  const { data: ingredients, isLoading: ingredientsLoading, refetch: refetchIngredients } = useQuery<Ingredient[]>({
+    queryKey: ['/api/drug-ingredients'],
+  });
+  
+  // Create drug form states
+  const [newDrug, setNewDrug] = useState({
+    name: '',
+    description: '',
+    basePrice: 1000,
+    riskLevel: 5,
+    addictionRate: 10,
+    strengthBonus: 0,
+    stealthBonus: 0,
+    charismaBonus: 0,
+    intelligenceBonus: 0,
+    cashGainBonus: 0,
+    durationHours: 1,
+    sideEffects: ''
+  });
+  
+  // Create ingredient form states
+  const [newIngredient, setNewIngredient] = useState({
+    name: '',
+    description: '',
+    price: 500,
+    rarity: 1
+  });
+  
+  // Create recipe form states
+  const [newRecipe, setNewRecipe] = useState({
+    drugId: 0,
+    ingredientId: 0,
+    quantity: 1
+  });
+  
+  // Create drug mutation
+  const createDrugMutation = useMutation({
+    mutationFn: async (drugData: any) => {
+      const response = await apiRequest('POST', '/api/admin/drugs', drugData);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create drug');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Drug created successfully",
+      });
+      // Reset form
+      setNewDrug({
+        name: '',
+        description: '',
+        basePrice: 1000,
+        riskLevel: 5,
+        addictionRate: 10,
+        strengthBonus: 0,
+        stealthBonus: 0,
+        charismaBonus: 0,
+        intelligenceBonus: 0,
+        cashGainBonus: 0,
+        durationHours: 1,
+        sideEffects: ''
+      });
+      // Refresh drug list
+      refetchDrugs();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Create ingredient mutation
+  const createIngredientMutation = useMutation({
+    mutationFn: async (ingredientData: any) => {
+      const response = await apiRequest('POST', '/api/admin/drug-ingredients', ingredientData);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create ingredient');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Ingredient created successfully",
+      });
+      // Reset form
+      setNewIngredient({
+        name: '',
+        description: '',
+        price: 500,
+        rarity: 1
+      });
+      // Refresh ingredient list
+      refetchIngredients();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Create recipe mutation
+  const createRecipeMutation = useMutation({
+    mutationFn: async (recipeData: any) => {
+      const response = await apiRequest('POST', '/api/admin/drug-recipes', recipeData);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create recipe');
+      }
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Recipe created successfully",
+      });
+      // Reset form
+      setNewRecipe({
+        drugId: 0,
+        ingredientId: 0,
+        quantity: 1
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Handler for drug form submission
+  const handleCreateDrug = (e: React.FormEvent) => {
+    e.preventDefault();
+    createDrugMutation.mutate(newDrug);
+  };
+  
+  // Handler for ingredient form submission
+  const handleCreateIngredient = (e: React.FormEvent) => {
+    e.preventDefault();
+    createIngredientMutation.mutate(newIngredient);
+  };
+  
+  // Handler for recipe form submission
+  const handleCreateRecipe = (e: React.FormEvent) => {
+    e.preventDefault();
+    createRecipeMutation.mutate(newRecipe);
+  };
+  
+  return (
+    <div className="space-y-8">
+      <Card className="bg-black/40 border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-2xl">Drug System Administration</CardTitle>
+          <CardDescription>Manage drugs, ingredients, and recipes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div className="flex space-x-4">
+              <Button 
+                variant={activeSection === 'drugs' ? 'default' : 'outline'} 
+                onClick={() => setActiveSection('drugs')}
+                className="flex-1"
+              >
+                <Pill className="mr-2 h-4 w-4" /> Drugs
+              </Button>
+              <Button 
+                variant={activeSection === 'ingredients' ? 'default' : 'outline'} 
+                onClick={() => setActiveSection('ingredients')}
+                className="flex-1"
+              >
+                <Beaker className="mr-2 h-4 w-4" /> Ingredients
+              </Button>
+              <Button 
+                variant={activeSection === 'recipes' ? 'default' : 'outline'} 
+                onClick={() => setActiveSection('recipes')}
+                className="flex-1"
+              >
+                <FileSignature className="mr-2 h-4 w-4" /> Recipes
+              </Button>
+            </div>
+            
+            {/* Drugs Section */}
+            {activeSection === 'drugs' && (
+              <div className="space-y-6">
+                <Card className="border border-primary/20">
+                  <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-lg">Create New Drug</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <form onSubmit={handleCreateDrug} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Name</label>
+                          <input 
+                            type="text" 
+                            value={newDrug.name} 
+                            onChange={(e) => setNewDrug({...newDrug, name: e.target.value})}
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Base Price</label>
+                          <input 
+                            type="number" 
+                            value={newDrug.basePrice} 
+                            onChange={(e) => setNewDrug({...newDrug, basePrice: parseInt(e.target.value)})}
+                            required
+                            min={1}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-sm font-medium">Description</label>
+                          <textarea 
+                            value={newDrug.description} 
+                            onChange={(e) => setNewDrug({...newDrug, description: e.target.value})}
+                            required
+                            rows={2}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Risk Level (1-10)</label>
+                          <input 
+                            type="number" 
+                            value={newDrug.riskLevel} 
+                            onChange={(e) => setNewDrug({...newDrug, riskLevel: parseInt(e.target.value)})}
+                            required
+                            min={1}
+                            max={10}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Addiction Rate (%)</label>
+                          <input 
+                            type="number" 
+                            value={newDrug.addictionRate} 
+                            onChange={(e) => setNewDrug({...newDrug, addictionRate: parseInt(e.target.value)})}
+                            required
+                            min={0}
+                            max={100}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Duration (hours)</label>
+                          <input 
+                            type="number" 
+                            value={newDrug.durationHours} 
+                            onChange={(e) => setNewDrug({...newDrug, durationHours: parseInt(e.target.value)})}
+                            required
+                            min={1}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-sm font-medium">Side Effects (optional)</label>
+                          <input 
+                            type="text" 
+                            value={newDrug.sideEffects || ''} 
+                            onChange={(e) => setNewDrug({...newDrug, sideEffects: e.target.value})}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4">
+                        <h4 className="text-md font-medium mb-3">Stat Bonuses</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Strength Bonus</label>
+                            <input 
+                              type="number" 
+                              value={newDrug.strengthBonus} 
+                              onChange={(e) => setNewDrug({...newDrug, strengthBonus: parseInt(e.target.value)})}
+                              className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Stealth Bonus</label>
+                            <input 
+                              type="number" 
+                              value={newDrug.stealthBonus} 
+                              onChange={(e) => setNewDrug({...newDrug, stealthBonus: parseInt(e.target.value)})}
+                              className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Charisma Bonus</label>
+                            <input 
+                              type="number" 
+                              value={newDrug.charismaBonus} 
+                              onChange={(e) => setNewDrug({...newDrug, charismaBonus: parseInt(e.target.value)})}
+                              className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Intelligence Bonus</label>
+                            <input 
+                              type="number" 
+                              value={newDrug.intelligenceBonus} 
+                              onChange={(e) => setNewDrug({...newDrug, intelligenceBonus: parseInt(e.target.value)})}
+                              className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Cash Gain Bonus (%)</label>
+                            <input 
+                              type="number" 
+                              value={newDrug.cashGainBonus} 
+                              onChange={(e) => setNewDrug({...newDrug, cashGainBonus: parseInt(e.target.value)})}
+                              className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4">
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-primary to-primary/80"
+                          disabled={createDrugMutation.isPending}
+                        >
+                          {createDrugMutation.isPending ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
+                          ) : (
+                            <><Plus className="mr-2 h-4 w-4" /> Create Drug</>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+                
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold">Existing Drugs</h3>
+                  {drugsLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[1, 2].map((i) => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                      ))}
+                    </div>
+                  ) : drugs && drugs.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {drugs.map((drug) => (
+                        <Card key={drug.id} className="bg-black/40 hover:bg-black/50 transition-colors">
+                          <CardHeader className="pb-2">
+                            <div className="flex justify-between items-start">
+                              <CardTitle>{drug.name}</CardTitle>
+                              <Badge className={getRiskLevelColor(drug.riskLevel)}>Risk: {drug.riskLevel}</Badge>
+                            </div>
+                            <CardDescription>{drug.description}</CardDescription>
+                          </CardHeader>
+                          <CardContent className="pb-4 pt-0">
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>Base Price: ${drug.basePrice}</div>
+                              <div>Duration: {drug.durationHours}h</div>
+                              <div>Addiction Rate: {drug.addictionRate}%</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-black/30 border-dashed border-primary/20">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">No drugs found. Create one above.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Ingredients Section */}
+            {activeSection === 'ingredients' && (
+              <div className="space-y-6">
+                <Card className="border border-primary/20">
+                  <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-lg">Create New Ingredient</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <form onSubmit={handleCreateIngredient} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Name</label>
+                          <input 
+                            type="text" 
+                            value={newIngredient.name} 
+                            onChange={(e) => setNewIngredient({...newIngredient, name: e.target.value})}
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Price</label>
+                          <input 
+                            type="number" 
+                            value={newIngredient.price} 
+                            onChange={(e) => setNewIngredient({...newIngredient, price: parseInt(e.target.value)})}
+                            required
+                            min={1}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-sm font-medium">Description</label>
+                          <textarea 
+                            value={newIngredient.description} 
+                            onChange={(e) => setNewIngredient({...newIngredient, description: e.target.value})}
+                            required
+                            rows={2}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Rarity (1-10)</label>
+                          <input 
+                            type="number" 
+                            value={newIngredient.rarity} 
+                            onChange={(e) => setNewIngredient({...newIngredient, rarity: parseInt(e.target.value)})}
+                            required
+                            min={1}
+                            max={10}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4">
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-primary to-primary/80"
+                          disabled={createIngredientMutation.isPending}
+                        >
+                          {createIngredientMutation.isPending ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
+                          ) : (
+                            <><Plus className="mr-2 h-4 w-4" /> Create Ingredient</>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+                
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold">Existing Ingredients</h3>
+                  {ingredientsLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                      ))}
+                    </div>
+                  ) : ingredients && ingredients.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {ingredients.map((ingredient) => (
+                        <Card key={ingredient.id} className="bg-black/40 hover:bg-black/50 transition-colors">
+                          <CardHeader className="pb-2">
+                            <div className="flex justify-between items-start">
+                              <CardTitle className="text-md">{ingredient.name}</CardTitle>
+                              <Badge variant="outline">Rarity: {ingredient.rarity}</Badge>
+                            </div>
+                            <CardDescription className="text-xs">{ingredient.description}</CardDescription>
+                          </CardHeader>
+                          <CardContent className="pb-4 pt-0">
+                            <div className="text-sm">Price: ${ingredient.price}</div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <Card className="bg-black/30 border-dashed border-primary/20">
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">No ingredients found. Create one above.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Recipes Section */}
+            {activeSection === 'recipes' && (
+              <div className="space-y-6">
+                <Card className="border border-primary/20">
+                  <CardHeader className="bg-primary/5">
+                    <CardTitle className="text-lg">Create New Recipe</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <form onSubmit={handleCreateRecipe} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Select Drug</label>
+                          <select 
+                            value={newRecipe.drugId} 
+                            onChange={(e) => setNewRecipe({...newRecipe, drugId: parseInt(e.target.value)})}
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          >
+                            <option value={0}>Select a drug...</option>
+                            {drugs?.map(drug => (
+                              <option key={drug.id} value={drug.id}>{drug.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Select Ingredient</label>
+                          <select 
+                            value={newRecipe.ingredientId} 
+                            onChange={(e) => setNewRecipe({...newRecipe, ingredientId: parseInt(e.target.value)})}
+                            required
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          >
+                            <option value={0}>Select an ingredient...</option>
+                            {ingredients?.map(ingredient => (
+                              <option key={ingredient.id} value={ingredient.id}>{ingredient.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Quantity Required</label>
+                          <input 
+                            type="number" 
+                            value={newRecipe.quantity} 
+                            onChange={(e) => setNewRecipe({...newRecipe, quantity: parseInt(e.target.value)})}
+                            required
+                            min={1}
+                            className="w-full p-2 rounded bg-black/50 border border-primary/20 focus:border-primary focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4">
+                        <Button 
+                          type="submit" 
+                          className="w-full bg-gradient-to-r from-primary to-primary/80"
+                          disabled={createRecipeMutation.isPending || newRecipe.drugId === 0 || newRecipe.ingredientId === 0}
+                        >
+                          {createRecipeMutation.isPending ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
+                          ) : (
+                            <><Plus className="mr-2 h-4 w-4" /> Create Recipe</>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+                
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold">Notice</h3>
+                  <Card className="bg-black/30">
+                    <CardContent className="p-6">
+                      <div className="flex items-start space-x-4">
+                        <BadgeInfo className="h-6 w-6 text-primary" />
+                        <div>
+                          <h4 className="text-md font-medium mb-1">Recipe Management</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Recipes define what ingredients are needed to produce each drug. Create recipes by selecting a drug, 
+                            an ingredient, and specifying the quantity of the ingredient required. You can add multiple ingredients 
+                            to a drug by creating multiple recipes for the same drug.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
