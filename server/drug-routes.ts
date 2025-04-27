@@ -1487,22 +1487,44 @@ export function registerDrugRoutes(app: Express) {
     try {
       const userId = req.user!.id;
       
-      // Get all ingredients
-      const allIngredients = await drugStorage.getAllIngredients();
+      // Get all ingredients - use the correct function name
+      const allIngredients = await drugStorage.getAllDrugIngredients();
+      
+      if (allIngredients.length === 0) {
+        return res.status(400).json({ error: "No ingredients found. Please seed drugs and ingredients first." });
+      }
       
       // Add a significant amount of each ingredient to the user
       const results = [];
       for (const ingredient of allIngredients) {
-        const userIngredient = await drugStorage.addIngredientToUser({
-          userId,
-          ingredientId: ingredient.id,
-          quantity: 100 // Give a large quantity for testing
-        });
-        results.push(userIngredient);
+        try {
+          // First check if user already has this ingredient
+          const existingIngredient = await drugStorage.getUserIngredient(userId, ingredient.id);
+          
+          if (existingIngredient) {
+            // Update the existing ingredient quantity
+            const updated = await drugStorage.updateUserIngredientQuantity(
+              existingIngredient.id, 
+              existingIngredient.quantity + 50
+            );
+            results.push(updated);
+          } else {
+            // Add new ingredient to user
+            const userIngredient = await drugStorage.addIngredientToUser({
+              userId,
+              ingredientId: ingredient.id,
+              quantity: 100 // Give a large quantity for testing
+            });
+            results.push(userIngredient);
+          }
+        } catch (err) {
+          console.error(`Error processing ingredient ${ingredient.id}:`, err);
+          // Continue with next ingredient even if one fails
+        }
       }
       
       res.json({
-        message: `Successfully added ${results.length} ingredient types to your inventory`,
+        message: `Successfully added/updated ${results.length} ingredient types to your inventory`,
         ingredients: results
       });
     } catch (error) {

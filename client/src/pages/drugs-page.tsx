@@ -516,14 +516,50 @@ function InventoryTab() {
                   <h3 className="text-lg font-semibold mb-1">Empty Ingredients</h3>
                   <p className="text-muted-foreground">You need to acquire ingredients for drug production.</p>
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="mt-2 border-primary/40 text-primary hover:bg-primary/10 relative overflow-hidden group"
-                >
-                  <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                  <Search className="mr-2 h-4 w-4" />
-                  <span className="relative z-10">Scavenge for Ingredients</span>
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="mt-2 border-primary/40 text-primary hover:bg-primary/10 relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                    <Search className="mr-2 h-4 w-4" />
+                    <span className="relative z-10">Scavenge for Ingredients</span>
+                  </Button>
+                  
+                  <Button 
+                    variant="default"
+                    className="mt-2 bg-gradient-to-r from-primary to-primary/80 relative overflow-hidden group"
+                    onClick={() => {
+                      // Create seed ingredients mutation
+                      fetch('/api/dev/seed-my-ingredients', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        }
+                      })
+                      .then(res => res.json())
+                      .then(data => {
+                        toast({
+                          title: "Ingredients Added",
+                          description: data.message,
+                        });
+                        // Refresh ingredients
+                        queryClient.invalidateQueries({ queryKey: ['/api/user/ingredients'] });
+                      })
+                      .catch(err => {
+                        toast({
+                          title: "Error",
+                          description: "Failed to add ingredients: " + err.message,
+                          variant: "destructive",
+                        });
+                      });
+                    }}
+                  >
+                    <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
+                    <Beaker className="mr-2 h-4 w-4" />
+                    <span className="relative z-10">Add Test Ingredients</span>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
