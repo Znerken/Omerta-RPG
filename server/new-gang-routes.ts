@@ -220,11 +220,11 @@ gangRouter.post("/:id/join", isAuthenticated, async (req: Request, res: Response
       return res.status(404).json({ message: "Gang not found" });
     }
     
-    // Add user as a member with the default "Soldier" rank
+    // Add user as a member with the default "Soldier" role
     const gangMember = await gangStorage.addGangMember({
       gangId,
       userId: req.user.id,
-      rank: "Soldier"
+      role: "Soldier"
     });
     
     res.status(201).json(gangMember);
@@ -254,7 +254,7 @@ gangRouter.post("/:id/leave", isAuthenticated, async (req: Request, res: Respons
     }
     
     // Leaders can't leave unless they're the only member
-    if (existingMembership.rank === "Leader") {
+    if (existingMembership.role === "Leader") {
       const memberCount = await gangStorage.getGangMemberCount(gangId);
       if (memberCount > 1) {
         return res.status(400).json({ 
@@ -289,9 +289,9 @@ gangRouter.post("/:id/members/:userId/promote", isAuthenticated, async (req: Req
       return res.status(400).json({ message: "Invalid IDs" });
     }
     
-    // Check if user is in this gang with appropriate rank
+    // Check if user is in this gang with appropriate role
     const userMembership = await gangStorage.getGangMember(req.user.id);
-    if (!userMembership || userMembership.gangId !== gangId || userMembership.rank !== "Leader") {
+    if (!userMembership || userMembership.gangId !== gangId || userMembership.role !== "Leader") {
       return res.status(403).json({ message: "Only the gang leader can promote members" });
     }
     
@@ -343,9 +343,9 @@ gangRouter.post("/:id/members/:userId/demote", isAuthenticated, async (req: Requ
       return res.status(400).json({ message: "Invalid IDs" });
     }
     
-    // Check if user is in this gang with appropriate rank
+    // Check if user is in this gang with appropriate role
     const userMembership = await gangStorage.getGangMember(req.user.id);
-    if (!userMembership || userMembership.gangId !== gangId || userMembership.rank !== "Leader") {
+    if (!userMembership || userMembership.gangId !== gangId || userMembership.role !== "Leader") {
       return res.status(403).json({ message: "Only the gang leader can demote members" });
     }
     
@@ -399,7 +399,7 @@ gangRouter.post("/:id/transfer-leadership/:userId", isAuthenticated, async (req:
     
     // Check if user is the leader of this gang
     const userMembership = await gangStorage.getGangMember(req.user.id);
-    if (!userMembership || userMembership.gangId !== gangId || userMembership.rank !== "Leader") {
+    if (!userMembership || userMembership.gangId !== gangId || userMembership.role !== "Leader") {
       return res.status(403).json({ message: "Only the gang leader can transfer leadership" });
     }
     
@@ -518,7 +518,7 @@ gangRouter.post("/:id/bank/withdraw", isAuthenticated, async (req: Request, res:
       return res.status(403).json({ message: "You are not a member of this gang" });
     }
     
-    if (membership.rank !== "Leader" && membership.rank !== "Underboss") {
+    if (membership.role !== "Leader" && membership.role !== "Underboss") {
       return res.status(403).json({ 
         message: "Only Leaders and Underbosses can withdraw from the gang bank" 
       });
@@ -604,13 +604,13 @@ gangRouter.post("/territories/:id/attack", isAuthenticated, async (req: Request,
       return res.status(400).json({ message: "Invalid territory ID" });
     }
     
-    // Check if user is in a gang with appropriate rank
+    // Check if user is in a gang with appropriate role
     const membership = await gangStorage.getGangMember(req.user.id);
     if (!membership) {
       return res.status(403).json({ message: "You must be in a gang to attack territories" });
     }
     
-    if (membership.rank !== "Leader" && membership.rank !== "Underboss") {
+    if (membership.role !== "Leader" && membership.role !== "Underboss") {
       return res.status(403).json({ 
         message: "Only Leaders and Underbosses can initiate territory attacks" 
       });
@@ -898,13 +898,13 @@ gangRouter.post("/missions/:id/start", isAuthenticated, async (req: Request, res
       return res.status(400).json({ message: "Invalid mission ID" });
     }
     
-    // Check if user is in a gang with appropriate rank
+    // Check if user is in a gang with appropriate role
     const membership = await gangStorage.getGangMember(req.user.id);
     if (!membership) {
       return res.status(403).json({ message: "You must be in a gang to start missions" });
     }
     
-    if (membership.rank !== "Leader" && membership.rank !== "Underboss" && membership.rank !== "Capo") {
+    if (membership.role !== "Leader" && membership.role !== "Underboss" && membership.role !== "Capo") {
       return res.status(403).json({ 
         message: "Only Leaders, Underbosses and Capos can start gang missions" 
       });
@@ -1020,7 +1020,7 @@ gangRouter.post("/missions/attempts/:id/collect", isAuthenticated, async (req: R
       return res.status(403).json({ message: "You are not a member of the gang doing this mission" });
     }
     
-    if (membership.rank !== "Leader" && membership.rank !== "Underboss") {
+    if (membership.role !== "Leader" && membership.role !== "Underboss") {
       return res.status(403).json({ 
         message: "Only Leaders and Underbosses can collect mission rewards" 
       });
