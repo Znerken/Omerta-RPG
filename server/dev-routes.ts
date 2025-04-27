@@ -74,7 +74,7 @@ export function registerDevRoutes(app: Express) {
         // Check if user is a gang leader
         const leaderOfGangs = await db.execute(sql`
           SELECT id, name FROM gangs 
-          WHERE owner_id = ${userId}
+          WHERE leader_id = ${userId}
         `);
         
         if (leaderOfGangs.rowCount > 0) {
@@ -278,9 +278,9 @@ export function registerDevRoutes(app: Express) {
       try {
         // First, check if any test users are gang leaders
         const leaderOfGangs = await db.execute(sql`
-          SELECT g.id, g.name, g.owner_id
+          SELECT g.id, g.name, g.leader_id
           FROM gangs g
-          WHERE g.owner_id IN (${sql.join(userIds, sql`, `)})
+          WHERE g.leader_id IN (${sql.join(userIds, sql`, `)})
         `);
         
         if (leaderOfGangs.rowCount > 0) {
@@ -289,7 +289,7 @@ export function registerDevRoutes(app: Express) {
           // For each gang that has a test user as the leader
           for (const gang of leaderOfGangs.rows) {
             const gangId = gang.id;
-            console.log(`Handling gang ${gangId} (${gang.name}) led by user ${gang.owner_id}`);
+            console.log(`Handling gang ${gangId} (${gang.name}) led by user ${gang.leader_id}`);
             
             // Delete all memberships for this gang
             await db.execute(sql`
