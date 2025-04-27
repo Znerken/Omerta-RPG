@@ -22,7 +22,6 @@ import EmergencyProfilePage from "@/pages/emergency-profile";
 import CrimesPage from "@/pages/crimes-page";
 import TrainingPage from "@/pages/training-page";
 import GangPage from "@/pages/gang-page";
-// Gang 2.0 page removed in favor of enhancing the original gang page
 import JailPage from "@/pages/jail-page";
 import InventoryPage from "@/pages/inventory-page";
 import MessagesPage from "@/pages/messages-page";

@@ -199,24 +199,14 @@ export class GangStorage {
     try {
       console.log("[Gang Storage] Creating gang with data:", gangData);
       
-      // Fixed SQL injection vulnerabilities and properly handling parameters
-      const query = `
+      // Use sql template literal to properly handle parameters
+      const result = await db.execute(sql`
         INSERT INTO gangs 
         (name, tag, description, logo, leader_id) 
         VALUES 
-        ($1, $2, $3, $4, $5)
+        (${gangData.name}, ${gangData.tag}, ${gangData.description || null}, ${gangData.logo || null}, ${gangData.ownerId})
         RETURNING *
-      `;
-      
-      const params = [
-        gangData.name,
-        gangData.tag,
-        gangData.description || null,
-        gangData.logo || null,
-        gangData.ownerId
-      ];
-      
-      const result = await db.execute(sql.raw(query, params));
+      `);
       
       if (result.rows.length === 0) {
         throw new Error("Gang creation failed - no gang returned");
@@ -383,16 +373,14 @@ export class GangStorage {
    */
   async getGangMembers(gangId: number): Promise<any[]> {
     try {
-      // Use raw SQL to avoid schema issues
-      const rawQuery = `
+      // Use sql template literal to properly handle parameters
+      const result = await db.execute(sql`
         SELECT gm.id, gm.gang_id, gm.user_id, gm.role, gm.joined_at, 
                u.id as user_id, u.username, u.level, u.avatar
         FROM gang_members gm
         JOIN users u ON gm.user_id = u.id
         WHERE gm.gang_id = ${gangId}
-      `;
-      
-      const result = await db.execute(sql.raw(rawQuery));
+      `);
       
       // Format the results
       const membersWithDetails = result.rows.map(row => {
@@ -542,37 +530,32 @@ export class GangStorage {
       console.log(`[DEBUG] Adding user ${data.userId} to gang ${data.gangId} with role ${data.role}`);
       
       // Begin transaction
-      await db.execute(sql.raw(`BEGIN`));
+      await db.execute(sql`BEGIN`);
       
       // Check if user is already in a gang
-      const checkQueryText = `
-        SELECT * FROM gang_members WHERE user_id = $1
-      `;
-      
-      const checkResult = await db.execute(sql.raw(checkQueryText, [data.userId]));
+      const checkResult = await db.execute(sql`
+        SELECT * FROM gang_members WHERE user_id = ${data.userId}
+      `);
       
       if (checkResult.rows && checkResult.rows.length > 0) {
         console.log(`[DEBUG] User ${data.userId} is already in a gang, removing from previous gang`);
         
         // Remove from previous gang
-        const deleteQueryText = `
-          DELETE FROM gang_members WHERE user_id = $1
-        `;
-        await db.execute(sql.raw(deleteQueryText, [data.userId]));
+        await db.execute(sql`
+          DELETE FROM gang_members WHERE user_id = ${data.userId}
+        `);
       }
       
       // Add member to gang using parameterized query to avoid SQL injection
-      const insertQueryText = `
+      const result = await db.execute(sql`
         INSERT INTO gang_members (gang_id, user_id, role)
-        VALUES ($1, $2, $3)
+        VALUES (${data.gangId}, ${data.userId}, ${data.role})
         RETURNING *
-      `;
-      
-      const result = await db.execute(sql.raw(insertQueryText, [data.gangId, data.userId, data.role]));
+      `);
       
       if (!result.rows || result.rows.length === 0) {
         console.log(`[DEBUG] Failed to add user ${data.userId} to gang ${data.gangId}`);
-        await db.execute(sql.raw(`ROLLBACK`));
+        await db.execute(sql`ROLLBACK`);
         throw new Error("Failed to add user to gang");
       }
       
@@ -580,13 +563,12 @@ export class GangStorage {
       console.log(`[DEBUG] Added user ${data.userId} to gang ${data.gangId}`, JSON.stringify(member));
       
       // Update user's gang_id
-      const updateQueryText = `
-        UPDATE users SET gang_id = $1 WHERE id = $2
-      `;
-      await db.execute(sql.raw(updateQueryText, [data.gangId, data.userId]));
+      await db.execute(sql`
+        UPDATE users SET gang_id = ${data.gangId} WHERE id = ${data.userId}
+      `);
       
       // Commit transaction
-      await db.execute(sql.raw(`COMMIT`));
+      await db.execute(sql`COMMIT`);
       
       console.log(`[DEBUG] Successfully added user ${data.userId} to gang ${data.gangId}`);
       
@@ -601,7 +583,7 @@ export class GangStorage {
       };
     } catch (error) {
       // Rollback on error
-      await db.execute(sql.raw(`ROLLBACK`));
+      await db.execute(sql`ROLLBACK`);
       console.error("Error adding gang member:", error);
       throw error;
     }
