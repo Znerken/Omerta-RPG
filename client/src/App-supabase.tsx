@@ -28,47 +28,45 @@ import { ProtectedRoute, AdminProtectedRoute, JailProtectedRoute } from '@/lib/p
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="omerta-theme">
-      <SupabaseAuthProvider>
-        <main>
-          <Switch>
-            {/* Public routes */}
-            <Route path="/auth" component={SupabaseAuthPage} />
+      <main>
+        <Switch>
+          {/* Public routes */}
+          <Route path="/auth" component={SupabaseAuthPage} />
 
-            {/* Protected routes (require authentication) */}
-            <ProtectedRoute path="/" component={DashboardPage} />
-            <ProtectedRoute path="/profile" component={ProfilePage} />
-            <Route path="/player/:userId" component={({ params }) => {
-              const userId = parseInt(params.userId);
-              return <PublicProfilePage userId={userId} />;
-            }} />
+          {/* Protected routes (require authentication) */}
+          <ProtectedRoute path="/" component={DashboardPage} />
+          <ProtectedRoute path="/profile" component={ProfilePage} />
+          <Route path="/player/:userId" component={({ params }) => {
+            const userId = parseInt(params.userId);
+            return <PublicProfilePage userId={userId} />;
+          }} />
 
-            {/* Protected routes (require not being in jail) */}
-            <JailProtectedRoute path="/crimes" component={CrimesPage} />
-            <JailProtectedRoute path="/casino" component={CasinoPage} />
-            <JailProtectedRoute path="/training" component={TrainingPage} />
-            <JailProtectedRoute path="/inventory" component={InventoryPage} />
-            <JailProtectedRoute path="/banking" component={BankingPage} />
-            <JailProtectedRoute path="/gang" component={GangPage} />
-            <JailProtectedRoute path="/drugs" component={DrugsPage} />
-            <JailProtectedRoute path="/locations" component={LocationsPage} />
+          {/* Protected routes (require not being in jail) */}
+          <JailProtectedRoute path="/crimes" component={CrimesPage} />
+          <JailProtectedRoute path="/casino" component={CasinoPage} />
+          <JailProtectedRoute path="/training" component={TrainingPage} />
+          <JailProtectedRoute path="/inventory" component={InventoryPage} />
+          <JailProtectedRoute path="/banking" component={BankingPage} />
+          <JailProtectedRoute path="/gang" component={GangPage} />
+          <JailProtectedRoute path="/drugs" component={DrugsPage} />
+          <JailProtectedRoute path="/locations" component={LocationsPage} />
 
-            {/* Routes that are accessible even when in jail */}
-            <ProtectedRoute path="/jail" component={JailPage} />
-            <ProtectedRoute path="/messages" component={MessagesPage} />
-            <ProtectedRoute path="/leaderboard" component={LeaderboardPage} />
-            <ProtectedRoute path="/achievements" component={AchievementsPage} />
-            <ProtectedRoute path="/challenges" component={ChallengesPage} />
-            <ProtectedRoute path="/friends" component={FriendsPage} />
+          {/* Routes that are accessible even when in jail */}
+          <ProtectedRoute path="/jail" component={JailPage} />
+          <ProtectedRoute path="/messages" component={MessagesPage} />
+          <ProtectedRoute path="/leaderboard" component={LeaderboardPage} />
+          <ProtectedRoute path="/achievements" component={AchievementsPage} />
+          <ProtectedRoute path="/challenges" component={ChallengesPage} />
+          <ProtectedRoute path="/friends" component={FriendsPage} />
 
-            {/* Admin routes */}
-            <AdminProtectedRoute path="/admin" component={AdminPage} />
+          {/* Admin routes */}
+          <AdminProtectedRoute path="/admin" component={AdminPage} />
 
-            {/* Catch-all route for 404 */}
-            <Route component={NotFound} />
-          </Switch>
-        </main>
-        <Toaster />
-      </SupabaseAuthProvider>
+          {/* Catch-all route for 404 */}
+          <Route component={NotFound} />
+        </Switch>
+      </main>
+      <Toaster />
     </ThemeProvider>
   );
 }
