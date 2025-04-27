@@ -59,7 +59,7 @@ const economyItems = [
   { name: "Inventory", path: "/inventory", icon: <Package className="h-4.5 w-4.5 mr-2.5" /> },
   { name: "Banking", path: "/banking", icon: <MoneyBriefcaseIcon size="sm" className="mr-2.5" /> },
   { name: "Casino", path: "/casino", icon: <DollarSign className="h-4.5 w-4.5 mr-2.5" /> },
-  { name: "Casino 2.0", path: "/casino-new", icon: <Zap className="h-4.5 w-4.5 mr-2.5" /> },
+  { name: "Noir Casino", path: "/casino-new", icon: <Zap className="h-4.5 w-4.5 mr-2.5 text-amber-400" /> },
   { name: "Leaderboard", path: "/leaderboard", icon: <Trophy className="h-4.5 w-4.5 mr-2.5" /> },
 ];
 
