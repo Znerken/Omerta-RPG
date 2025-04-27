@@ -1,7 +1,11 @@
 import { Express, Request, Response } from "express";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
-import { users, userFriends, friendRequests, userStatus, stats, userDrugs, drugs } from "@shared/schema";
+import { 
+  users, userFriends, friendRequests, userStatus, stats, userDrugs, drugs,
+  drugAddictions, drugLabs, drugProduction, drugDeals, userDrugEffects,
+  challengeProgress, achievementProgress
+} from "@shared/schema";
 import { casinoGames, casinoBets, casinoStats } from "@shared/schema-casino";
 import { eq, and, like } from "drizzle-orm";
 import { scrypt, randomBytes } from "crypto";
@@ -54,23 +58,67 @@ export function registerDevRoutes(app: Express) {
       // Get all test user IDs
       const userIds = testUsers.map(user => user.id);
       
-      // Delete related data for these users
-      // Stats
+      // Delete related data for these users in a specific order to avoid foreign key constraints
+      
+      // First, delete all related drug data
+      try {
+        // Delete user drug effects
+        await db.delete(userDrugEffects).where(sql`${userDrugEffects.userId} IN ${userIds}`);
+        
+        // Delete drug addictions
+        await db.delete(drugAddictions).where(sql`${drugAddictions.userId} IN ${userIds}`);
+        
+        // Delete drug deals
+        await db.delete(drugDeals).where(sql`${drugDeals.sellerId} IN ${userIds}`);
+        
+        // Delete drug production
+        const labs = await db.select()
+          .from(drugLabs)
+          .where(sql`${drugLabs.userId} IN ${userIds}`);
+        
+        const labIds = labs.map(lab => lab.id);
+        
+        if (labIds.length > 0) {
+          await db.delete(drugProduction).where(sql`${drugProduction.labId} IN ${labIds}`);
+        }
+        
+        // Delete drug labs
+        await db.delete(drugLabs).where(sql`${drugLabs.userId} IN ${userIds}`);
+        
+        // Delete user drugs
+        await db.delete(userDrugs).where(sql`${userDrugs.userId} IN ${userIds}`);
+      } catch (err) {
+        console.warn("Error deleting drug-related data:", err);
+        // Continue with other deletions even if some drug data fails
+      }
+      
+      // Delete stats
       await db.delete(stats).where(sql`${stats.userId} IN ${userIds}`);
       
-      // User drugs
-      await db.delete(userDrugs).where(sql`${userDrugs.userId} IN ${userIds}`);
-      
-      // User friends
+      // Delete user friends
       await db.delete(userFriends)
         .where(sql`${userFriends.userId} IN ${userIds} OR ${userFriends.friendId} IN ${userIds}`);
       
-      // Friend requests
+      // Delete friend requests
       await db.delete(friendRequests)
         .where(sql`${friendRequests.senderId} IN ${userIds} OR ${friendRequests.receiverId} IN ${userIds}`);
       
-      // User status
+      // Delete user status
       await db.delete(userStatus).where(sql`${userStatus.userId} IN ${userIds}`);
+      
+      // Delete challenge progress
+      try {
+        await db.delete(challengeProgress).where(sql`${challengeProgress.userId} IN ${userIds}`);
+      } catch (err) {
+        console.warn("Error deleting challenge progress:", err);
+      }
+      
+      // Delete achievement progress
+      try {
+        await db.delete(achievementProgress).where(sql`${achievementProgress.userId} IN ${userIds}`);
+      } catch (err) {
+        console.warn("Error deleting achievement progress:", err);
+      }
       
       // Finally, delete the users
       const deletedUsers = await db.delete(users)
