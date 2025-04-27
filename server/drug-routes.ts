@@ -11,7 +11,8 @@ import {
   insertDrugProductionSchema,
   insertDrugDealSchema,
   insertDrugAddictionSchema,
-  insertDrugTerritorySchema
+  insertDrugTerritorySchema,
+  insertUserDrugEffectSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { isAuthenticated, isAdmin } from "./middleware/auth";
@@ -1034,6 +1035,100 @@ export function registerDrugRoutes(app: Express) {
     } catch (error) {
       console.error("Error creating recipes:", error);
       res.status(500).json({ error: "Failed to create recipes: " + error.message });
+    }
+  });
+
+  // ========== User Drug Effects Routes ==========
+  
+  // Get active drug effects for the current user
+  app.get("/api/user/drug-effects/active", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const activeEffects = await drugStorage.getUserActiveDrugEffects(userId);
+      res.json(activeEffects);
+    } catch (error) {
+      console.error("Error fetching active drug effects:", error);
+      res.status(500).json({ error: "Failed to fetch active drug effects" });
+    }
+  });
+
+  // Get all drug effects history for the current user
+  app.get("/api/user/drug-effects/history", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const allEffects = await drugStorage.getUserAllDrugEffects(userId);
+      res.json(allEffects);
+    } catch (error) {
+      console.error("Error fetching drug effects history:", error);
+      res.status(500).json({ error: "Failed to fetch drug effects history" });
+    }
+  });
+
+  // Get total stat bonuses from all active drug effects
+  app.get("/api/user/drug-effects/bonuses", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const bonuses = await drugStorage.getUserTotalBonuses(userId);
+      res.json(bonuses);
+    } catch (error) {
+      console.error("Error calculating drug effect bonuses:", error);
+      res.status(500).json({ error: "Failed to calculate drug effect bonuses" });
+    }
+  });
+
+  // Use a drug with enhanced effects tracking
+  app.post("/api/user/drugs/:id/consume", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.id;
+      const drugId = parseInt(req.params.id);
+      
+      const result = await drugStorage.useDrug(userId, drugId);
+      
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+      
+      res.json({
+        message: result.message,
+        effect: result.effect
+      });
+    } catch (error) {
+      console.error("Error consuming drug:", error);
+      res.status(500).json({ error: "Failed to consume drug" });
+    }
+  });
+
+  // Manually deactivate a drug effect (for admin or testing purposes)
+  app.post("/api/admin/drug-effects/:id/deactivate", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const effectId = parseInt(req.params.id);
+      const success = await drugStorage.deactivateDrugEffect(effectId);
+      
+      if (!success) {
+        return res.status(400).json({ error: "Failed to deactivate drug effect" });
+      }
+      
+      res.json({ 
+        message: "Drug effect deactivated successfully",
+        effectId
+      });
+    } catch (error) {
+      console.error("Error deactivating drug effect:", error);
+      res.status(500).json({ error: "Failed to deactivate drug effect" });
+    }
+  });
+
+  // System endpoint to deactivate all expired drug effects (could be called by a cron job)
+  app.post("/api/system/drug-effects/deactivate-expired", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
+    try {
+      const count = await drugStorage.deactivateExpiredEffects();
+      res.json({ 
+        message: `Successfully deactivated ${count} expired drug effects`,
+        count
+      });
+    } catch (error) {
+      console.error("Error deactivating expired drug effects:", error);
+      res.status(500).json({ error: "Failed to deactivate expired drug effects" });
     }
   });
 }
