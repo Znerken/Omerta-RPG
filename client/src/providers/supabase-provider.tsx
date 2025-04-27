@@ -18,6 +18,12 @@ const SupabaseContext = createContext<SupabaseContextType>({
 // Global reference to prevent multiple instances
 let globalSupabaseClient: SupabaseClient | null = null;
 
+// Add a global function to reset the Supabase client
+export function resetSupabaseClient() {
+  globalSupabaseClient = null;
+  window.__SUPABASE_CLIENT = undefined;
+}
+
 // Provider component
 export const SupabaseProvider = ({ children }: { children: ReactNode }) => {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(globalSupabaseClient);

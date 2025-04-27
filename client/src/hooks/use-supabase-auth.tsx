@@ -3,6 +3,7 @@ import { User } from '@supabase/supabase-js';
 import { useQuery, useMutation, useQueryClient, UseMutationResult } from '@tanstack/react-query';
 import { signInWithPassword, signUp as signUpFn, signOut as signOutFn } from '@/lib/supabase';
 import { useSupabase } from '@/providers/supabase-provider';
+import { resetSupabaseClient } from '@/providers/supabase-provider';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -308,45 +309,74 @@ export function SupabaseAuthProvider({ children }: AuthProviderProps) {
 
   // Direct sign out function for emergency cases
   async function signOut() {
-    console.log("Emergency sign out triggered");
+    console.log("NUCLEAR OPTION: Emergency sign out triggered");
     try {
       // Call server-side logout route
-      await fetch('/api/logout', {
-        method: 'POST',
-        headers: {
-          'Cache-Control': 'no-cache, no-store',
-          'Pragma': 'no-cache'
-        }
+      try {
+        await fetch('/api/logout', {
+          method: 'POST',
+          headers: {
+            'Cache-Control': 'no-cache, no-store',
+            'Pragma': 'no-cache'
+          }
+        });
+      } catch (e) {
+        console.error("Error calling server logout:", e);
+      }
+      
+      // Force clear all Supabase cookies
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
       
+      // Clear local storage and session storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Sign out from Supabase if available
       if (supabase) {
-        // Force clear all Supabase cookies
-        document.cookie.split(";").forEach(function(c) {
-          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-        });
-        
-        // Clear local storage and session storage
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Sign out from Supabase
-        await supabase.auth.signOut({ scope: 'global' });
-        
-        // Clear React Query cache
-        queryClient.clear();
-        
-        // Remove the user from state
-        setSupabaseUser(null);
-        
-        console.log("Emergency sign out completed, redirecting to auth page");
-        
-        // Force a hard reload to clear any cached states
-        window.location.href = '/auth?logout=' + Date.now();
+        try {
+          // Try to sign out from Supabase
+          await supabase.auth.signOut({ scope: 'global' });
+        } catch (e) {
+          console.error("Supabase sign out error:", e);
+        }
       }
+      
+      // Reset the global Supabase client
+      resetSupabaseClient();
+      
+      // Clear React Query cache
+      queryClient.clear();
+      
+      // Remove the user from state
+      setSupabaseUser(null);
+      
+      console.log("Emergency sign out completed, preparing for hard reload");
+      
+      // Force a hard full page reload to clear any cached states
+      const logoutUrl = '/auth?logout=' + Date.now();
+      
+      toast({
+        title: "Successfully logged out",
+        description: "Redirecting to login page...",
+      });
+      
+      // Add a delay to make sure toast is shown
+      setTimeout(() => {
+        // Attempt to use window.location.replace for a cleaner navigation history
+        try {
+          window.location.replace(logoutUrl);
+        } catch (e) {
+          // Fall back to standard redirect if replace fails
+          window.location.href = logoutUrl;
+        }
+      }, 1000);
     } catch (error) {
       console.error("Sign out error:", error);
       // Force navigation in case of error
-      window.location.href = '/auth?error=1';
+      alert("An error occurred during logout. The page will now reload.");
+      window.location.reload();
     }
   }
 

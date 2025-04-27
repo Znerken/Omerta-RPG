@@ -17,6 +17,19 @@ declare global {
  * @param app Express app
  */
 export function setupAuthRoutes(app: Express) {
+  // Add a special endpoint that returns a special login page with a forced logout
+  app.get('/auth', async (req: Request, res: Response, next: NextFunction) => {
+    // If there's a logout parameter, clear any potential lingering session data
+    if (req.query.logout) {
+      console.log('Login page accessed with logout parameter, clearing any server-side session data');
+      req.user = undefined;
+      req.supabaseUser = undefined;
+    }
+    
+    // Continue to the normal route handling for the auth page
+    next();
+  });
+  
   // Add a special logout route that clears all server-side session data
   app.post('/api/logout', async (req: Request, res: Response) => {
     console.log('Server-side logout requested');
