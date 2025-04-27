@@ -326,7 +326,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               username: user.username,
               level: user.level,
               xp: user.xp,
-              gangId: user.gangId
+              gangId: user.gangId,
+              avatar: user.avatar,
+              strength: user.stats?.strength,
+              stealth: user.stats?.stealth,
+              charisma: user.stats?.charisma,
+              intelligence: user.stats?.intelligence,
+              cash: user.cash,
+              respect: user.respect
             }));
           break;
           
@@ -339,7 +346,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               username: user.username,
               level: user.level,
               cash: user.cash,
-              gangId: user.gangId
+              gangId: user.gangId,
+              avatar: user.avatar,
+              strength: user.stats?.strength,
+              stealth: user.stats?.stealth,
+              charisma: user.stats?.charisma,
+              intelligence: user.stats?.intelligence,
+              xp: user.xp,
+              respect: user.respect
             }));
           break;
           
@@ -352,7 +366,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               username: user.username,
               level: user.level,
               respect: user.respect,
-              gangId: user.gangId
+              gangId: user.gangId,
+              avatar: user.avatar,
+              strength: user.stats?.strength,
+              stealth: user.stats?.stealth,
+              charisma: user.stats?.charisma,
+              intelligence: user.stats?.intelligence,
+              xp: user.xp,
+              cash: user.cash
             }));
           break;
           
@@ -387,7 +408,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               username: user.username,
               level: user.level,
               xp: user.xp,
-              gangId: user.gangId
+              gangId: user.gangId,
+              avatar: user.avatar,
+              strength: user.stats?.strength,
+              stealth: user.stats?.stealth,
+              charisma: user.stats?.charisma,
+              intelligence: user.stats?.intelligence,
+              cash: user.cash,
+              respect: user.respect
             }));
       }
       
