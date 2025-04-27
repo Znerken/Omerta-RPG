@@ -1,5 +1,5 @@
 import { Express, Request, Response, NextFunction } from 'express';
-import { validateAuthHeader } from './supabase';
+import { validateToken, extractAndValidateToken } from './supabase';
 import { storage } from './storage-supabase';
 
 // Extend Request type to include user
@@ -35,8 +35,14 @@ export function setupAuthRoutes(app: Express) {
     }
 
     try {
+      // Extract token from Authorization header
+      const token = authHeader.split('Bearer ')[1];
+      if (!token) {
+        return next();
+      }
+      
       // Validate JWT token with Supabase
-      const supabaseUser = await validateAuthHeader(authHeader);
+      const supabaseUser = await extractAndValidateToken(req);
       if (!supabaseUser) {
         return next();
       }

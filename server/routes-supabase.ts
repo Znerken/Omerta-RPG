@@ -2,7 +2,7 @@ import type { Express, Request, Response } from 'express';
 import { createServer, type Server } from 'http';
 import { setupAuthRoutes, authProtected, adminProtected, jailProtected, checkUsernameEmail } from './auth-supabase';
 import { storage } from './storage-supabase';
-import { registerWebSocketServer } from './websocket-supabase';
+import { createWebSocketServer } from './websocket-supabase';
 import { registerProfileRoutes } from './profile-routes';
 import { registerCasinoRoutes } from './casino-routes';
 import { registerDrugRoutes } from './drug-routes';
@@ -12,7 +12,7 @@ import { registerAchievementRoutes } from './achievement-routes';
 import { registerAdminRoutes } from './admin-routes';
 import { registerSocialRoutes } from './social-routes';
 import { eq, and, desc, sql } from 'drizzle-orm';
-import { users, userStats, crimes, locations } from '@shared/schema';
+import { users, stats, crimes } from '@shared/schema';
 import { db } from './db-supabase';
 
 /**
@@ -231,21 +231,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Location routes
+  // Location routes - placeholder until locations table is created
   app.get('/api/locations', async (req: Request, res: Response) => {
-    try {
-      const locationsList = await db.select().from(locations);
-      res.json(locationsList);
-    } catch (error) {
-      console.error('Error fetching locations:', error);
-      res.status(500).json({ message: 'Failed to fetch locations' });
-    }
+    res.json([
+      { id: 1, name: 'Downtown', description: 'The heart of the city', image: '/locations/downtown.jpg' },
+      { id: 2, name: 'Slums', description: 'The rough part of town', image: '/locations/slums.jpg' },
+      { id: 3, name: 'Business District', description: 'Where the money is made', image: '/locations/business.jpg' },
+      { id: 4, name: 'Harbor', description: 'Shipping and smuggling central', image: '/locations/harbor.jpg' },
+      { id: 5, name: 'Suburbs', description: 'Quiet and unassuming', image: '/locations/suburbs.jpg' }
+    ]);
   });
 
   app.get('/api/locations/:id', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const [location] = await db.select().from(locations).where(eq(locations.id, parseInt(id)));
+      const locationId = parseInt(id);
+      
+      const locations = [
+        { id: 1, name: 'Downtown', description: 'The heart of the city', image: '/locations/downtown.jpg' },
+        { id: 2, name: 'Slums', description: 'The rough part of town', image: '/locations/slums.jpg' },
+        { id: 3, name: 'Business District', description: 'Where the money is made', image: '/locations/business.jpg' },
+        { id: 4, name: 'Harbor', description: 'Shipping and smuggling central', image: '/locations/harbor.jpg' },
+        { id: 5, name: 'Suburbs', description: 'Quiet and unassuming', image: '/locations/suburbs.jpg' }
+      ];
+      
+      const location = locations.find(l => l.id === locationId);
       
       if (!location) {
         return res.status(404).json({ message: 'Location not found' });
@@ -321,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   
   // Register WebSocket server
-  registerWebSocketServer(httpServer);
+  createWebSocketServer(httpServer);
 
   return httpServer;
 }

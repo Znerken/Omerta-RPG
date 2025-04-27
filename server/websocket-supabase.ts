@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
-import { validateAuthHeader } from './supabase';
+import { extractAndValidateToken } from './supabase';
 import { storage } from './storage-supabase';
 import { db } from './db-supabase';
 import { users } from '@shared/schema';
@@ -38,8 +38,11 @@ export function createWebSocketServer(server: Server) {
     }
     
     try {
+      // Create a mock request object with the token
+      const mockRequest = { headers: { authorization: `Bearer ${token}` } };
+      
       // Validate token
-      const supabaseUser = await validateAuthHeader(`Bearer ${token}`);
+      const supabaseUser = await extractAndValidateToken(mockRequest as any);
       if (!supabaseUser) {
         console.log('WebSocket connection with invalid token');
         mafiaWs.close(1008, 'Invalid authentication token');

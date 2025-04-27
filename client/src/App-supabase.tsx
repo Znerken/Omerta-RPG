@@ -21,7 +21,7 @@ import DrugsPage from '@/pages/drugs-page';
 import LocationsPage from '@/pages/locations-page';
 import FriendsPage from '@/pages/friends-page';
 import AdminPage from '@/pages/admin-page';
-import PublicProfilePage, { PublicProfilePageProps } from '@/pages/public-profile-page';
+import PublicProfilePage from '@/pages/public-profile-page';
 import { ProtectedRoute, AdminProtectedRoute, JailProtectedRoute } from '@/lib/protected-route-supabase';
 
 // App component

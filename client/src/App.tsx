@@ -1,229 +1,75 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "./hooks/use-auth";
-import { WebSocketProvider } from "./hooks/use-websocket-context";
-import { NotificationProvider } from "./hooks/use-notification";
-import { AchievementsProvider } from "./hooks/use-achievements";
-import { MessagesProvider } from "./hooks/use-messages";
-import { ProtectedRoute } from "./lib/protected-route";
-import { MafiaLayout } from "@/components/layout/mafia-layout";
-import { useAuth } from "@/hooks/use-auth";
+import { Switch, Route } from 'wouter';
+import { SupabaseAuthProvider } from '@/hooks/use-supabase-auth';
+import { ThemeProvider } from '@/components/theme-provider';
+import { Toaster } from '@/components/ui/toaster';
+import DashboardPage from '@/pages/dashboard-page';
+import ProfilePage from '@/pages/profile-page';
+import NotFound from '@/pages/not-found';
+import SupabaseAuthPage from '@/pages/supabase-auth-page';
+import CrimesPage from '@/pages/crimes-page';
+import CasinoPage from '@/pages/casino-page';
+import TrainingPage from '@/pages/training-page';
+import JailPage from '@/pages/jail-page';
+import InventoryPage from '@/pages/inventory-page';
+import MessagesPage from '@/pages/messages-page';
+import LeaderboardPage from '@/pages/leaderboard-page';
+import BankingPage from '@/pages/banking-page';
+import GangPage from '@/pages/gang-page';
+import AchievementsPage from '@/pages/achievements-page';
+import ChallengesPage from '@/pages/challenges-page';
+import DrugsPage from '@/pages/drugs-page';
+import LocationsPage from '@/pages/locations-page';
+import FriendsPage from '@/pages/friends-page';
+import AdminPage from '@/pages/admin-page';
+import PublicProfilePage, { PublicProfilePageProps } from '@/pages/public-profile-page';
+import { ProtectedRoute, AdminProtectedRoute, JailProtectedRoute } from '@/lib/protected-route-supabase';
 
-// Pages
-import NotFound from "@/pages/not-found";
-import AuthPage from "@/pages/auth-page";
-import DashboardPage from "@/pages/dashboard-page";
-import ProfilePage from "@/pages/profile-page";
-import PublicProfilePage from "@/pages/public-profile-page";
-import CrimesPage from "@/pages/crimes-page";
-import TrainingPage from "@/pages/training-page";
-import GangPage from "@/pages/gang-page";
-import JailPage from "@/pages/jail-page";
-import InventoryPage from "@/pages/inventory-page";
-import MessagesPage from "@/pages/messages-page";
-import LeaderboardPage from "@/pages/leaderboard-page";
-import BankingPage from "@/pages/banking-page";
-import ChallengesPage from "@/pages/challenges-page";
-import AchievementsPage from "@/pages/achievements-page";
-import AdminPage from "@/pages/admin-page";
-import DrugsPage from "@/pages/drugs-page";
-import CasinoPage from "@/pages/casino-page";
-import FriendsPage from "@/pages/friends-page";
-import FriendSystemTestPage from "@/pages/friend-system-test";
-import LocationsPage from "@/pages/locations-page";
-
-// Protected route with layout wrapper
-function ProtectedPage({ component: Component }: { component: React.ComponentType }) {
-  return (
-    <MafiaLayout>
-      <Component />
-    </MafiaLayout>
-  );
-}
-
-// Router component that uses the auth context
-function AppRouter() {
-  const { user, isLoading } = useAuth();
-  
-  // Loading state
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-  
-  return (
-    <Switch>
-      <Route path="/auth" component={AuthPage} />
-      
-      {/* Protected routes with layout */}
-      <Route path="/">
-        {() => (
-          <ProtectedRoute path="/" component={() => <ProtectedPage component={DashboardPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/profile">
-        {() => (
-          <ProtectedRoute path="/profile" component={() => <ProtectedPage component={ProfilePage} />} />
-        )}
-      </Route>
-      
-      {/* Deprecated route - keeping for backwards compatibility but redirecting to /player/:id */}
-      <Route path="/profile/:userId">
-        {({ params }) => (
-          <ProtectedRoute 
-            path={`/profile/${params.userId}`} 
-            component={() => <ProtectedPage component={() => <PublicProfilePage userId={parseInt(params.userId)} />} />} 
-          />
-        )}
-      </Route>
-      
-      <Route path="/crimes">
-        {() => (
-          <ProtectedRoute path="/crimes" component={() => <ProtectedPage component={CrimesPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/training">
-        {() => (
-          <ProtectedRoute path="/training" component={() => <ProtectedPage component={TrainingPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/gang">
-        {() => (
-          <ProtectedRoute path="/gang" component={() => <ProtectedPage component={GangPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/drugs">
-        {() => (
-          <ProtectedRoute path="/drugs" component={() => <ProtectedPage component={DrugsPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/jail">
-        {() => (
-          <ProtectedRoute path="/jail" component={() => <ProtectedPage component={JailPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/inventory">
-        {() => (
-          <ProtectedRoute path="/inventory" component={() => <ProtectedPage component={InventoryPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/messages">
-        {() => (
-          <ProtectedRoute path="/messages" component={() => <ProtectedPage component={MessagesPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/leaderboard">
-        {() => (
-          <ProtectedRoute path="/leaderboard" component={() => <ProtectedPage component={LeaderboardPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/banking">
-        {() => (
-          <ProtectedRoute path="/banking" component={() => <ProtectedPage component={BankingPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/casino">
-        {() => (
-          <ProtectedRoute path="/casino" component={() => <ProtectedPage component={CasinoPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/challenges">
-        {() => (
-          <ProtectedRoute path="/challenges" component={() => <ProtectedPage component={ChallengesPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/achievements">
-        {() => (
-          <ProtectedRoute path="/achievements" component={() => <ProtectedPage component={AchievementsPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/friends">
-        {() => (
-          <ProtectedRoute path="/friends" component={() => <ProtectedPage component={FriendsPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/friend-system-test">
-        {() => (
-          <ProtectedRoute path="/friend-system-test" component={() => <ProtectedPage component={FriendSystemTestPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/locations">
-        {() => (
-          <ProtectedRoute path="/locations" component={() => <ProtectedPage component={LocationsPage} />} />
-        )}
-      </Route>
-      
-      <Route path="/admin">
-        {() => (
-          <ProtectedRoute path="/admin" component={() => {
-            // Only render the admin page if the user is an admin
-            const { user } = useAuth();
-            if (!user?.isAdmin) {
-              return <ProtectedPage component={() => (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-                  <h1 className="text-2xl font-bold">Access Denied</h1>
-                  <p className="text-gray-400">You don't have permission to access this page.</p>
-                </div>
-              )} />
-            }
-            return <ProtectedPage component={AdminPage} />;
-          }} />
-        )}
-      </Route>
-      
-      {/* Public profile route - not protected, only wrapped in layout */}
-      <Route path="/player/:id">
-        {(params) => {
-          const id = params?.id || '';
-          return (
-            <MafiaLayout>
-              <PublicProfilePage userId={parseInt(id)} />
-            </MafiaLayout>
-          );
-        }}
-      </Route>
-      
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-// Wrap the entire application
+// App component
 function App() {
   return (
-    <TooltipProvider>
-      <QueryClientProvider client={queryClient}>
+    <ThemeProvider defaultTheme="dark" storageKey="omerta-theme">
+      <SupabaseAuthProvider>
+        <main>
+          <Switch>
+            {/* Public routes */}
+            <Route path="/auth" component={SupabaseAuthPage} />
+
+            {/* Protected routes (require authentication) */}
+            <ProtectedRoute path="/" component={DashboardPage} />
+            <ProtectedRoute path="/profile" component={ProfilePage} />
+            <Route path="/player/:userId" component={({ params }) => {
+              const userId = parseInt(params.userId);
+              return <PublicProfilePage userId={userId} />;
+            }} />
+
+            {/* Protected routes (require not being in jail) */}
+            <JailProtectedRoute path="/crimes" component={CrimesPage} />
+            <JailProtectedRoute path="/casino" component={CasinoPage} />
+            <JailProtectedRoute path="/training" component={TrainingPage} />
+            <JailProtectedRoute path="/inventory" component={InventoryPage} />
+            <JailProtectedRoute path="/banking" component={BankingPage} />
+            <JailProtectedRoute path="/gang" component={GangPage} />
+            <JailProtectedRoute path="/drugs" component={DrugsPage} />
+            <JailProtectedRoute path="/locations" component={LocationsPage} />
+
+            {/* Routes that are accessible even when in jail */}
+            <ProtectedRoute path="/jail" component={JailPage} />
+            <ProtectedRoute path="/messages" component={MessagesPage} />
+            <ProtectedRoute path="/leaderboard" component={LeaderboardPage} />
+            <ProtectedRoute path="/achievements" component={AchievementsPage} />
+            <ProtectedRoute path="/challenges" component={ChallengesPage} />
+            <ProtectedRoute path="/friends" component={FriendsPage} />
+
+            {/* Admin routes */}
+            <AdminProtectedRoute path="/admin" component={AdminPage} />
+
+            {/* Catch-all route for 404 */}
+            <Route component={NotFound} />
+          </Switch>
+        </main>
         <Toaster />
-        <AuthProvider>
-          <WebSocketProvider>
-            <NotificationProvider>
-              <AchievementsProvider>
-                <MessagesProvider>
-                  <AppRouter />
-                </MessagesProvider>
-              </AchievementsProvider>
-            </NotificationProvider>
-          </WebSocketProvider>
-        </AuthProvider>
-      </QueryClientProvider>
-    </TooltipProvider>
+      </SupabaseAuthProvider>
+    </ThemeProvider>
   );
 }
 

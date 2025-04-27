@@ -1,5 +1,5 @@
 import { db } from './db-supabase';
-import { users, userStats, userFriends, gangs, gangMembers, messages } from '@shared/schema';
+import { users, stats, userFriends, gangs, gangMembers, messages } from '@shared/schema';
 import { eq, and, asc, desc, sql, not, inArray, isNull, or, like } from 'drizzle-orm';
 import { createInsertSchema } from 'drizzle-zod';
 import { z } from 'zod';
@@ -134,7 +134,7 @@ export class SupabaseStorage {
   async createUserStats(userId: number) {
     try {
       const [insertedStats] = await db
-        .insert(userStats)
+        .insert(stats)
         .values({
           userId,
           strength: 10,
@@ -261,8 +261,8 @@ export class SupabaseStorage {
    */
   async getUserStats(userId: number) {
     try {
-      return await db.query.userStats.findFirst({
-        where: eq(userStats.userId, userId),
+      return await db.query.stats.findFirst({
+        where: eq(stats.userId, userId),
       });
     } catch (error) {
       console.error('Error getting user stats:', error);
