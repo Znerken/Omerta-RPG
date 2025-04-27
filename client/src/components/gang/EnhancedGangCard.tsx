@@ -758,7 +758,7 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                             Your gang doesn't have any active operations at the moment.
                           </p>
                           <Button size="sm" className="mx-auto">
-                            <BriefcaseBusiness className="h-4 w-4 mr-2" />
+                            <Briefcase className="h-4 w-4 mr-2" />
                             Start New Operation
                           </Button>
                         </div>
@@ -777,14 +777,14 @@ export function EnhancedGangCard({ gang, isUserInGang, userRank, userId }: GangC
                     <CardContent className="px-4 pb-4 pt-0">
                       <div className="border border-gray-700/30 rounded-md p-6 bg-gray-800/30 text-center">
                         <div className="w-12 h-12 mx-auto rounded-full bg-gray-800 flex items-center justify-center mb-3">
-                          <FolderKanban className="h-6 w-6 text-gray-500" />
+                          <Folder className="h-6 w-6 text-gray-500" />
                         </div>
                         <h3 className="text-base font-medium mb-1">Operations Coming Soon</h3>
                         <p className="text-sm text-gray-500 mb-4">
                           Gang operations are still being established in the criminal underworld.
                         </p>
                         <Button size="sm" className="mx-auto" disabled>
-                          <FolderKanban className="h-4 w-4 mr-2" />
+                          <Folder className="h-4 w-4 mr-2" />
                           Browse Operations
                         </Button>
                       </div>
