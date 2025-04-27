@@ -33,6 +33,17 @@ export const queryClient = new QueryClient({
             if (response.status === 401) {
               throw new Error("UNAUTHORIZED");
             }
+
+            // Special handling for prison escape
+            if (response.url.includes('/api/jail/escape')) {
+              const text = await response.text();
+              try {
+                const json = JSON.parse(text);
+                throw new Error(json.message || "Failed to escape from prison");
+              } catch {
+                throw new Error("Failed to escape from prison");
+              }
+            }
             
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
