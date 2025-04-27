@@ -1396,7 +1396,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
         .from(messages)
         .where(
           and(
-            eq(messages.receiverId, userId),
+            eq(messages.recipientId, userId),
             eq(messages.read, false),
             eq(messages.type, 'personal')
           )
@@ -1428,7 +1428,7 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
         .set({ read: true })
         .where(
           and(
-            eq(messages.receiverId, userId),
+            eq(messages.recipientId, userId),
             eq(messages.read, false),
             eq(messages.type, 'personal')
           )
@@ -1443,8 +1443,8 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
   async createMessage(messageData: Omit<InsertMessage, 'timestamp'>): Promise<Message> {
     try {
       // Set default values if not provided
-      if (messageData.type === 'personal' && !messageData.receiverId) {
-        throw new Error("receiverId is required for personal messages");
+      if (messageData.type === 'personal' && !messageData.recipientId) {
+        throw new Error("recipientId is required for personal messages");
       }
       
       if (messageData.type === 'gang' && !messageData.gangId) {
