@@ -7,8 +7,10 @@ import {
   messages,
   items,
   userInventory,
+  userStatus,
   type User,
-  type Stat
+  type Stat,
+  type UserStatus
 } from '@shared/schema';
 import { eq, and, or, desc, asc, sql } from 'drizzle-orm';
 
@@ -112,12 +114,13 @@ export class SupabaseStorage {
     }
   }
 
-  async updateUserStatus(id: number, status: string): Promise<User> {
+  async updateUserStatus(id: number, status: string, location?: string): Promise<User> {
     try {
-      // First, update the user's last seen time
-      const user = await this.updateUser(id, {
-        lastSeen: new Date()
-      });
+      // Get the user first
+      const user = await this.getUser(id);
+      if (!user) {
+        throw new Error('User not found');
+      }
       
       // Then update/create a record in the userStatus table
       const existingStatus = await db.query.userStatus.findFirst({
@@ -128,7 +131,8 @@ export class SupabaseStorage {
         await db.update(userStatus)
           .set({
             status: status,
-            lastActive: new Date()
+            lastActive: new Date(),
+            lastLocation: location || existingStatus.lastLocation
           })
           .where(eq(userStatus.userId, id));
       } else {
@@ -136,7 +140,8 @@ export class SupabaseStorage {
           .values({
             userId: id,
             status: status,
-            lastActive: new Date()
+            lastActive: new Date(),
+            lastLocation: location
           });
       }
       
@@ -207,6 +212,19 @@ export class SupabaseStorage {
       return userStats || undefined;
     } catch (error) {
       console.error('Error getting user stats:', error);
+      throw error;
+    }
+  }
+  
+  async getUserStatus(userId: number): Promise<UserStatus | undefined> {
+    try {
+      const status = await db.query.userStatus.findFirst({
+        where: eq(userStatus.userId, userId)
+      });
+      
+      return status || undefined;
+    } catch (error) {
+      console.error('Error getting user status:', error);
       throw error;
     }
   }
@@ -536,10 +554,11 @@ export class SupabaseStorage {
           u.username, 
           u.level, 
           u.avatar, 
-          u.status,
-          u.last_seen AS "lastSeen"
+          us.status,
+          us.last_active AS "lastSeen"
         FROM users u
         JOIN user_friends uf ON u.id = uf.friend_id
+        LEFT JOIN user_status us ON u.id = us.user_id
         WHERE uf.user_id = $1
         ORDER BY u.username ASC
       `;
