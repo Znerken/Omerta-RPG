@@ -126,12 +126,19 @@ export function NotificationList() {
           <ScrollArea className="h-[calc(80vh-8rem)] max-h-96">
             <div className="flex flex-col">
               {notifications.map((notification) => (
-                <button
+                <div
                   key={notification.id}
-                  className={`text-left p-4 border-b hover:bg-accent/30 transition-colors ${
+                  className={`cursor-pointer text-left p-4 border-b hover:bg-accent/30 transition-colors ${
                     !notification.read ? "bg-accent/20" : ""
                   }`}
                   onClick={() => handleNotificationClick(notification.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleNotificationClick(notification.id);
+                    }
+                  }}
                 >
                   <div className="flex items-start">
                     <div className="mr-3 mt-0.5">
@@ -156,7 +163,7 @@ export function NotificationList() {
                       )}
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           </ScrollArea>

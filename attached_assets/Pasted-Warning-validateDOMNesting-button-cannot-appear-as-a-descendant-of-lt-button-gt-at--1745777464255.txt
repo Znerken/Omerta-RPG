@@ -1,0 +1,38 @@
+Warning: validateDOMNesting(...): <button> cannot appear as a descendant of &lt;button&gt;.
+    at button
+    at _c (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/components/ui/button.tsx:48:11)
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-GR3B7I3S.js?v=d706d400:79:13
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-GR3B7I3S.js?v=d706d400:56:13
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DVHSTOKX.js?v=d706d400:42:13
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-GR3B7I3S.js?v=d706d400:79:13
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-GR3B7I3S.js?v=d706d400:56:13
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-DVHSTOKX.js?v=d706d400:42:13
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-JYL32WHJ.js?v=d706d400:1929:13
+    at https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-popover.js?v=d706d400:116:13
+    at Provider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-3RXG37ZK.js?v=d706d400:38:15)
+    at Provider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-3RXG37ZK.js?v=d706d400:38:15)
+    at Popper (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-JYL32WHJ.js?v=d706d400:1921:11)
+    at Popover (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-popover.js?v=d706d400:65:5)
+    at NotificationList (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/components/notification/notification-list.tsx:100:7)
+    at button
+    at _c (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/components/ui/button.tsx:48:11)
+    at div
+    at div
+    at main
+    at div
+    at MafiaLayout (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/components/layout/mafia-layout.tsx:152:31)
+    at ProtectedPage (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/App.tsx?v=72dKY46eCVuH7VHemhWFE:58:37)
+    at component
+    at _c3 (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/lib/protected-route.tsx:36:3)
+    at Route (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=d706d400:206:16)
+    at ProtectedRoute (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/lib/protected-route.tsx:45:3)
+    at Route (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=d706d400:206:16)
+    at Switch (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=d706d400:262:17)
+    at AppRouter (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/App.tsx?v=72dKY46eCVuH7VHemhWFE:72:31)
+    at MessagesProvider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/hooks/use-messages.tsx:23:36)
+    at AchievementsProvider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/hooks/use-achievements.tsx:24:40)
+    at NotificationProvider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/hooks/use-notification.tsx:23:40)
+    at WebSocketProvider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/hooks/use-websocket-context.tsx:37:37)
+    at AuthProvider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/src/hooks/use-auth.tsx:34:32)
+    at QueryClientProvider (https://337cb255-12df-4cd9-be7a-39bcb91c7311-00-24087anvhaj3.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=d706d400:2875:3)
+    at Provider…
