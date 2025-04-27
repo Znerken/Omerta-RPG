@@ -459,7 +459,21 @@ export function MafiaLayout({ children, title, description }: MafiaLayoutProps) 
         <div className="container mx-auto px-4 py-6 md:py-8 max-w-6xl">
           {/* Mobile only notification bell (top-right of screen) */}
           {user && (
-            <div className="md:hidden fixed top-20 right-4 z-30">
+            <div className="md:hidden fixed top-20 right-4 z-30 flex flex-col gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleNotifications}
+                title={notificationsEnabled ? "Turn off notifications" : "Turn on notifications"}
+                className="h-9 w-9 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full bg-black/20 shadow-md border border-gold/10"
+              >
+                {notificationsEnabled ? (
+                  <Bell className="h-4 w-4" />
+                ) : (
+                  <BellOff className="h-4 w-4" />
+                )}
+              </Button>
+              
               <Button
                 variant="ghost"
                 size="icon"
@@ -495,15 +509,32 @@ export function MafiaLayout({ children, title, description }: MafiaLayoutProps) 
               
               {/* Desktop notification bell */}
               {user && (
-                <NotificationList>
+                <div className="flex items-center space-x-1">
+                  {/* Notification toggle button */}
                   <Button
                     variant="ghost"
                     size="icon"
+                    onClick={toggleNotifications}
+                    title={notificationsEnabled ? "Turn off notifications" : "Turn on notifications"}
                     className="h-8 w-8 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full"
                   >
-                    <Bell className="h-4 w-4" />
+                    {notificationsEnabled ? (
+                      <Bell className="h-4 w-4" />
+                    ) : (
+                      <BellOff className="h-4 w-4" />
+                    )}
                   </Button>
-                </NotificationList>
+                  
+                  <NotificationList>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gold/70 hover:text-gold hover:bg-black/30 rounded-full"
+                    >
+                      <Bell className="h-4 w-4" />
+                    </Button>
+                  </NotificationList>
+                </div>
               )}
             </div>
             
