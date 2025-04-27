@@ -253,56 +253,73 @@ export class DatabaseStorage extends EconomyStorage implements IStorage {
       }
       console.log(`[DEBUG] Found user:`, user);
       
-      // First check directly in the database 
-      const [directMember] = await db
-        .select()
-        .from(gangMembers)
-        .where(eq(gangMembers.userId, userId));
+      try {
+        // First check directly in the database - use raw SQL query to avoid column doesn't exist errors
+        const result = await db.execute(
+          sql`SELECT * FROM gang_members WHERE user_id = ${userId}`
+        );
         
-      console.log(`[DEBUG] Direct database query for gangMembers:`, directMember);
-      
-      // If user is in a gang based on direct query
-      if (directMember) {
-        // Get the gang details
-        const [gangData] = await db
-          .select()
-          .from(gangs)
-          .where(eq(gangs.id, directMember.gangId));
+        const directMember = result.rows[0];
+        console.log(`[DEBUG] Direct database query for gangMembers:`, directMember);
+        
+        // If user is in a gang based on direct query
+        if (directMember) {
+          // Get the gang details
+          const [gangData] = await db
+            .select()
+            .from(gangs)
+            .where(eq(gangs.id, directMember.gang_id));
+            
+          // Return user with gang info
+          console.log(`[DEBUG] User is in gang (direct query), returning user with gang info`);
           
-        // Return user with gang info
-        console.log(`[DEBUG] User is in gang (direct query), returning user with gang info`);
-        return {
-          ...user,
-          inGang: true,
-          gangId: directMember.gangId,
-          gang: gangData,
-          gangRank: directMember.rank,
-          gangMember: directMember
-        };
+          // Handle both column naming conventions
+          const memberRank = directMember.rank || 'Member'; // Default to 'Member' if rank doesn't exist
+          
+          return {
+            ...user,
+            inGang: true,
+            gangId: directMember.gang_id,
+            gang: gangData,
+            gangRank: memberRank,
+            gangMember: {
+              ...directMember,
+              gangId: directMember.gang_id,
+              userId: directMember.user_id,
+              joinedAt: directMember.joined_at
+            }
+          };
+        }
+      } catch (error) {
+        console.error("Error in direct gang member query:", error);
+        // Continue to fallback method
       }
       
-      // Now try through the method as a fallback
-      const gangMember = await this.getGangMember(userId);
-      console.log(`[DEBUG] getGangMember result:`, gangMember);
-      
-      if (!gangMember) {
-        console.log(`[DEBUG] User with ID ${userId} is not in a gang`);
-        // Return user without gang info
-        return {
-          ...user,
-          inGang: false
-        };
+      // Fallback to using storage methods
+      try {
+        const gangMember = await this.getGangMember(userId);
+        console.log(`[DEBUG] getGangMember result:`, gangMember);
+        
+        if (gangMember) {
+          console.log(`[DEBUG] User is in gang via getGangMember, returning user with gang info`);
+          return {
+            ...user,
+            inGang: true,
+            gangId: gangMember.gangId,
+            gang: gangMember.gang,
+            gangRank: gangMember.rank || 'Member',
+            gangMember
+          };
+        }
+      } catch (error) {
+        console.error("Error in fallback gang member query:", error);
       }
       
-      // Return user with gang info
-      console.log(`[DEBUG] User is in gang via getGangMember, returning user with gang info`);
+      // Return user without gang info if we get here
+      console.log(`[DEBUG] User with ID ${userId} is not in a gang`);
       return {
         ...user,
-        inGang: true,
-        gangId: gangMember.gangId,
-        gang: gangMember.gang,
-        gangRank: gangMember.rank,
-        gangMember: gangMember
+        inGang: false
       };
     } catch (error) {
       console.error("Error in getUserWithGang:", error);
