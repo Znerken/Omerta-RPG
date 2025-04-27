@@ -1,165 +1,173 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
 // Load environment variables
 dotenv.config();
 
 // Validate Supabase credentials
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  console.error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_ANON_KEY in your .env file.');
   process.exit(1);
 }
 
-// Create a Supabase client with the service role key for admin access
+// Create a regular Supabase client with anonymous key
+export const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
+
+// Validate Supabase service role key for admin operations
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Missing SUPABASE_SERVICE_ROLE_KEY. Some admin operations may not work.');
+}
+
+// Create an admin Supabase client with service role key
 export const supabaseAdmin = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
 /**
- * Verify a JWT token from Supabase
- * @param token JWT token from Authorization header
- * @returns User data if token is valid, null otherwise
+ * Verify a Supabase JWT token and return the user if valid
+ * @param token JWT token from the client
+ * @returns User object if token is valid, null otherwise
  */
-export async function verifyToken(token: string): Promise<any> {
+export async function verifySupabaseToken(token: string) {
   try {
-    // Extract the token from Authorization header if needed
-    const jwt = token.startsWith('Bearer ') ? token.slice(7) : token;
-    
-    // Call Supabase API to get user by JWT token
-    const { data, error } = await supabaseAdmin.auth.getUser(jwt);
+    const { data, error } = await supabase.auth.getUser(token);
     
     if (error) {
-      console.error('Error verifying token:', error);
+      console.error('Error verifying token:', error.message);
       return null;
     }
     
     return data.user;
   } catch (error) {
-    console.error('Error verifying token:', error);
+    console.error('Exception verifying token:', error);
     return null;
   }
 }
 
 /**
- * Get all users from Supabase Auth
- * @returns Array of users
+ * Check connection to Supabase
+ * @returns {Promise<boolean>} True if connected, false otherwise
  */
-export async function listUsers(): Promise<any[]> {
+export async function checkSupabaseConnection(): Promise<boolean> {
   try {
-    // Get all users from Supabase Auth
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { error } = await supabase.from('test_connection').select('*').limit(1);
     
-    if (error) {
-      console.error('Error listing users:', error);
-      return [];
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 is "relation does not exist" which is expected if the table doesn't exist
+      console.error('Supabase connection error:', error);
+      return false;
     }
     
-    return data.users;
-  } catch (error) {
-    console.error('Error listing users:', error);
-    return [];
-  }
-}
-
-/**
- * Create a user in Supabase Auth
- * @param email User email
- * @param password User password
- * @param metadata User metadata
- * @returns Created user data
- */
-export async function createUser(email: string, password: string, metadata: any): Promise<any> {
-  try {
-    // Create user in Supabase Auth
-    const { data, error } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: metadata,
-    });
+    // Test auth service
+    const { data, error: authError } = await supabaseAdmin.auth.getUser();
     
-    if (error) {
-      console.error('Error creating user:', error);
-      throw error;
-    }
-    
-    return data.user;
-  } catch (error) {
-    console.error('Error creating user:', error);
-    throw error;
-  }
-}
-
-/**
- * Update a user in Supabase Auth
- * @param id User ID
- * @param userData User data to update
- * @returns Updated user data
- */
-export async function updateUser(id: string, userData: any): Promise<any> {
-  try {
-    // Update user in Supabase Auth
-    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(id, userData);
-    
-    if (error) {
-      console.error('Error updating user:', error);
-      throw error;
-    }
-    
-    return data.user;
-  } catch (error) {
-    console.error('Error updating user:', error);
-    throw error;
-  }
-}
-
-/**
- * Delete a user from Supabase Auth
- * @param id User ID
- * @returns True if successful, throws error otherwise
- */
-export async function deleteUser(id: string): Promise<boolean> {
-  try {
-    // Delete user from Supabase Auth
-    const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
-    
-    if (error) {
-      console.error('Error deleting user:', error);
-      throw error;
+    if (authError) {
+      console.error('Supabase auth service error:', authError);
+      return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Error deleting user:', error);
-    throw error;
+    console.error('Error checking Supabase connection:', error);
+    return false;
   }
 }
 
 /**
- * Get a user by ID from Supabase Auth
- * @param id User ID
- * @returns User data if found, null otherwise
+ * Fetch user from Supabase Auth by email
+ * @param email User's email
+ * @returns Supabase Auth user if found, null otherwise
  */
-export async function getUserById(id: string): Promise<any> {
+export async function getUserByEmail(email: string) {
   try {
-    // Get user from Supabase Auth
-    const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers();
     
     if (error) {
-      console.error('Error getting user:', error);
+      console.error('Error fetching users:', error);
+      return null;
+    }
+    
+    return data.users.find(user => user.email === email) || null;
+  } catch (error) {
+    console.error('Exception fetching user by email:', error);
+    return null;
+  }
+}
+
+/**
+ * Create a new user in Supabase Auth
+ * @param email User's email
+ * @param password User's password
+ * @param metadata Additional metadata
+ * @returns Created user if successful, null otherwise
+ */
+export async function createSupabaseUser(email: string, password: string, metadata: any = {}) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: metadata
+    });
+    
+    if (error) {
+      console.error('Error creating user:', error);
       return null;
     }
     
     return data.user;
   } catch (error) {
-    console.error('Error getting user:', error);
+    console.error('Exception creating user:', error);
+    return null;
+  }
+}
+
+/**
+ * Delete a user from Supabase Auth
+ * @param userId User's Supabase Auth ID
+ * @returns True if successful, false otherwise
+ */
+export async function deleteSupabaseUser(userId: string) {
+  try {
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Exception deleting user:', error);
+    return false;
+  }
+}
+
+/**
+ * Update a user in Supabase Auth
+ * @param userId User's Supabase Auth ID
+ * @param userData User data to update
+ * @returns Updated user if successful, null otherwise
+ */
+export async function updateSupabaseUser(userId: string, userData: any) {
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      userData
+    );
+    
+    if (error) {
+      console.error('Error updating user:', error);
+      return null;
+    }
+    
+    return data.user;
+  } catch (error) {
+    console.error('Exception updating user:', error);
     return null;
   }
 }

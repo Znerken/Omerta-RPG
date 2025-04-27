@@ -1,179 +1,249 @@
-import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
-import { supabase, signInWithEmail, signUpWithEmail, signOut, UserProfile } from '@/lib/supabase';
-import { Session, User } from '@supabase/supabase-js';
-import { useToast } from '@/hooks/use-toast';
-import { useQuery } from '@tanstack/react-query';
-import { apiRequest, queryClient } from '@/lib/queryClient';
+import { ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase, UserProfile } from '@/lib/supabase';
+import { useToast } from './use-toast';
+import { useLocation } from 'wouter';
 
-// Create a context for authentication
+// Define the context type
 interface SupabaseAuthContextType {
   session: Session | null;
   user: User | null;
   gameUser: UserProfile | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username: string, confirmPassword: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    username: string,
+    confirmPassword: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
 }
 
-const SupabaseAuthContext = createContext<SupabaseAuthContextType | undefined>(undefined);
+// Create the context
+const SupabaseAuthContext = createContext<SupabaseAuthContextType | null>(null);
 
 // Provider component
-export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+export function SupabaseAuthProvider({ children }: { children: ReactNode }): JSX.Element {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [gameUser, setGameUser] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
-  // Get game user data from our database
-  const { data: gameUser } = useQuery<UserProfile>({
-    queryKey: ['/api/user'],
-    queryFn: async () => {
-      if (!user) return null;
-      try {
-        const res = await apiRequest('GET', '/api/user');
-        if (!res.ok) {
-          throw new Error('Failed to fetch user profile');
-        }
-        return await res.json();
-      } catch (error) {
-        return null;
-      }
-    },
-    enabled: !!user,
-  });
-
-  // Check for session on initial load
+  // Initialize auth state from Supabase
   useEffect(() => {
+    // Set isLoading to true when starting to fetch session
     setIsLoading(true);
-    
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    // Get current session
+    const initializeAuth = async () => {
+      // Get the current session
+      const { data: { session } } = await supabase.auth.getSession();
 
-    return () => subscription.unsubscribe();
+      if (session) {
+        setSession(session);
+        setUser(session.user);
+
+        // Fetch game user data
+        try {
+          const response = await fetch('/api/user', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`
+            }
+          });
+
+          if (response.ok) {
+            const gameUserData = await response.json();
+            setGameUser(gameUserData);
+          } else {
+            console.error('Failed to fetch game user data');
+            setGameUser(null);
+          }
+        } catch (error) {
+          console.error('Error fetching game user data:', error);
+          setGameUser(null);
+        }
+      } else {
+        // No active session
+        setSession(null);
+        setUser(null);
+        setGameUser(null);
+      }
+
+      // Auth state is initialized, set loading to false
+      setIsLoading(false);
+    };
+
+    // Initialize auth state
+    initializeAuth();
+
+    // Set up auth state change subscription
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Fetch game user data when auth state changes
+        if (session) {
+          try {
+            const response = await fetch('/api/user', {
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              }
+            });
+
+            if (response.ok) {
+              const gameUserData = await response.json();
+              setGameUser(gameUserData);
+            } else {
+              setGameUser(null);
+            }
+          } catch (error) {
+            console.error('Error fetching game user data on auth change:', error);
+            setGameUser(null);
+          }
+        } else {
+          setGameUser(null);
+        }
+      }
+    );
+
+    // Clean up subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Sign in with email and password
+  // Sign in function
   const signIn = async (email: string, password: string) => {
-    setIsLoading(true);
     try {
-      const { user } = await signInWithEmail(email, password);
-      setUser(user);
-      
-      // Invalidate user query to refetch
-      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      
-      toast({
-        title: 'Welcome back',
-        description: 'You have successfully signed in.',
+      setIsLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Signed in',
+        description: 'Welcome back to OMERTÀ',
+        variant: 'default'
+      });
+
+      setLocation('/');
     } catch (error: any) {
       toast({
         title: 'Sign in failed',
-        description: error.message || 'Please check your credentials and try again.',
-        variant: 'destructive',
+        description: error.message || 'Failed to sign in',
+        variant: 'destructive'
       });
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign up with email, password and username
-  const signUp = async (email: string, password: string, username: string, confirmPassword: string) => {
-    // Validate password match
+  // Sign up function
+  const signUp = async (
+    email: string,
+    password: string,
+    username: string,
+    confirmPassword: string
+  ) => {
     if (password !== confirmPassword) {
       toast({
         title: 'Passwords do not match',
-        description: 'Please make sure your passwords match.',
-        variant: 'destructive',
+        description: 'Please ensure your passwords match',
+        variant: 'destructive'
       });
-      throw new Error('Passwords do not match');
+      return;
     }
 
-    setIsLoading(true);
     try {
-      // Register with Supabase
-      const { user } = await signUpWithEmail(email, password, username);
-      
-      if (user) {
-        // Create user in our database
-        const res = await apiRequest('POST', '/api/register', {
-          supabaseId: user.id,
-          username,
-          email,
-          password,
-          confirmPassword,
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || 'Failed to complete registration');
+      setIsLoading(true);
+
+      // First, sign up with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username }
         }
-        
-        setUser(user);
-        
-        // Invalidate user query to fetch game user data
-        queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-        
-        toast({
-          title: 'Account created',
-          description: 'Your account has been created successfully. Welcome to OMERTÀ!',
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // If successful, create a user in our database
+      if (data.user) {
+        const apiResponse = await fetch('/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${data.session?.access_token}`
+          },
+          body: JSON.stringify({
+            username,
+            email,
+            confirmPassword,
+            supabaseId: data.user.id
+          })
         });
+
+        if (!apiResponse.ok) {
+          const errorData = await apiResponse.json();
+          throw new Error(errorData.message || 'Failed to create user in the game database');
+        }
+
+        // Registration successful
+        toast({
+          title: 'Registration successful',
+          description: 'Welcome to OMERTÀ',
+          variant: 'default'
+        });
+
+        setLocation('/');
       }
     } catch (error: any) {
       toast({
         title: 'Registration failed',
-        description: error.message || 'Please try again with different credentials.',
-        variant: 'destructive',
+        description: error.message || 'Failed to register',
+        variant: 'destructive'
       });
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Sign out
+  // Logout function
   const logout = async () => {
-    setIsLoading(true);
     try {
-      await signOut();
-      setUser(null);
-      setSession(null);
-      
-      // Clear user data from query cache
-      queryClient.setQueryData(['/api/user'], null);
-      
+      setIsLoading(true);
+      await supabase.auth.signOut();
+
       toast({
         title: 'Signed out',
-        description: 'You have been signed out successfully.',
+        description: 'You have been signed out',
+        variant: 'default'
       });
+
+      setLocation('/auth');
     } catch (error: any) {
       toast({
         title: 'Sign out failed',
-        description: error.message || 'There was an error signing out.',
-        variant: 'destructive',
+        description: error.message || 'Failed to sign out',
+        variant: 'destructive'
       });
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Context value
   const value = {
     session,
     user,
@@ -181,7 +251,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     signIn,
     signUp,
-    logout,
+    logout
   };
 
   return (
@@ -191,13 +261,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Custom hook to use the auth context
+// Hook to use the auth context
 export function useSupabaseAuth() {
   const context = useContext(SupabaseAuthContext);
-  
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useSupabaseAuth must be used within a SupabaseAuthProvider');
   }
-  
   return context;
 }
