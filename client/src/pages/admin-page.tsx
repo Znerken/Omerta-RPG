@@ -192,6 +192,51 @@ export default function AdminPage() {
       });
     },
   });
+
+  // Delete a specific test user by ID
+  const deleteTestUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/delete-test-user/${userId}`);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to delete test user");
+      }
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Test User Deleted",
+        description: `Successfully deleted ${data.deletedUser.username}`,
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action: Test User Deleted",
+        message: `Successfully deleted ${data.deletedUser.username}`,
+        type: "success",
+        read: false,
+        timestamp: new Date()
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete test user",
+        description: error.message,
+        variant: "destructive",
+      });
+      
+      addNotification({
+        id: Date.now().toString(),
+        title: "Admin Action Failed",
+        message: `Failed to delete test user: ${error.message}`,
+        type: "error",
+        read: false,
+        timestamp: new Date()
+      });
+    },
+  });
   
   const deleteTestUsersMutation = useMutation({
     mutationFn: async () => {
@@ -205,13 +250,13 @@ export default function AdminPage() {
     onSuccess: (data) => {
       toast({
         title: "Test Users Deleted",
-        description: `Deleted ${data.count} test users`,
+        description: `Deleted ${data.deletedCount} test users`,
       });
       
       addNotification({
         id: Date.now().toString(),
         title: "Admin Action: Test Users Deleted",
-        message: `Deleted ${data.count} test users`,
+        message: `Deleted ${data.deletedCount} test users`,
         type: "success",
         read: false,
         timestamp: new Date()

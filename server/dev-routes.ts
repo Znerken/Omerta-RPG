@@ -43,6 +43,140 @@ function generateRandomString(length: number) {
 
 // Register development routes
 export function registerDevRoutes(app: Express) {
+  // Delete specific test users by ID (only accessible by admin)
+  app.delete("/api/admin/delete-test-user/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      // Get the user to verify it's a test user
+      const [testUser] = await db.select()
+        .from(users)
+        .where(eq(users.id, userId));
+      
+      if (!testUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (!testUser.username.startsWith('tester_')) {
+        return res.status(400).json({ message: "This endpoint can only delete test users (username starting with 'tester_')" });
+      }
+      
+      console.log(`Attempting to delete test user: ${testUser.username} (ID: ${testUser.id})`);
+      
+      // Delete related data for this user in a specific order to avoid foreign key constraints
+      
+      // Handle gang-related data first
+      try {
+        // Use raw SQL to delete gang memberships
+        await db.execute(sql`
+          DELETE FROM gang_members 
+          WHERE user_id = ${userId}
+        `);
+        console.log(`Successfully deleted gang memberships for user ${userId}`);
+      } catch (err) {
+        console.warn(`Error deleting gang memberships for user ${userId}:`, err);
+      }
+      
+      // Delete drug-related data
+      try {
+        // Delete user drug effects
+        await db.delete(userDrugEffects).where(eq(userDrugEffects.userId, userId));
+        
+        // Delete drug addictions
+        await db.delete(drugAddictions).where(eq(drugAddictions.userId, userId));
+        
+        // Delete drug deals
+        await db.delete(drugDeals).where(eq(drugDeals.sellerId, userId));
+        
+        // Delete drug production and labs
+        const labs = await db.select()
+          .from(drugLabs)
+          .where(eq(drugLabs.userId, userId));
+        
+        for (const lab of labs) {
+          await db.delete(drugProduction).where(eq(drugProduction.labId, lab.id));
+        }
+        
+        await db.delete(drugLabs).where(eq(drugLabs.userId, userId));
+        
+        // Delete user drugs
+        await db.delete(userDrugs).where(eq(userDrugs.userId, userId));
+      } catch (err) {
+        console.warn(`Error deleting drug-related data for user ${userId}:`, err);
+      }
+      
+      // Delete stats
+      try {
+        await db.delete(stats).where(eq(stats.userId, userId));
+      } catch (err) {
+        console.warn(`Error deleting stats for user ${userId}:`, err);
+      }
+      
+      // Delete friends
+      try {
+        await db.delete(userFriends)
+          .where(
+            or(
+              eq(userFriends.userId, userId),
+              eq(userFriends.friendId, userId)
+            )
+          );
+      } catch (err) {
+        console.warn(`Error deleting friends for user ${userId}:`, err);
+      }
+      
+      // Delete friend requests
+      try {
+        await db.delete(friendRequests)
+          .where(
+            or(
+              eq(friendRequests.senderId, userId),
+              eq(friendRequests.receiverId, userId)
+            )
+          );
+      } catch (err) {
+        console.warn(`Error deleting friend requests for user ${userId}:`, err);
+      }
+      
+      // Delete user status
+      try {
+        await db.delete(userStatus).where(eq(userStatus.userId, userId));
+      } catch (err) {
+        console.warn(`Error deleting user status for user ${userId}:`, err);
+      }
+      
+      // Finally, delete the user
+      const [deletedUser] = await db.delete(users)
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (!deletedUser) {
+        return res.status(404).json({ 
+          message: "User not found or could not be deleted",
+          id: userId
+        });
+      }
+      
+      return res.json({ 
+        message: `Successfully deleted test user: ${deletedUser.username}`,
+        deletedUser: {
+          id: deletedUser.id,
+          username: deletedUser.username
+        }
+      });
+    } catch (error) {
+      console.error(`Error deleting test user with ID ${req.params.id}:`, error);
+      res.status(500).json({ 
+        message: "Error deleting test user", 
+        error: error.message 
+      });
+    }
+  });
+  
   // Delete all test users (only accessible by admin)
   app.delete("/api/admin/delete-test-users", isAuthenticated, isAdmin, async (req, res) => {
     try {
@@ -57,6 +191,10 @@ export function registerDevRoutes(app: Express) {
       
       // Get all test user IDs
       const userIds = testUsers.map(user => user.id);
+      
+      // Log the test users and their IDs for debugging
+      console.log("Found the following test users:");
+      testUsers.forEach(user => console.log(`- ${user.username} (ID: ${user.id})`));
       
       // Delete related data for these users in a specific order to avoid foreign key constraints
       
@@ -106,6 +244,18 @@ export function registerDevRoutes(app: Express) {
       // Delete user status
       await db.delete(userStatus).where(sql`${userStatus.userId} IN ${userIds}`);
       
+      // Handle gang-related data
+      try {
+        // Use raw SQL to delete gang memberships
+        await db.execute(sql`
+          DELETE FROM gang_members 
+          WHERE user_id IN (${sql.join(userIds, sql`, `)})
+        `);
+        console.log("Successfully deleted gang memberships");
+      } catch (err) {
+        console.warn("Error deleting gang memberships:", err);
+      }
+        
       // Delete challenge progress
       try {
         await db.delete(challengeProgress).where(sql`${challengeProgress.userId} IN ${userIds}`);
