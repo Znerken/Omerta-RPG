@@ -137,6 +137,15 @@ export const userInventory = pgTable("user_inventory", {
   equipped: boolean("equipped").notNull().default(false),
 });
 
+// User Equipment Schema
+export const equipments = pgTable("equipments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  itemId: integer("item_id").notNull(),
+  slotType: text("slot_type").notNull(), // weapon, armor, accessory
+  equippedAt: timestamp("equipped_at").defaultNow(),
+});
+
 // Gangs Schema
 export const gangs = pgTable("gangs", {
   id: serial("id").primaryKey(),
@@ -298,6 +307,12 @@ export const insertUserInventorySchema = createInsertSchema(userInventory).pick(
   quantity: true,
 });
 
+export const insertEquipmentSchema = createInsertSchema(equipments).pick({
+  userId: true,
+  itemId: true,
+  slotType: true,
+});
+
 export const insertGangSchema = createInsertSchema(gangs).pick({
   name: true,
   tag: true,
@@ -371,7 +386,6 @@ export const insertUserStatusSchema = createInsertSchema(userStatus).pick({
   lastActive: true,
 });
 
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertUserFriend = z.infer<typeof insertUserFriendSchema>;
 export type InsertFriendRequest = z.infer<typeof insertFriendRequestSchema>;
 export type InsertUserStatus = z.infer<typeof insertUserStatusSchema>;
@@ -397,6 +411,9 @@ export type Item = typeof items.$inferSelect;
 
 export type InsertUserInventory = z.infer<typeof insertUserInventorySchema>;
 export type UserInventory = typeof userInventory.$inferSelect;
+
+export type InsertEquipment = z.infer<typeof insertEquipmentSchema>;
+export type Equipment = typeof equipments.$inferSelect;
 
 export type InsertGang = z.infer<typeof insertGangSchema>;
 export type Gang = typeof gangs.$inferSelect;

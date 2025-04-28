@@ -1,66 +1,60 @@
-import { Express, Request, Response } from "express";
-import multer from "multer";
+import { Request, Response, Express } from "express";
+import { z } from "zod";
+import { isAuthenticated, isAdmin } from "./middleware/auth";
 import path from "path";
 import fs from "fs";
-import { isAuthenticated, isAdmin } from "./middleware/auth";
+import multer from "multer";
+import { promises as fsPromises } from "fs";
 import { db } from "./db";
-import { items } from "@shared/schema";
+import { items, equipments } from "@shared/schema";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
 
-// Set up multer for image uploads
+// Define upload directory and storage
+const UPLOAD_DIR = path.join(process.cwd(), "public", "images", "items");
+
+// Ensure the upload directory exists
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    console.log(`Created upload directory at ${UPLOAD_DIR}`);
+  }
+} catch (error) {
+  console.error("Error creating upload directory:", error);
+}
+
+// Configure multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const itemsDir = path.join(process.cwd(), "public", "images", "items");
-    // Make sure the directory exists
-    if (!fs.existsSync(itemsDir)) {
-      fs.mkdirSync(itemsDir, { recursive: true });
-    }
-    cb(null, itemsDir);
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
-    // Create a sanitized filename based on the original name
-    const fileName = file.originalname.toLowerCase().replace(/\s+/g, "-");
-    cb(null, `${Date.now()}-${fileName}`);
-  }
+    // Create unique filename using timestamp and original extension
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `${uniqueSuffix}${ext}`);
+  },
 });
 
-// File filter to only allow image files
+// File filter for image uploads
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
-  if (allowedTypes.includes(file.mimetype)) {
+  // Accept only image files
+  if (file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed"));
+    cb(new Error('Only image files are allowed!'));
   }
 };
 
+// Create the multer upload instance
 const upload = multer({ 
   storage, 
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB max file size
+    fileSize: 5 * 1024 * 1024, // 5MB limit
   }
 });
 
-// Define the item schema for validation
-const itemSchema = z.object({
-  name: z.string().min(1, "Item name is required"),
-  description: z.string().min(1, "Description is required"),
-  type: z.string().min(1, "Type is required"),
-  category: z.string().optional(),
-  price: z.number().min(0, "Price must be a positive number"),
-  level: z.number().int().min(1, "Level must be at least 1").optional(),
-  rarity: z.string().optional(),
-  strengthBonus: z.number().default(0),
-  stealthBonus: z.number().default(0),
-  charismaBonus: z.number().default(0),
-  intelligenceBonus: z.number().default(0),
-  crimeSuccessBonus: z.number().default(0),
-  jailTimeReduction: z.number().default(0),
-  escapeChanceBonus: z.number().default(0),
-});
-
+// Register item management routes
 export function registerItemManagementRoutes(app: Express) {
   // Get all items
   app.get("/api/admin/items", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
@@ -68,71 +62,81 @@ export function registerItemManagementRoutes(app: Express) {
       const allItems = await db.select().from(items);
       res.json(allItems);
     } catch (error) {
-      console.error("Failed to get items:", error);
-      res.status(500).json({ error: "Failed to get items" });
+      console.error("Error fetching items:", error);
+      res.status(500).json({ message: "Failed to fetch items", error: error.message });
     }
   });
 
-  // Get a single item by ID
+  // Get a specific item
   app.get("/api/admin/items/:id", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
       const itemId = parseInt(req.params.id);
       const [item] = await db.select().from(items).where(eq(items.id, itemId));
       
       if (!item) {
-        return res.status(404).json({ error: "Item not found" });
+        return res.status(404).json({ message: "Item not found" });
       }
       
       res.json(item);
     } catch (error) {
-      console.error("Failed to get item:", error);
-      res.status(500).json({ error: "Failed to get item" });
+      console.error("Error fetching item:", error);
+      res.status(500).json({ message: "Failed to fetch item", error: error.message });
     }
   });
 
-  // Create a new item with image upload
+  // Create a new item
   app.post(
     "/api/admin/items", 
     isAuthenticated, 
     isAdmin, 
-    upload.single("image"), 
+    upload.single('image'),
     async (req: Request, res: Response) => {
       try {
-        // Parse and validate the item data
+        const itemSchema = z.object({
+          name: z.string().min(1, "Name is required"),
+          description: z.string().min(1, "Description is required"),
+          type: z.string().min(1, "Type is required"),
+          category: z.string().optional(),
+          price: z.coerce.number().min(0, "Price must be a positive number"),
+          level: z.coerce.number().int().min(1, "Level must be at least 1").optional(),
+          rarity: z.string().optional(),
+          strengthBonus: z.coerce.number().default(0),
+          stealthBonus: z.coerce.number().default(0),
+          charismaBonus: z.coerce.number().default(0),
+          intelligenceBonus: z.coerce.number().default(0),
+          crimeSuccessBonus: z.coerce.number().default(0),
+          jailTimeReduction: z.coerce.number().default(0),
+          escapeChanceBonus: z.coerce.number().default(0),
+        });
+        
+        // Parse and validate the request body
+        const validatedData = itemSchema.parse(req.body);
+        
+        // Prepare the item data
         const itemData = {
-          ...req.body,
-          price: Number(req.body.price),
-          level: req.body.level ? Number(req.body.level) : 1,
-          strengthBonus: req.body.strengthBonus ? Number(req.body.strengthBonus) : 0,
-          stealthBonus: req.body.stealthBonus ? Number(req.body.stealthBonus) : 0,
-          charismaBonus: req.body.charismaBonus ? Number(req.body.charismaBonus) : 0,
-          intelligenceBonus: req.body.intelligenceBonus ? Number(req.body.intelligenceBonus) : 0,
-          crimeSuccessBonus: req.body.crimeSuccessBonus ? Number(req.body.crimeSuccessBonus) : 0,
-          jailTimeReduction: req.body.jailTimeReduction ? Number(req.body.jailTimeReduction) : 0,
-          escapeChanceBonus: req.body.escapeChanceBonus ? Number(req.body.escapeChanceBonus) : 0,
-        };
-        
-        const validatedData = itemSchema.parse(itemData);
-        
-        // Add the image URL if an image was uploaded
-        const imageUrl = req.file ? `/images/items/${req.file.filename}` : null;
-        
-        // Insert the new item into the database
-        const [newItem] = await db.insert(items).values({
           ...validatedData,
-          imageUrl
-        }).returning();
+          imageUrl: req.file ? `/images/items/${req.file.filename}` : null,
+        };
+
+        // Insert the item into the database
+        const [newItem] = await db.insert(items).values(itemData).returning();
         
         res.status(201).json(newItem);
       } catch (error) {
-        console.error("Failed to create item:", error);
+        console.error("Error creating item:", error);
         
-        // Handle validation errors
+        // If it's a Zod validation error, return the validation issues
         if (error instanceof z.ZodError) {
-          return res.status(400).json({ error: error.errors });
+          return res.status(400).json({ 
+            message: "Validation error", 
+            errors: error.errors 
+          });
         }
         
-        res.status(500).json({ error: "Failed to create item" });
+        res.status(500).json({ 
+          message: "Failed to create item", 
+          error: error.message 
+        });
       }
     }
   );
@@ -142,70 +146,87 @@ export function registerItemManagementRoutes(app: Express) {
     "/api/admin/items/:id", 
     isAuthenticated, 
     isAdmin, 
-    upload.single("image"), 
+    upload.single('image'),
     async (req: Request, res: Response) => {
       try {
         const itemId = parseInt(req.params.id);
         
-        // Fetch the existing item to make sure it exists
+        // Check if the item exists
         const [existingItem] = await db.select().from(items).where(eq(items.id, itemId));
         
         if (!existingItem) {
-          return res.status(404).json({ error: "Item not found" });
+          return res.status(404).json({ message: "Item not found" });
         }
         
-        // Parse and validate the item data
-        const itemData = {
-          ...req.body,
-          price: Number(req.body.price),
-          level: req.body.level ? Number(req.body.level) : 1,
-          strengthBonus: req.body.strengthBonus ? Number(req.body.strengthBonus) : 0,
-          stealthBonus: req.body.stealthBonus ? Number(req.body.stealthBonus) : 0,
-          charismaBonus: req.body.charismaBonus ? Number(req.body.charismaBonus) : 0,
-          intelligenceBonus: req.body.intelligenceBonus ? Number(req.body.intelligenceBonus) : 0,
-          crimeSuccessBonus: req.body.crimeSuccessBonus ? Number(req.body.crimeSuccessBonus) : 0,
-          jailTimeReduction: req.body.jailTimeReduction ? Number(req.body.jailTimeReduction) : 0,
-          escapeChanceBonus: req.body.escapeChanceBonus ? Number(req.body.escapeChanceBonus) : 0,
+        const itemSchema = z.object({
+          name: z.string().min(1, "Name is required"),
+          description: z.string().min(1, "Description is required"),
+          type: z.string().min(1, "Type is required"),
+          category: z.string().optional(),
+          price: z.coerce.number().min(0, "Price must be a positive number"),
+          level: z.coerce.number().int().min(1, "Level must be at least 1").optional(),
+          rarity: z.string().optional(),
+          strengthBonus: z.coerce.number().default(0),
+          stealthBonus: z.coerce.number().default(0),
+          charismaBonus: z.coerce.number().default(0),
+          intelligenceBonus: z.coerce.number().default(0),
+          crimeSuccessBonus: z.coerce.number().default(0),
+          jailTimeReduction: z.coerce.number().default(0),
+          escapeChanceBonus: z.coerce.number().default(0),
+        });
+        
+        // Parse and validate the request body
+        const validatedData = itemSchema.parse(req.body);
+        
+        // Prepare update data
+        const updateData: any = {
+          ...validatedData,
         };
         
-        const validatedData = itemSchema.parse(itemData);
-        
-        // Handle the image update
-        let imageUrl = existingItem.imageUrl;
-        
+        // If a new image was uploaded, update the imageUrl
         if (req.file) {
-          // If there's a new image, update the image URL
-          imageUrl = `/images/items/${req.file.filename}`;
-          
-          // Delete the old image file if it exists
+          // If the item already has an image, delete the old one
           if (existingItem.imageUrl) {
-            const oldImagePath = path.join(process.cwd(), "public", existingItem.imageUrl);
-            if (fs.existsSync(oldImagePath)) {
-              fs.unlinkSync(oldImagePath);
+            try {
+              const oldImagePath = path.join(process.cwd(), "public", existingItem.imageUrl);
+              // Check if file exists before attempting to delete
+              if (fs.existsSync(oldImagePath)) {
+                await fsPromises.unlink(oldImagePath);
+                console.log(`Deleted old image: ${oldImagePath}`);
+              }
+            } catch (err) {
+              console.error("Error deleting old image:", err);
+              // Continue with the update even if the delete fails
             }
           }
+          
+          // Set the new image URL
+          updateData.imageUrl = `/images/items/${req.file.filename}`;
         }
         
         // Update the item in the database
         const [updatedItem] = await db
           .update(items)
-          .set({
-            ...validatedData,
-            imageUrl
-          })
+          .set(updateData)
           .where(eq(items.id, itemId))
           .returning();
         
         res.json(updatedItem);
       } catch (error) {
-        console.error("Failed to update item:", error);
+        console.error("Error updating item:", error);
         
-        // Handle validation errors
+        // If it's a Zod validation error, return the validation issues
         if (error instanceof z.ZodError) {
-          return res.status(400).json({ error: error.errors });
+          return res.status(400).json({ 
+            message: "Validation error", 
+            errors: error.errors 
+          });
         }
         
-        res.status(500).json({ error: "Failed to update item" });
+        res.status(500).json({ 
+          message: "Failed to update item", 
+          error: error.message 
+        });
       }
     }
   );
@@ -215,28 +236,80 @@ export function registerItemManagementRoutes(app: Express) {
     try {
       const itemId = parseInt(req.params.id);
       
-      // Get the item first so we can delete its image if needed
-      const [item] = await db.select().from(items).where(eq(items.id, itemId));
+      // Check if the item exists
+      const [existingItem] = await db.select().from(items).where(eq(items.id, itemId));
       
-      if (!item) {
-        return res.status(404).json({ error: "Item not found" });
+      if (!existingItem) {
+        return res.status(404).json({ message: "Item not found" });
       }
       
-      // Delete the image file if it exists
-      if (item.imageUrl) {
-        const imagePath = path.join(process.cwd(), "public", item.imageUrl);
-        if (fs.existsSync(imagePath)) {
-          fs.unlinkSync(imagePath);
+      // Check if the item is equipped by any user
+      const equipmentCount = await db
+        .select({ count: db.fn.count() })
+        .from(equipments)
+        .where(eq(equipments.itemId, itemId));
+      
+      if (equipmentCount[0].count > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete an item that is currently equipped by users"
+        });
+      }
+      
+      // Delete the item's image if it exists
+      if (existingItem.imageUrl) {
+        try {
+          const imagePath = path.join(process.cwd(), "public", existingItem.imageUrl);
+          if (fs.existsSync(imagePath)) {
+            await fsPromises.unlink(imagePath);
+            console.log(`Deleted image: ${imagePath}`);
+          }
+        } catch (err) {
+          console.error("Error deleting image:", err);
+          // Continue with the delete even if the image delete fails
         }
       }
       
       // Delete the item from the database
-      await db.delete(items).where(eq(items.id, itemId));
+      const [deletedItem] = await db
+        .delete(items)
+        .where(eq(items.id, itemId))
+        .returning();
       
-      res.status(200).json({ message: "Item deleted successfully" });
+      res.json({ message: "Item deleted successfully", item: deletedItem });
     } catch (error) {
-      console.error("Failed to delete item:", error);
-      res.status(500).json({ error: "Failed to delete item" });
+      console.error("Error deleting item:", error);
+      res.status(500).json({ 
+        message: "Failed to delete item", 
+        error: error.message 
+      });
+    }
+  });
+
+  // Get all items (public endpoint)
+  app.get("/api/items", async (req: Request, res: Response) => {
+    try {
+      const allItems = await db.select().from(items);
+      res.json(allItems);
+    } catch (error) {
+      console.error("Error fetching items:", error);
+      res.status(500).json({ message: "Failed to fetch items", error: error.message });
+    }
+  });
+
+  // Get a specific item (public endpoint)
+  app.get("/api/items/:id", async (req: Request, res: Response) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      const [item] = await db.select().from(items).where(eq(items.id, itemId));
+      
+      if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching item:", error);
+      res.status(500).json({ message: "Failed to fetch item", error: error.message });
     }
   });
 }
