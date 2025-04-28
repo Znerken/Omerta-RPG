@@ -166,15 +166,24 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
   const getDefaultImage = () => {
     switch (item.type) {
       case "weapon":
-        return "https://game-icons.net/icons/ffffff/000000/1x1/delapouite/bolter-gun.png";
+        // Use one of the locally extracted weapon images
+        const weaponImages = [
+          "/images/items/weapons/Thompson.png",
+          "/images/items/weapons/BAR.png",
+          "/images/items/weapons/Colt M1911.png",
+          "/images/items/weapons/MP 40.png",
+          "/images/items/weapons/StG 44.png"
+        ];
+        return weaponImages[Math.floor(Math.random() * weaponImages.length)];
       case "tool":
-        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/tools.png";
+        return "/images/items/tools/tool.png";
       case "protection":
-        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/leather-armor.png";
+        return "/images/items/protection/armor.png";
       case "consumable":
-        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/potion-ball.png";
+        return "/images/items/consumables/potion.png";
       default:
-        return "https://game-icons.net/icons/ffffff/000000/1x1/delapouite/backpack.png";
+        // Use a mafia themed placeholder
+        return "/images/items/gen-mafia-gangster-organized-crime-suit-man-photoreali.webp";
     }
   };
 
