@@ -122,6 +122,10 @@ export const items = pgTable("items", {
   crimeSuccessBonus: integer("crime_success_bonus").notNull().default(0),
   jailTimeReduction: integer("jail_time_reduction").notNull().default(0),
   escapeChanceBonus: integer("escape_chance_bonus").notNull().default(0),
+  rarity: text("rarity").default("common"), // common, uncommon, rare, epic, legendary
+  imageUrl: text("image_url"), // URL to the item image
+  category: text("category"), // primary weapon, secondary weapon, armor, accessory, consumable, etc.
+  level: integer("level").default(1), // Level requirement to use the item
 });
 
 // User Inventory Schema

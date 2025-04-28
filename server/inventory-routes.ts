@@ -42,19 +42,31 @@ async function initializeInventoryTables() {
           intelligence_bonus INTEGER NOT NULL DEFAULT 0,
           crime_success_bonus INTEGER NOT NULL DEFAULT 0,
           jail_time_reduction INTEGER NOT NULL DEFAULT 0,
-          escape_chance_bonus INTEGER NOT NULL DEFAULT 0
+          escape_chance_bonus INTEGER NOT NULL DEFAULT 0,
+          rarity TEXT DEFAULT 'common',
+          image_url TEXT,
+          category TEXT,
+          level INTEGER DEFAULT 1
         )
       `);
       
-      // Add some sample items
+      // Add some sample items with images
       await db.execute(sql`
-        INSERT INTO items (name, description, type, price, strength_bonus, stealth_bonus)
+        INSERT INTO items (name, description, type, price, strength_bonus, stealth_bonus, rarity, image_url, category, level)
         VALUES 
-          ('Brass Knuckles', 'Increases damage in hand-to-hand combat', 'weapon', 1000, 10, 0),
-          ('Switchblade', 'A concealable blade for quick attacks', 'weapon', 1500, 5, 5),
-          ('Leather Jacket', 'Basic protection that looks stylish', 'protection', 2000, 3, 0),
-          ('Ski Mask', 'Conceals your identity during crimes', 'tool', 800, 0, 8),
-          ('Fake ID', 'Helps you talk your way out of situations', 'tool', 1200, 0, 0)
+          ('Brass Knuckles', 'Increases damage in hand-to-hand combat', 'weapon', 1000, 10, 0, 'common', 'https://i.imgur.com/aHYHl5e.png', 'melee', 1),
+          ('Switchblade', 'A concealable blade for quick attacks', 'weapon', 1500, 5, 5, 'uncommon', 'https://i.imgur.com/Q4MWLNL.png', 'melee', 1),
+          ('Leather Jacket', 'Basic protection that looks stylish', 'protection', 2000, 3, 0, 'common', 'https://i.imgur.com/1Rto1pQ.png', 'armor', 1),
+          ('Ski Mask', 'Conceals your identity during crimes', 'tool', 800, 0, 8, 'common', 'https://i.imgur.com/rBemUX4.png', 'accessory', 1),
+          ('Fake ID', 'Helps you talk your way out of situations', 'tool', 1200, 0, 0, 'uncommon', 'https://i.imgur.com/WgJ5Tao.png', 'tool', 1),
+          ('Gold Plated Desert Eagle', 'Show off your status with this flashy sidearm', 'weapon', 25000, 15, -5, 'legendary', 'https://i.imgur.com/pU09GQ2.png', 'ranged', 10),
+          ('Kevlar Vest', 'Military-grade protection for dangerous operations', 'protection', 15000, 0, -10, 'rare', 'https://i.imgur.com/XgNjp9x.png', 'armor', 5),
+          ('Smoke Grenade', 'Create a diversion to escape sticky situations', 'tool', 2500, 0, 10, 'uncommon', 'https://i.imgur.com/bIgvJC6.png', 'consumable', 3),
+          ('Hacking Laptop', 'Advanced tech for digital heists', 'tool', 10000, 0, 0, 'epic', 'https://i.imgur.com/KU3gHLd.png', 'tool', 7),
+          ('Tommy Gun', 'Old-school firepower with intimidation factor', 'weapon', 20000, 20, -15, 'epic', 'https://i.imgur.com/JMu8FNa.png', 'ranged', 8),
+          ('Armored Limousine', 'Travel in style and safety', 'protection', 50000, 5, -20, 'legendary', 'https://i.imgur.com/xSIf2QQ.png', 'vehicle', 15),
+          ('Bulletproof Suit', 'Protection that doesn\'t sacrifice style', 'protection', 30000, 2, 0, 'epic', 'https://i.imgur.com/w4lGIYu.png', 'armor', 10),
+          ('Lockpicking Set', 'Professional tools for physical security bypasses', 'tool', 5000, 0, 5, 'rare', 'https://i.imgur.com/4S7lfWy.png', 'tool', 5)
         ON CONFLICT (id) DO NOTHING
       `);
     }
