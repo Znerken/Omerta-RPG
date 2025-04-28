@@ -185,33 +185,18 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
       <Card className={`bg-dark-lighter border overflow-hidden h-full ${getRarityColor()} ${getRarityGlow()}`}>
         <div className="relative">
           <div className="h-48 overflow-hidden relative">
-            {/* Use CSS shapes to create weapon visuals instead of images */}
+            {/* Use uploaded images for items */}
             <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
-              {item.name === "Switchblade" ? (
-                <div className="w-32 h-32 relative transition-transform duration-500 ease-in-out" style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-5 bg-gradient-to-r from-gray-500 to-gray-700 rounded-sm"></div>
-                  <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 w-3 h-20 bg-gradient-to-r from-gray-800 to-gray-900 rounded-sm"></div>
-                  <div className="absolute top-2/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-10 bg-gray-400 rounded-sm rotate-45"></div>
-                </div>
-              ) : item.name === "Brass Knuckles" ? (
-                <div className="w-32 h-32 relative transition-transform duration-500 ease-in-out" style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-6 bg-gradient-to-r from-amber-800 to-amber-600 rounded-md"></div>
-                  <div className="absolute top-1/2 left-1/3 transform -translate-y-1/2 w-4 h-4 bg-gradient-to-r from-amber-900 to-amber-800 rounded-full"></div>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-y-1/2 w-4 h-4 bg-gradient-to-r from-amber-900 to-amber-800 rounded-full"></div>
-                  <div className="absolute top-1/2 left-2/3 transform -translate-y-1/2 w-4 h-4 bg-gradient-to-r from-amber-900 to-amber-800 rounded-full"></div>
-                </div>
-              ) : item.name === "Tommy Gun" ? (
-                <div className="w-32 h-32 relative transition-transform duration-500 ease-in-out" style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-4 bg-gradient-to-r from-gray-700 to-gray-900 rounded-md"></div>
-                  <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 w-8 h-3 bg-gradient-to-r from-gray-600 to-gray-800 rounded-sm"></div>
-                  <div className="absolute bottom-1/3 left-1/3 transform w-12 h-3 bg-gradient-to-r from-amber-800 to-amber-950 rounded-sm rotate-45"></div>
-                </div>
-              ) : (
-                <div className="w-32 h-32 relative transition-transform duration-500 ease-in-out" style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}>
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-20 h-6 bg-gradient-to-r from-gray-700 to-gray-900 rounded-md"></div>
-                  <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 w-14 h-3 bg-gradient-to-r from-gray-600 to-gray-800 rounded-sm"></div>
-                </div>
-              )}
+              <img 
+                src={item.name === "Brass Knuckles" ? "/items/brass-knuckles.png" : "/items/brass-knuckles.png"}
+                alt={item.name}
+                className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
+                style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
+                onError={(e) => {
+                  console.error(`Failed to load image for item: ${item.name}`);
+                  e.currentTarget.src = "/items/brass-knuckles.png";
+                }}
+              />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </div>
