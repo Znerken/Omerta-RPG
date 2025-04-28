@@ -35,7 +35,7 @@ export default function InventoryPage() {
   });
 
   const { data: userProfile } = useQuery({
-    queryKey: ["/api/user/profile"],
+    queryKey: ["/api/user"],
   });
 
   const buyItemMutation = useMutation({
@@ -69,7 +69,7 @@ export default function InventoryPage() {
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
     },
     onError: (error) => {
       const title = "Purchase Failed";
