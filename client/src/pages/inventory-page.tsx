@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { InventoryItem } from "@/components/inventory/InventoryItem";
+import { StoreItem } from "@/components/inventory/StoreItem";
 import { useToast } from "@/hooks/use-toast";
 import { useNotification } from "@/hooks/use-notification";
 import { apiRequest } from "@/lib/queryClient";
@@ -18,13 +19,23 @@ import {
   Drill,
   Shield, 
   Cherry,
-  Loader2
+  Loader2,
+  SearchIcon,
+  Filter,
+  SlidersHorizontal,
+  Sparkles
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useEffect, useState } from "react";
 
 export default function InventoryPage() {
   const { toast } = useToast();
   const { addNotification } = useNotification();
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortMethod, setSortMethod] = useState<"price-asc" | "price-desc" | "name" | "level" | "rarity">("price-asc");
+  const [filterRarity, setFilterRarity] = useState<string | null>(null);
 
   const { data: inventory, isLoading: inventoryLoading } = useQuery({
     queryKey: ["/api/inventory"],
@@ -162,6 +173,61 @@ export default function InventoryPage() {
     equipItemMutation.mutate(itemId);
   };
 
+  // Filter and sort store items based on search and filters
+  const filteredStoreItems = React.useMemo(() => {
+    if (!storeItems) return [];
+    
+    let filtered = [...storeItems];
+    
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(searchLower) || 
+        item.description.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Filter by rarity
+    if (filterRarity) {
+      filtered = filtered.filter(item => 
+        item.rarity?.toLowerCase() === filterRarity.toLowerCase()
+      );
+    }
+    
+    // Sort items
+    switch (sortMethod) {
+      case "price-asc":
+        filtered = filtered.sort((a, b) => a.price - b.price);
+        break;
+      case "price-desc":
+        filtered = filtered.sort((a, b) => b.price - a.price);
+        break;
+      case "name":
+        filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "level":
+        filtered = filtered.sort((a, b) => (b.level || 1) - (a.level || 1));
+        break;
+      case "rarity":
+        const rarityOrder: Record<string, number> = {
+          common: 1,
+          uncommon: 2,
+          rare: 3,
+          epic: 4,
+          legendary: 5
+        };
+        filtered = filtered.sort((a, b) => {
+          const aRarity = a.rarity?.toLowerCase() || 'common';
+          const bRarity = b.rarity?.toLowerCase() || 'common';
+          return rarityOrder[bRarity] - rarityOrder[aRarity];
+        });
+        break;
+    }
+    
+    return filtered;
+  }, [storeItems, searchTerm, filterRarity, sortMethod]);
+  
   // Group inventory by type
   const weapons = inventory?.filter((item: any) => item.item?.type === "weapon") || [];
   const tools = inventory?.filter((item: any) => item.item?.type === "tool") || [];
