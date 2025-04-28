@@ -163,10 +163,10 @@ export default function InventoryPage() {
   };
 
   // Group inventory by type
-  const weapons = inventory?.filter((item: any) => item.type === "weapon") || [];
-  const tools = inventory?.filter((item: any) => item.type === "tool") || [];
-  const protection = inventory?.filter((item: any) => item.type === "protection") || [];
-  const consumables = inventory?.filter((item: any) => item.type === "consumable") || [];
+  const weapons = inventory?.filter((item: any) => item.item?.type === "weapon") || [];
+  const tools = inventory?.filter((item: any) => item.item?.type === "tool") || [];
+  const protection = inventory?.filter((item: any) => item.item?.type === "protection") || [];
+  const consumables = inventory?.filter((item: any) => item.item?.type === "consumable") || [];
 
   // Group store items by type
   const storeWeapons = storeItems?.filter((item: any) => item.type === "weapon") || [];
@@ -223,11 +223,15 @@ export default function InventoryPage() {
                       
                       <TabsContent value="all">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {inventory.map((item: any) => (
+                          {inventory.map((inventoryItem: any) => (
                             <InventoryItem 
-                              key={item.id} 
-                              item={item} 
-                              onToggleEquip={() => handleToggleEquip(item.id)} 
+                              key={inventoryItem.id} 
+                              item={{
+                                ...inventoryItem.item,
+                                equipped: inventoryItem.equipped,
+                                quantity: inventoryItem.quantity
+                              }} 
+                              onToggleEquip={() => handleToggleEquip(inventoryItem.id)} 
                               isEquipping={equipItemMutation.isPending}
                             />
                           ))}
@@ -237,11 +241,15 @@ export default function InventoryPage() {
                       <TabsContent value="weapons">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {weapons.length > 0 ? (
-                            weapons.map((item: any) => (
+                            weapons.map((inventoryItem: any) => (
                               <InventoryItem 
-                                key={item.id} 
-                                item={item} 
-                                onToggleEquip={() => handleToggleEquip(item.id)} 
+                                key={inventoryItem.id} 
+                                item={{
+                                  ...inventoryItem.item,
+                                  equipped: inventoryItem.equipped,
+                                  quantity: inventoryItem.quantity
+                                }} 
+                                onToggleEquip={() => handleToggleEquip(inventoryItem.id)} 
                                 isEquipping={equipItemMutation.isPending}
                               />
                             ))
@@ -256,11 +264,15 @@ export default function InventoryPage() {
                       <TabsContent value="tools">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {tools.length > 0 ? (
-                            tools.map((item: any) => (
+                            tools.map((inventoryItem: any) => (
                               <InventoryItem 
-                                key={item.id} 
-                                item={item} 
-                                onToggleEquip={() => handleToggleEquip(item.id)} 
+                                key={inventoryItem.id} 
+                                item={{
+                                  ...inventoryItem.item,
+                                  equipped: inventoryItem.equipped,
+                                  quantity: inventoryItem.quantity
+                                }} 
+                                onToggleEquip={() => handleToggleEquip(inventoryItem.id)} 
                                 isEquipping={equipItemMutation.isPending}
                               />
                             ))
@@ -275,11 +287,15 @@ export default function InventoryPage() {
                       <TabsContent value="protection">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {protection.length > 0 ? (
-                            protection.map((item: any) => (
+                            protection.map((inventoryItem: any) => (
                               <InventoryItem 
-                                key={item.id} 
-                                item={item} 
-                                onToggleEquip={() => handleToggleEquip(item.id)} 
+                                key={inventoryItem.id} 
+                                item={{
+                                  ...inventoryItem.item,
+                                  equipped: inventoryItem.equipped,
+                                  quantity: inventoryItem.quantity
+                                }} 
+                                onToggleEquip={() => handleToggleEquip(inventoryItem.id)} 
                                 isEquipping={equipItemMutation.isPending}
                               />
                             ))
@@ -294,11 +310,15 @@ export default function InventoryPage() {
                       <TabsContent value="consumables">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {consumables.length > 0 ? (
-                            consumables.map((item: any) => (
+                            consumables.map((inventoryItem: any) => (
                               <InventoryItem 
-                                key={item.id} 
-                                item={item} 
-                                onToggleEquip={() => handleToggleEquip(item.id)} 
+                                key={inventoryItem.id} 
+                                item={{
+                                  ...inventoryItem.item,
+                                  equipped: inventoryItem.equipped,
+                                  quantity: inventoryItem.quantity
+                                }} 
+                                onToggleEquip={() => handleToggleEquip(inventoryItem.id)} 
                                 isEquipping={equipItemMutation.isPending}
                               />
                             ))
