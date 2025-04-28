@@ -1,77 +1,80 @@
-import { Request, Response, Express } from "express";
-import { z } from "zod";
-import { isAuthenticated, isAdmin } from "./middleware/auth";
+import { Express, Request, Response } from "express";
+import { db } from "./db";
+import { eq, ilike, and } from "drizzle-orm";
+import { items, equipments, Item } from "@shared/schema";
+import multer from "multer";
 import path from "path";
 import fs from "fs";
-import multer from "multer";
-import { promises as fsPromises } from "fs";
-import { db } from "./db";
-import { items, equipments } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { isAuthenticated, isAdmin } from "./middleware/auth";
 
-// Define upload directory and storage
-const UPLOAD_DIR = path.join(process.cwd(), "public", "images", "items");
-
-// Ensure the upload directory exists
-try {
-  if (!fs.existsSync(UPLOAD_DIR)) {
-    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-    console.log(`Created upload directory at ${UPLOAD_DIR}`);
-  }
-} catch (error) {
-  console.error("Error creating upload directory:", error);
-}
-
-// Configure multer storage
+// Configure multer for image uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "items");
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
-    // Create unique filename using timestamp and original extension
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    // Create a unique filename with timestamp and original extension
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
     const ext = path.extname(file.originalname);
-    cb(null, `${uniqueSuffix}${ext}`);
-  },
+    cb(null, `item-${uniqueSuffix}${ext}`);
+  }
 });
 
-// File filter for image uploads
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   // Accept only image files
-  if (file.mimetype.startsWith('image/')) {
+  if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error('Only image files are allowed!'));
+    cb(new Error("Only image files are allowed"));
   }
 };
 
-// Create the multer upload instance
 const upload = multer({ 
   storage, 
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 5 * 1024 * 1024, // 5MB max file size
   }
 });
 
-// Register item management routes
 export function registerItemManagementRoutes(app: Express) {
-  // Get all items
+  // Get all items (with optional search)
   app.get("/api/admin/items", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
-      const allItems = await db.select().from(items);
+      const search = req.query.search as string | undefined;
+      
+      let query = db.select().from(items);
+      
+      if (search) {
+        query = query.where(
+          ilike(items.name, `%${search}%`)
+        );
+      }
+      
+      const allItems = await query;
       res.json(allItems);
     } catch (error) {
       console.error("Error fetching items:", error);
-      res.status(500).json({ message: "Failed to fetch items", error: error.message });
+      res.status(500).json({ message: "Failed to fetch items" });
     }
   });
 
-  // Get a specific item
+  // Get single item by ID
   app.get("/api/admin/items/:id", isAuthenticated, isAdmin, async (req: Request, res: Response) => {
     try {
       const itemId = parseInt(req.params.id);
-      const [item] = await db.select().from(items).where(eq(items.id, itemId));
+      
+      const [item] = await db
+        .select()
+        .from(items)
+        .where(eq(items.id, itemId));
       
       if (!item) {
         return res.status(404).json({ message: "Item not found" });
@@ -80,153 +83,138 @@ export function registerItemManagementRoutes(app: Express) {
       res.json(item);
     } catch (error) {
       console.error("Error fetching item:", error);
-      res.status(500).json({ message: "Failed to fetch item", error: error.message });
+      res.status(500).json({ message: "Failed to fetch item" });
     }
   });
 
-  // Create a new item
+  // Create new item
   app.post(
-    "/api/admin/items", 
-    isAuthenticated, 
-    isAdmin, 
-    upload.single('image'),
+    "/api/admin/items",
+    isAuthenticated,
+    isAdmin,
+    upload.single("image"),
     async (req: Request, res: Response) => {
       try {
-        const itemSchema = z.object({
-          name: z.string().min(1, "Name is required"),
-          description: z.string().min(1, "Description is required"),
-          type: z.string().min(1, "Type is required"),
-          category: z.string().optional(),
-          price: z.coerce.number().min(0, "Price must be a positive number"),
-          level: z.coerce.number().int().min(1, "Level must be at least 1").optional(),
-          rarity: z.string().optional(),
-          strengthBonus: z.coerce.number().default(0),
-          stealthBonus: z.coerce.number().default(0),
-          charismaBonus: z.coerce.number().default(0),
-          intelligenceBonus: z.coerce.number().default(0),
-          crimeSuccessBonus: z.coerce.number().default(0),
-          jailTimeReduction: z.coerce.number().default(0),
-          escapeChanceBonus: z.coerce.number().default(0),
-        });
-        
-        // Parse and validate the request body
-        const validatedData = itemSchema.parse(req.body);
-        
-        // Prepare the item data
         const itemData = {
-          ...validatedData,
-          imageUrl: req.file ? `/images/items/${req.file.filename}` : null,
+          name: req.body.name,
+          description: req.body.description,
+          type: req.body.type,
+          category: req.body.category || null,
+          price: parseInt(req.body.price),
+          level: req.body.level ? parseInt(req.body.level) : 1,
+          rarity: req.body.rarity || "common",
+          strengthBonus: parseInt(req.body.strengthBonus) || 0,
+          stealthBonus: parseInt(req.body.stealthBonus) || 0,
+          charismaBonus: parseInt(req.body.charismaBonus) || 0,
+          intelligenceBonus: parseInt(req.body.intelligenceBonus) || 0,
+          crimeSuccessBonus: parseInt(req.body.crimeSuccessBonus) || 0,
+          jailTimeReduction: parseInt(req.body.jailTimeReduction) || 0,
+          escapeChanceBonus: parseInt(req.body.escapeChanceBonus) || 0,
         };
 
-        // Insert the item into the database
-        const [newItem] = await db.insert(items).values(itemData).returning();
-        
-        res.status(201).json(newItem);
+        // Add image URL if a file was uploaded
+        if (req.file) {
+          const relativePath = `/uploads/items/${req.file.filename}`;
+          (itemData as any).imageUrl = relativePath;
+        }
+
+        const [createdItem] = await db.insert(items).values(itemData).returning();
+
+        res.status(201).json(createdItem);
       } catch (error) {
         console.error("Error creating item:", error);
         
-        // If it's a Zod validation error, return the validation issues
-        if (error instanceof z.ZodError) {
-          return res.status(400).json({ 
-            message: "Validation error", 
-            errors: error.errors 
-          });
+        // If there was an uploaded file, try to delete it on error
+        if (req.file) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch (unlinkError) {
+            console.error("Failed to delete uploaded file:", unlinkError);
+          }
         }
         
-        res.status(500).json({ 
-          message: "Failed to create item", 
-          error: error.message 
-        });
+        res.status(500).json({ message: "Failed to create item" });
       }
     }
   );
 
-  // Update an existing item
+  // Update an item
   app.put(
-    "/api/admin/items/:id", 
-    isAuthenticated, 
-    isAdmin, 
-    upload.single('image'),
+    "/api/admin/items/:id",
+    isAuthenticated,
+    isAdmin,
+    upload.single("image"),
     async (req: Request, res: Response) => {
       try {
         const itemId = parseInt(req.params.id);
         
-        // Check if the item exists
-        const [existingItem] = await db.select().from(items).where(eq(items.id, itemId));
-        
+        // First, get the current item to check if it exists and to get the old image path
+        const [existingItem] = await db
+          .select()
+          .from(items)
+          .where(eq(items.id, itemId));
+          
         if (!existingItem) {
           return res.status(404).json({ message: "Item not found" });
         }
         
-        const itemSchema = z.object({
-          name: z.string().min(1, "Name is required"),
-          description: z.string().min(1, "Description is required"),
-          type: z.string().min(1, "Type is required"),
-          category: z.string().optional(),
-          price: z.coerce.number().min(0, "Price must be a positive number"),
-          level: z.coerce.number().int().min(1, "Level must be at least 1").optional(),
-          rarity: z.string().optional(),
-          strengthBonus: z.coerce.number().default(0),
-          stealthBonus: z.coerce.number().default(0),
-          charismaBonus: z.coerce.number().default(0),
-          intelligenceBonus: z.coerce.number().default(0),
-          crimeSuccessBonus: z.coerce.number().default(0),
-          jailTimeReduction: z.coerce.number().default(0),
-          escapeChanceBonus: z.coerce.number().default(0),
-        });
-        
-        // Parse and validate the request body
-        const validatedData = itemSchema.parse(req.body);
-        
-        // Prepare update data
-        const updateData: any = {
-          ...validatedData,
+        const updateData: Partial<Item> = {
+          name: req.body.name,
+          description: req.body.description,
+          type: req.body.type,
+          category: req.body.category || null,
+          price: parseInt(req.body.price),
+          level: req.body.level ? parseInt(req.body.level) : 1,
+          rarity: req.body.rarity || "common",
+          strengthBonus: parseInt(req.body.strengthBonus) || 0,
+          stealthBonus: parseInt(req.body.stealthBonus) || 0,
+          charismaBonus: parseInt(req.body.charismaBonus) || 0,
+          intelligenceBonus: parseInt(req.body.intelligenceBonus) || 0,
+          crimeSuccessBonus: parseInt(req.body.crimeSuccessBonus) || 0,
+          jailTimeReduction: parseInt(req.body.jailTimeReduction) || 0,
+          escapeChanceBonus: parseInt(req.body.escapeChanceBonus) || 0,
         };
         
-        // If a new image was uploaded, update the imageUrl
+        // Process new image if uploaded
         if (req.file) {
-          // If the item already has an image, delete the old one
+          const relativePath = `/uploads/items/${req.file.filename}`;
+          updateData.imageUrl = relativePath;
+          
+          // Delete old image if it exists
           if (existingItem.imageUrl) {
+            const oldImagePath = path.join(process.cwd(), "public", existingItem.imageUrl);
+            
             try {
-              const oldImagePath = path.join(process.cwd(), "public", existingItem.imageUrl);
-              // Check if file exists before attempting to delete
               if (fs.existsSync(oldImagePath)) {
-                await fsPromises.unlink(oldImagePath);
-                console.log(`Deleted old image: ${oldImagePath}`);
+                fs.unlinkSync(oldImagePath);
               }
-            } catch (err) {
-              console.error("Error deleting old image:", err);
-              // Continue with the update even if the delete fails
+            } catch (unlinkError) {
+              console.error("Failed to delete old image:", unlinkError);
             }
           }
-          
-          // Set the new image URL
-          updateData.imageUrl = `/images/items/${req.file.filename}`;
         }
         
-        // Update the item in the database
+        // Update the item
         const [updatedItem] = await db
           .update(items)
           .set(updateData)
           .where(eq(items.id, itemId))
           .returning();
-        
+          
         res.json(updatedItem);
       } catch (error) {
         console.error("Error updating item:", error);
         
-        // If it's a Zod validation error, return the validation issues
-        if (error instanceof z.ZodError) {
-          return res.status(400).json({ 
-            message: "Validation error", 
-            errors: error.errors 
-          });
+        // If there was an uploaded file, try to delete it on error
+        if (req.file) {
+          try {
+            fs.unlinkSync(req.file.path);
+          } catch (unlinkError) {
+            console.error("Failed to delete uploaded file:", unlinkError);
+          }
         }
         
-        res.status(500).json({ 
-          message: "Failed to update item", 
-          error: error.message 
-        });
+        res.status(500).json({ message: "Failed to update item" });
       }
     }
   );
@@ -236,71 +224,87 @@ export function registerItemManagementRoutes(app: Express) {
     try {
       const itemId = parseInt(req.params.id);
       
-      // Check if the item exists
-      const [existingItem] = await db.select().from(items).where(eq(items.id, itemId));
-      
-      if (!existingItem) {
+      // Get item to find image path
+      const [item] = await db
+        .select()
+        .from(items)
+        .where(eq(items.id, itemId));
+        
+      if (!item) {
         return res.status(404).json({ message: "Item not found" });
       }
       
-      // Check if the item is equipped by any user
-      const equipmentCount = await db
-        .select({ count: db.fn.count() })
-        .from(equipments)
-        .where(eq(equipments.itemId, itemId));
+      // Begin transaction
+      await db.transaction(async (tx) => {
+        // First, check if the item is linked to equipment or inventory entries
+        const equipmentCount = await tx.execute(
+          db.select({ count: db.fn.count() }).from(equipments).where(eq(equipments.itemId, itemId))
+        );
+        
+        if (equipmentCount.length > 0 && equipmentCount[0].count > 0) {
+          throw new Error("Cannot delete item that is equipped by users");
+        }
+        
+        // Delete the item
+        await tx.delete(items).where(eq(items.id, itemId));
+      });
       
-      if (equipmentCount[0].count > 0) {
-        return res.status(400).json({ 
-          message: "Cannot delete an item that is currently equipped by users"
-        });
-      }
-      
-      // Delete the item's image if it exists
-      if (existingItem.imageUrl) {
+      // Delete image file if it exists
+      if (item.imageUrl) {
+        const imagePath = path.join(process.cwd(), "public", item.imageUrl);
+        
         try {
-          const imagePath = path.join(process.cwd(), "public", existingItem.imageUrl);
           if (fs.existsSync(imagePath)) {
-            await fsPromises.unlink(imagePath);
-            console.log(`Deleted image: ${imagePath}`);
+            fs.unlinkSync(imagePath);
           }
-        } catch (err) {
-          console.error("Error deleting image:", err);
-          // Continue with the delete even if the image delete fails
+        } catch (unlinkError) {
+          console.error("Failed to delete image file:", unlinkError);
         }
       }
       
-      // Delete the item from the database
-      const [deletedItem] = await db
-        .delete(items)
-        .where(eq(items.id, itemId))
-        .returning();
-      
-      res.json({ message: "Item deleted successfully", item: deletedItem });
+      res.json({ success: true, item });
     } catch (error) {
       console.error("Error deleting item:", error);
-      res.status(500).json({ 
-        message: "Failed to delete item", 
-        error: error.message 
-      });
+      res.status(500).json({ message: "Failed to delete item" });
     }
   });
 
-  // Get all items (public endpoint)
+  // Public endpoints for all users
+  
+  // Get all items for shopping/inventory
   app.get("/api/items", async (req: Request, res: Response) => {
     try {
-      const allItems = await db.select().from(items);
+      const search = req.query.search as string | undefined;
+      const type = req.query.type as string | undefined; 
+      
+      let query = db.select().from(items);
+      
+      // Apply filters
+      if (search) {
+        query = query.where(ilike(items.name, `%${search}%`));
+      }
+      
+      if (type) {
+        query = query.where(eq(items.type, type));
+      }
+      
+      const allItems = await query;
       res.json(allItems);
     } catch (error) {
       console.error("Error fetching items:", error);
-      res.status(500).json({ message: "Failed to fetch items", error: error.message });
+      res.status(500).json({ message: "Failed to fetch items" });
     }
   });
 
-  // Get a specific item (public endpoint)
+  // Get a single item
   app.get("/api/items/:id", async (req: Request, res: Response) => {
     try {
       const itemId = parseInt(req.params.id);
-      const [item] = await db.select().from(items).where(eq(items.id, itemId));
+      
+      const [item] = await db
+        .select()
+        .from(items)
+        .where(eq(items.id, itemId));
       
       if (!item) {
         return res.status(404).json({ message: "Item not found" });
@@ -309,7 +313,7 @@ export function registerItemManagementRoutes(app: Express) {
       res.json(item);
     } catch (error) {
       console.error("Error fetching item:", error);
-      res.status(500).json({ message: "Failed to fetch item", error: error.message });
+      res.status(500).json({ message: "Failed to fetch item" });
     }
   });
 }

@@ -1334,7 +1334,25 @@ export default function AdminPage() {
                   </CardContent>
                 </Card>
                 
-
+                <Card className="bg-dark-lighter hover:bg-dark-surface transition-colors">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <div className="p-2 bg-primary/20 rounded-full">
+                        <Package2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <CardTitle className="text-lg">Item Management</CardTitle>
+                      <CardDescription>Create, edit, and manage game items</CardDescription>
+                      <Link href="/admin/item-management">
+                        <Button 
+                          variant="default" 
+                          className="mt-4 w-full"
+                        >
+                          Open Item Manager
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
                 
                 <Card className="bg-dark-lighter hover:bg-dark-surface transition-colors">
                   <CardContent className="p-6">

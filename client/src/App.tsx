@@ -32,6 +32,7 @@ import ATMBankingPage from "@/pages/atm-banking-page";
 import ChallengesPage from "@/pages/challenges-page";
 import AchievementsPage from "@/pages/achievements-page";
 import AdminPage from "@/pages/admin-page";
+import ItemManagementPage from "@/pages/admin/item-management";
 import DrugsPage from "@/pages/drugs-page";
 import CasinoPage from "@/pages/casino-page";
 import NewCasinoPage from "@/pages/new-casino-page";
@@ -229,6 +230,24 @@ function AppRouter() {
               )} />
             }
             return <ProtectedPage component={AdminPage} />;
+          }} />
+        )}
+      </Route>
+      
+      <Route path="/admin/item-management">
+        {() => (
+          <ProtectedRoute path="/admin/item-management" component={() => {
+            // Only render the item management page if the user is an admin
+            const { user } = useAuth();
+            if (!user?.isAdmin) {
+              return <ProtectedPage component={() => (
+                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                  <h1 className="text-2xl font-bold">Access Denied</h1>
+                  <p className="text-gray-400">You don't have permission to access this page.</p>
+                </div>
+              )} />
+            }
+            return <ProtectedPage component={ItemManagementPage} />;
           }} />
         )}
       </Route>
