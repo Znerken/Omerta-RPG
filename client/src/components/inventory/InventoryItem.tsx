@@ -1,21 +1,35 @@
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Sword, Drill, Shield, Cherry, Check, Loader2, Scroll, Heart, Brain, 
-  Sparkles, Lock, Unlock, Ban, RefreshCw, Crosshair, DollarSign, Award
+  Sword, 
+  Drill, 
+  Shield, 
+  Cherry, 
+  Loader2, 
+  Sparkles, 
+  Ban, 
+  Crosshair, 
+  DollarSign, 
+  Award, 
+  Heart, 
+  Brain, 
+  Lock, 
+  Unlock, 
+  Check
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
-interface ItemProps {
+interface InventoryItemProps {
   item: {
     id: number;
     name: string;
     description: string;
     type: string;
     price: number;
+    quantity?: number;
     strengthBonus: number;
     stealthBonus: number;
     charismaBonus: number;
@@ -23,23 +37,21 @@ interface ItemProps {
     crimeSuccessBonus: number;
     jailTimeReduction: number;
     escapeChanceBonus: number;
-    equipped: boolean;
-    quantity: number;
     rarity?: string;
     imageUrl?: string;
     category?: string;
     level?: number;
+    equipped?: boolean;
   };
   onToggleEquip: () => void;
   isEquipping: boolean;
 }
 
-export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
+export function InventoryItem({ item, onToggleEquip, isEquipping }: InventoryItemProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
+  const [imageError, setImageError] = useState(false);
+
   const getTypeIcon = () => {
-    if (!item.type) return null;
-    
     switch (item.type) {
       case "weapon":
         return <Sword className="h-4 w-4 mr-1" />;
@@ -70,29 +82,8 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
         return <Drill className="h-4 w-4 mr-1" />;
       case "consumable":
         return <Cherry className="h-4 w-4 mr-1" />;
-      case "vehicle":
-        return <RefreshCw className="h-4 w-4 mr-1" />;
       default:
         return null;
-    }
-  };
-
-  const getRarityColor = () => {
-    if (!item.rarity) return "";
-    
-    switch (item.rarity.toLowerCase()) {
-      case "common":
-        return "border-gray-500 bg-gray-900 bg-opacity-50 text-gray-300";
-      case "uncommon":
-        return "border-green-500 bg-green-900 bg-opacity-30 text-green-300";
-      case "rare":
-        return "border-blue-500 bg-blue-900 bg-opacity-30 text-blue-300";
-      case "epic":
-        return "border-purple-500 bg-purple-900 bg-opacity-30 text-purple-300";
-      case "legendary":
-        return "border-amber-500 bg-amber-900 bg-opacity-30 text-amber-300";
-      default:
-        return "";
     }
   };
 
@@ -117,18 +108,20 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
     }
   };
 
-  const getTypeColor = () => {
-    if (!item.type) return "";
+  const getRarityColor = () => {
+    if (!item.rarity) return "";
     
-    switch (item.type) {
-      case "weapon":
-        return "border-red-500 bg-red-900 bg-opacity-20 text-red-400";
-      case "tool":
-        return "border-green-500 bg-green-900 bg-opacity-20 text-green-400";
-      case "protection":
-        return "border-blue-500 bg-blue-900 bg-opacity-20 text-blue-400";
-      case "consumable":
-        return "border-purple-500 bg-purple-900 bg-opacity-20 text-purple-400";
+    switch (item.rarity.toLowerCase()) {
+      case "common":
+        return "border-gray-500 bg-gray-900 bg-opacity-50 text-gray-300";
+      case "uncommon":
+        return "border-green-500 bg-green-900 bg-opacity-30 text-green-300";
+      case "rare":
+        return "border-blue-500 bg-blue-900 bg-opacity-30 text-blue-300";
+      case "epic":
+        return "border-purple-500 bg-purple-900 bg-opacity-30 text-purple-300";
+      case "legendary":
+        return "border-amber-500 bg-amber-900 bg-opacity-30 text-amber-300";
       default:
         return "";
     }
@@ -153,33 +146,37 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
     }
   };
 
-  const glow = item.rarity === 'legendary' ? 
-    'shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 
-    item.rarity === 'epic' ? 
-    'shadow-[0_0_10px_rgba(139,92,246,0.4)]' : '';
-
-  // Default images by type
-  const getDefaultImageByType = () => {
-    switch (item.type) {
-      case "weapon":
-        return "https://static.vecteezy.com/system/resources/previews/009/970/456/original/crossed-revolvers-gun-western-weapon-vintage-label-handgun-retro-emblem-vector.jpg";
-      case "tool":
-        return "https://www.iconbolt.com/preview/facebook/ionicons-fill/build.svg";
-      case "protection":
-        return "https://static.thenounproject.com/png/61798-200.png";
-      case "consumable":
-        return "https://cdn-icons-png.flaticon.com/512/3165/3165589.png";
+  const getRarityGlow = () => {
+    if (!item.rarity) return "";
+    
+    switch (item.rarity.toLowerCase()) {
+      case "legendary":
+        return 'shadow-[0_0_15px_rgba(245,158,11,0.5)]';
+      case "epic":
+        return 'shadow-[0_0_10px_rgba(139,92,246,0.4)]';
       default:
-        return "https://i.imgur.com/KMWEp4v.png";
+        return '';
     }
   };
 
-  // Fallback image handling
-  const [imageError, setImageError] = useState(false);
-  const defaultImageUrl = getDefaultImageByType();
-
   const handleImageError = () => {
     setImageError(true);
+  };
+
+  // Generate a default image based on item type
+  const getDefaultImage = () => {
+    switch (item.type) {
+      case "weapon":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/delapouite/bolter-gun.png";
+      case "tool":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/tools.png";
+      case "protection":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/leather-armor.png";
+      case "consumable":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/potion-ball.png";
+      default:
+        return "https://game-icons.net/icons/ffffff/000000/1x1/delapouite/backpack.png";
+    }
   };
 
   return (
@@ -189,19 +186,30 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Card className={`bg-dark-lighter border overflow-hidden h-full ${getRarityColor()} ${glow}`}>
+      <Card className={`bg-dark-lighter border overflow-hidden h-full ${getRarityColor()} ${getRarityGlow()}`}>
         <div className="relative">
           <div className="h-48 overflow-hidden relative">
-            <img 
-              src={!imageError && item.imageUrl ? item.imageUrl : defaultImageUrl}
-              alt={item.name}
-              className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
-              style={{ 
-                transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-                filter: isHovered ? 'brightness(1.1)' : 'brightness(1)'
-              }}
-              onError={handleImageError}
-            />
+            {!imageError && item.imageUrl ? (
+              <img 
+                src={item.imageUrl}
+                alt={item.name}
+                className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  filter: isHovered ? 'brightness(1.1)' : 'brightness(1)'
+                }}
+                onError={handleImageError}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
+                <img 
+                  src={getDefaultImage()}
+                  alt={item.name}
+                  className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
+                  style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
+                />
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </div>
           

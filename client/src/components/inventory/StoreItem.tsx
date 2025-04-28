@@ -2,9 +2,21 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Sword, Drill, Shield, Cherry, Loader2, Sparkles, Ban, 
-  RefreshCw, Crosshair, DollarSign, Award, Heart, Brain, 
-  Lock, Unlock, ShoppingCart
+  Loader2, 
+  DollarSign, 
+  Award, 
+  Heart, 
+  Brain, 
+  Lock, 
+  Unlock, 
+  ShoppingCart, 
+  Ban, 
+  Crosshair, 
+  Sword, 
+  Drill, 
+  Shield, 
+  Cherry, 
+  Sparkles
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -36,6 +48,22 @@ interface StoreItemProps {
 
 export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const getTypeIcon = () => {
+    switch (item.type) {
+      case "weapon":
+        return <Sword className="h-4 w-4 mr-1" />;
+      case "tool":
+        return <Drill className="h-4 w-4 mr-1" />;
+      case "protection":
+        return <Shield className="h-4 w-4 mr-1" />;
+      case "consumable":
+        return <Cherry className="h-4 w-4 mr-1" />;
+      default:
+        return null;
+    }
+  };
 
   const getCategoryIcon = () => {
     if (!item.category) return null;
@@ -53,46 +81,8 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
         return <Drill className="h-4 w-4 mr-1" />;
       case "consumable":
         return <Cherry className="h-4 w-4 mr-1" />;
-      case "vehicle":
-        return <RefreshCw className="h-4 w-4 mr-1" />;
       default:
         return null;
-    }
-  };
-
-  const getTypeIcon = () => {
-    if (!item.type) return null;
-    
-    switch (item.type) {
-      case "weapon":
-        return <Sword className="h-4 w-4 mr-1" />;
-      case "tool":
-        return <Drill className="h-4 w-4 mr-1" />;
-      case "protection":
-        return <Shield className="h-4 w-4 mr-1" />;
-      case "consumable":
-        return <Cherry className="h-4 w-4 mr-1" />;
-      default:
-        return null;
-    }
-  };
-
-  const getRarityColor = () => {
-    if (!item.rarity) return "";
-    
-    switch (item.rarity.toLowerCase()) {
-      case "common":
-        return "border-gray-500 bg-gray-900 bg-opacity-50 text-gray-300";
-      case "uncommon":
-        return "border-green-500 bg-green-900 bg-opacity-30 text-green-300";
-      case "rare":
-        return "border-blue-500 bg-blue-900 bg-opacity-30 text-blue-300";
-      case "epic":
-        return "border-purple-500 bg-purple-900 bg-opacity-30 text-purple-300";
-      case "legendary":
-        return "border-amber-500 bg-amber-900 bg-opacity-30 text-amber-300";
-      default:
-        return "";
     }
   };
 
@@ -117,6 +107,25 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
     }
   };
 
+  const getRarityColor = () => {
+    if (!item.rarity) return "";
+    
+    switch (item.rarity.toLowerCase()) {
+      case "common":
+        return "border-gray-500 bg-gray-900 bg-opacity-50 text-gray-300";
+      case "uncommon":
+        return "border-green-500 bg-green-900 bg-opacity-30 text-green-300";
+      case "rare":
+        return "border-blue-500 bg-blue-900 bg-opacity-30 text-blue-300";
+      case "epic":
+        return "border-purple-500 bg-purple-900 bg-opacity-30 text-purple-300";
+      case "legendary":
+        return "border-amber-500 bg-amber-900 bg-opacity-30 text-amber-300";
+      default:
+        return "";
+    }
+  };
+
   const getRarityBadgeVariant = () => {
     if (!item.rarity) return "outline";
     
@@ -136,33 +145,37 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
     }
   };
 
-  const glow = item.rarity === 'legendary' ? 
-    'shadow-[0_0_15px_rgba(245,158,11,0.5)]' : 
-    item.rarity === 'epic' ? 
-    'shadow-[0_0_10px_rgba(139,92,246,0.4)]' : '';
-
-  // Default images by type
-  const getDefaultImageByType = () => {
-    switch (item.type) {
-      case "weapon":
-        return "https://static.vecteezy.com/system/resources/previews/009/970/456/original/crossed-revolvers-gun-western-weapon-vintage-label-handgun-retro-emblem-vector.jpg";
-      case "tool":
-        return "https://www.iconbolt.com/preview/facebook/ionicons-fill/build.svg";
-      case "protection":
-        return "https://static.thenounproject.com/png/61798-200.png";
-      case "consumable":
-        return "https://cdn-icons-png.flaticon.com/512/3165/3165589.png";
+  const getRarityGlow = () => {
+    if (!item.rarity) return "";
+    
+    switch (item.rarity.toLowerCase()) {
+      case "legendary":
+        return 'shadow-[0_0_15px_rgba(245,158,11,0.5)]';
+      case "epic":
+        return 'shadow-[0_0_10px_rgba(139,92,246,0.4)]';
       default:
-        return "https://i.imgur.com/KMWEp4v.png";
+        return '';
     }
   };
 
-  // Fallback image handling
-  const [imageError, setImageError] = useState(false);
-  const defaultImageUrl = getDefaultImageByType();
-
   const handleImageError = () => {
     setImageError(true);
+  };
+
+  // Generate a default image based on item type
+  const getDefaultImage = () => {
+    switch (item.type) {
+      case "weapon":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/delapouite/bolter-gun.png";
+      case "tool":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/tools.png";
+      case "protection":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/leather-armor.png";
+      case "consumable":
+        return "https://game-icons.net/icons/ffffff/000000/1x1/lorc/potion-ball.png";
+      default:
+        return "https://game-icons.net/icons/ffffff/000000/1x1/delapouite/backpack.png";
+    }
   };
 
   return (
@@ -172,19 +185,30 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <Card className={`bg-dark-lighter border overflow-hidden h-full ${getRarityColor()} ${glow}`}>
+      <Card className={`bg-dark-lighter border overflow-hidden h-full ${getRarityColor()} ${getRarityGlow()}`}>
         <div className="relative">
           <div className="h-48 overflow-hidden relative">
-            <img 
-              src={!imageError && item.imageUrl ? item.imageUrl : defaultImageUrl} 
-              alt={item.name}
-              className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
-              style={{ 
-                transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-                filter: isHovered ? 'brightness(1.1)' : 'brightness(1)'
-              }}
-              onError={handleImageError}
-            />
+            {!imageError && item.imageUrl ? (
+              <img 
+                src={item.imageUrl} 
+                alt={item.name}
+                className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                  filter: isHovered ? 'brightness(1.1)' : 'brightness(1)'
+                }}
+                onError={handleImageError}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
+                <img 
+                  src={getDefaultImage()}
+                  alt={item.name}
+                  className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
+                  style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
+                />
+              </div>
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </div>
           
