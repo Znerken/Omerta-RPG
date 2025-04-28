@@ -1,15 +1,16 @@
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Sword, Drill, Shield, Cherry, Check, Loader2, Scroll, Heart, Brain, 
-  Sparkles, Lock, Unlock, Ban, RefreshCw, Crosshair, DollarSign, Award
+  Sword, Drill, Shield, Cherry, Loader2, Sparkles, Ban, 
+  RefreshCw, Crosshair, DollarSign, Award, Heart, Brain, 
+  Lock, Unlock, ShoppingCart
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useState } from "react";
 
-interface ItemProps {
+interface StoreItemProps {
   item: {
     id: number;
     name: string;
@@ -23,36 +24,18 @@ interface ItemProps {
     crimeSuccessBonus: number;
     jailTimeReduction: number;
     escapeChanceBonus: number;
-    equipped: boolean;
-    quantity: number;
     rarity?: string;
     imageUrl?: string;
     category?: string;
     level?: number;
   };
-  onToggleEquip: () => void;
-  isEquipping: boolean;
+  onBuy: () => void;
+  isBuying: boolean;
+  canAfford: boolean;
 }
 
-export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
+export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) {
   const [isHovered, setIsHovered] = useState(false);
-  
-  const getTypeIcon = () => {
-    if (!item.type) return null;
-    
-    switch (item.type) {
-      case "weapon":
-        return <Sword className="h-4 w-4 mr-1" />;
-      case "tool":
-        return <Drill className="h-4 w-4 mr-1" />;
-      case "protection":
-        return <Shield className="h-4 w-4 mr-1" />;
-      case "consumable":
-        return <Cherry className="h-4 w-4 mr-1" />;
-      default:
-        return null;
-    }
-  };
 
   const getCategoryIcon = () => {
     if (!item.category) return null;
@@ -72,6 +55,23 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
         return <Cherry className="h-4 w-4 mr-1" />;
       case "vehicle":
         return <RefreshCw className="h-4 w-4 mr-1" />;
+      default:
+        return null;
+    }
+  };
+
+  const getTypeIcon = () => {
+    if (!item.type) return null;
+    
+    switch (item.type) {
+      case "weapon":
+        return <Sword className="h-4 w-4 mr-1" />;
+      case "tool":
+        return <Drill className="h-4 w-4 mr-1" />;
+      case "protection":
+        return <Shield className="h-4 w-4 mr-1" />;
+      case "consumable":
+        return <Cherry className="h-4 w-4 mr-1" />;
       default:
         return null;
     }
@@ -114,23 +114,6 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
         return <Unlock className="h-3 w-3 mr-1 inline" />;
       default:
         return null;
-    }
-  };
-
-  const getTypeColor = () => {
-    if (!item.type) return "";
-    
-    switch (item.type) {
-      case "weapon":
-        return "border-red-500 bg-red-900 bg-opacity-20 text-red-400";
-      case "tool":
-        return "border-green-500 bg-green-900 bg-opacity-20 text-green-400";
-      case "protection":
-        return "border-blue-500 bg-blue-900 bg-opacity-20 text-blue-400";
-      case "consumable":
-        return "border-purple-500 bg-purple-900 bg-opacity-20 text-purple-400";
-      default:
-        return "";
     }
   };
 
@@ -191,7 +174,10 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
           </div>
           
           <div className="absolute top-2 right-2">
-            <Badge variant="outline" className="bg-black/70 backdrop-blur-sm">
+            <Badge 
+              variant={canAfford ? "outline" : "destructive"} 
+              className={`${canAfford ? 'bg-black/70' : 'bg-red-950/70'} backdrop-blur-sm`}
+            >
               <DollarSign className="h-3 w-3 mr-1" />
               {formatCurrency(item.price || 0)}
             </Badge>
@@ -204,10 +190,15 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
                   {item.name || 'Unknown Item'}
                 </h3>
                 <div className="flex space-x-2 mt-1">
-                  {item.category && (
+                  {item.category ? (
                     <Badge variant="outline" className="bg-black/50 backdrop-blur-sm">
                       {getCategoryIcon()}
                       {item.category.charAt(0).toUpperCase() + item.category.slice(1)}
+                    </Badge>
+                  ) : item.type && (
+                    <Badge variant="outline" className="bg-black/50 backdrop-blur-sm">
+                      {getTypeIcon()}
+                      {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
                     </Badge>
                   )}
                   
@@ -218,20 +209,6 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
                     </Badge>
                   )}
                 </div>
-              </div>
-              
-              <div className="flex space-x-2">
-                {item.equipped && (
-                  <Badge variant="default" className="bg-secondary text-black">
-                    <Check className="h-3 w-3 mr-1" />
-                    Equipped
-                  </Badge>
-                )}
-                {item.quantity !== undefined && item.quantity > 1 && (
-                  <Badge variant="outline" className="bg-black/50 backdrop-blur-sm">
-                    x{item.quantity}
-                  </Badge>
-                )}
               </div>
             </div>
           </div>
@@ -295,54 +272,26 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
         </CardContent>
         
         <CardFooter className="p-4 pt-0">
-          {item.type === "consumable" ? (
-            <Button 
-              className="w-full bg-primary hover:bg-primary/80 relative overflow-hidden group" 
-              disabled={isEquipping}
-              onClick={onToggleEquip}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent scale-x-150 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              {isEquipping ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-                  Using...
-                </>
-              ) : (
-                <>
-                  <Cherry className="mr-2 h-4 w-4" /> 
-                  Use Item
-                </>
-              )}
-            </Button>
-          ) : (
-            <Button 
-              className={`w-full relative overflow-hidden group ${item.equipped ? 'bg-dark hover:bg-dark/80' : 'bg-primary hover:bg-primary/80'}`} 
-              disabled={isEquipping}
-              onClick={onToggleEquip}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent scale-x-150 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              {isEquipping ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-                  {item.equipped ? "Unequipping..." : "Equipping..."}
-                </>
-              ) : (
-                <>
-                  {item.equipped ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" /> 
-                      Unequip
-                    </>
-                  ) : (
-                    <>
-                      {getCategoryIcon() || getTypeIcon()}
-                      Equip Item
-                    </>
-                  )}
-                </>
-              )}
-            </Button>
-          )}
+          <Button 
+            className={`w-full relative overflow-hidden group ${!canAfford ? 'bg-gray-700 hover:bg-gray-600' : 'bg-primary hover:bg-primary/80'}`}
+            disabled={isBuying || !canAfford}
+            onClick={onBuy}
+          >
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent scale-x-150 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+            {isBuying ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                Buying...
+              </>
+            ) : !canAfford ? (
+              "Not Enough Cash"
+            ) : (
+              <>
+                <ShoppingCart className="mr-2 h-4 w-4" /> 
+                Buy Item
+              </>
+            )}
+          </Button>
         </CardFooter>
       </Card>
     </motion.div>
