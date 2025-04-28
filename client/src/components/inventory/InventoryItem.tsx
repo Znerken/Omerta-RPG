@@ -2,6 +2,8 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getItemImagePath, getFallbackImageByType } from "@/lib/item-image-mapping";
+// Import the brass knuckles image directly
+import BrassKnucklesImage from '@/assets/brass-knuckles.png';
 import { 
   Sword, 
   Drill, 
@@ -189,14 +191,10 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: InventoryIte
             {/* Use uploaded images for items */}
             <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
               <img 
-                src={item.name === "Brass Knuckles" ? "/items/brass-knuckles.png" : "/items/brass-knuckles.png"}
+                src={BrassKnucklesImage}
                 alt={item.name}
                 className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
                 style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
-                onError={(e) => {
-                  console.error(`Failed to load image for item: ${item.name}`);
-                  e.currentTarget.src = "/items/brass-knuckles.png";
-                }}
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
