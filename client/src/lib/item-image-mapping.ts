@@ -11,19 +11,19 @@ type ItemImageMapping = {
 
 // Map item names to specific weapon images
 const weaponImageMapping: ItemImageMapping = {
-  "Brass Knuckles": "/images/items/weapons/Colt M1911.png",
-  "Pistol": "/images/items/weapons/Colt M1911.png",
-  "Revolver": "/images/items/weapons/Tokarev TT-33.png",
-  "Shotgun": "/images/items/weapons/StG 44.png",
-  "SMG": "/images/items/weapons/Thompson.png",
-  "Machine Gun": "/images/items/weapons/MG 42.png",
-  "Assault Rifle": "/images/items/weapons/BAR.png",
-  "Sniper Rifle": "/images/items/weapons/M1 Garand.png",
-  "Switchblade": "/images/items/weapons/Stick grenade.png",
-  "Combat Knife": "/images/items/weapons/Stick grenade.png",
-  "Baseball Bat": "/images/items/weapons/MP 40.png",
-  "Grenade": "/images/items/weapons/Mk 2 grenade.png",
-  "Molotov Cocktail": "/images/items/weapons/Type 97 grenade.png",
+  "Brass Knuckles": "/brass-knuckles.svg",
+  "Pistol": "/brass-knuckles.svg",
+  "Revolver": "/brass-knuckles.svg",
+  "Shotgun": "/brass-knuckles.svg",
+  "SMG": "/switchblade.svg",
+  "Machine Gun": "/switchblade.svg",
+  "Assault Rifle": "/switchblade.svg",
+  "Sniper Rifle": "/switchblade.svg",
+  "Switchblade": "/switchblade.svg",
+  "Combat Knife": "/switchblade.svg",
+  "Baseball Bat": "/switchblade.svg",
+  "Grenade": "/switchblade.svg",
+  "Molotov Cocktail": "/switchblade.svg",
 };
 
 // Map tool items to specific images
@@ -82,16 +82,16 @@ export function getItemImagePath(itemName: string, itemType: string): string | u
 export function getFallbackImageByType(itemType: string): string {
   switch (itemType) {
     case "weapon":
-      // Default to the Thompson as a fallback
-      return "/images/items/weapons/Thompson.png";
+      // Default to our brass knuckles SVG as a fallback
+      return "/brass-knuckles.svg";
     case "tool":
-      return "/images/items/tools/tool.png";
+      return "/switchblade.svg";
     case "protection":
-      return "/images/items/protection/armor.png";
+      return "/switchblade.svg";
     case "consumable":
-      return "/images/items/consumables/potion.png";
+      return "/brass-knuckles.svg";
     default:
       // Generic fallback
-      return "/images/items/gen-mafia-gangster-organized-crime-suit-man-photoreali.webp";
+      return "/brass-knuckles.svg";
   }
 }
