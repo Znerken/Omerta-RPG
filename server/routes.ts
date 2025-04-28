@@ -11,6 +11,7 @@ import { registerProfileRoutes } from "./profile-routes";
 import { registerInventoryRoutes } from "./inventory-routes";
 import { registerSocialRoutes, setNotifyUserFunction } from "./social-routes";
 import { registerDevRoutes } from "./dev-routes";
+import { registerItemManagementRoutes } from "./item-management-routes";
 import challengeRoutes from "./challenge-routes";
 import gangRoutes from "./gang-routes";
 import newGangRoutes from "./new-gang-routes";
@@ -148,6 +149,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register inventory routes
   registerInventoryRoutes(app);
+  
+  // Register item management routes
+  registerItemManagementRoutes(app);
   
   // Register dev routes for testing
   registerDevRoutes(app);
