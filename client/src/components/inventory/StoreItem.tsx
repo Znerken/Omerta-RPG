@@ -185,27 +185,15 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
       <Card className={`bg-dark-lighter border overflow-hidden h-full ${getRarityColor()} ${getRarityGlow()}`}>
         <div className="relative">
           <div className="h-48 overflow-hidden relative">
-            {!imageError && item.imageUrl ? (
+            {/* Always use either brass-knuckles.svg or switchblade.svg based on item type */}
+            <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
               <img 
-                src={item.imageUrl} 
+                src={item.type === "weapon" && item.name === "Switchblade" ? "/switchblade.svg" : "/brass-knuckles.svg"}
                 alt={item.name}
-                className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
-                style={{ 
-                  transform: isHovered ? 'scale(1.1)' : 'scale(1)',
-                  filter: isHovered ? 'brightness(1.1)' : 'brightness(1)'
-                }}
-                onError={handleImageError}
+                className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
+                style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
               />
-            ) : (
-              <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
-                <img 
-                  src={getDefaultImage()}
-                  alt={item.name}
-                  className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
-                  style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
-                />
-              </div>
-            )}
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </div>
           
