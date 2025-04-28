@@ -141,7 +141,29 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
     item.rarity === 'epic' ? 
     'shadow-[0_0_10px_rgba(139,92,246,0.4)]' : '';
 
-  const defaultImageUrl = "https://i.imgur.com/KMWEp4v.png"; // Fallback image
+  // Default images by type
+  const getDefaultImageByType = () => {
+    switch (item.type) {
+      case "weapon":
+        return "https://static.vecteezy.com/system/resources/previews/009/970/456/original/crossed-revolvers-gun-western-weapon-vintage-label-handgun-retro-emblem-vector.jpg";
+      case "tool":
+        return "https://www.iconbolt.com/preview/facebook/ionicons-fill/build.svg";
+      case "protection":
+        return "https://static.thenounproject.com/png/61798-200.png";
+      case "consumable":
+        return "https://cdn-icons-png.flaticon.com/512/3165/3165589.png";
+      default:
+        return "https://i.imgur.com/KMWEp4v.png";
+    }
+  };
+
+  // Fallback image handling
+  const [imageError, setImageError] = useState(false);
+  const defaultImageUrl = getDefaultImageByType();
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
 
   return (
     <motion.div 
@@ -154,13 +176,14 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
         <div className="relative">
           <div className="h-48 overflow-hidden relative">
             <img 
-              src={item.imageUrl || defaultImageUrl} 
+              src={!imageError && item.imageUrl ? item.imageUrl : defaultImageUrl} 
               alt={item.name}
               className="w-full h-full object-cover transition-transform duration-500 ease-in-out"
               style={{ 
                 transform: isHovered ? 'scale(1.1)' : 'scale(1)',
                 filter: isHovered ? 'brightness(1.1)' : 'brightness(1)'
               }}
+              onError={handleImageError}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </div>
