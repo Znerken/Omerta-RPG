@@ -188,13 +188,12 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
             {/* Use uploaded images for items */}
             <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
               <img 
-                src={item.name === "Brass Knuckles" ? "/items/brass-knuckles.png" : "/items/brass-knuckles.png"}
+                src={"/images/items/brass-knuckles.png"}
                 alt={item.name}
                 className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
                 style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
                 onError={(e) => {
                   console.error(`Failed to load image for item: ${item.name}`);
-                  e.currentTarget.src = "/items/brass-knuckles.png";
                 }}
               />
             </div>
