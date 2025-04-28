@@ -27,6 +27,8 @@ interface ItemProps {
 
 export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
   const getTypeIcon = () => {
+    if (!item.type) return null;
+    
     switch (item.type) {
       case "weapon":
         return <Sword className="h-4 w-4 mr-1" />;
@@ -42,6 +44,8 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
   };
 
   const getTypeColor = () => {
+    if (!item.type) return "";
+    
     switch (item.type) {
       case "weapon":
         return "bg-red-900 bg-opacity-20 text-red-400";
@@ -61,11 +65,11 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
       <CardHeader className="p-4 pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg">{item.name}</CardTitle>
+            <CardTitle className="text-lg">{item.name || 'Unknown Item'}</CardTitle>
             <div className="flex space-x-2 mt-1">
               <Badge variant="outline" className={getTypeColor()}>
                 {getTypeIcon()}
-                {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Item'}
               </Badge>
               {item.equipped && (
                 <Badge variant="default" className="bg-secondary text-black">
@@ -73,7 +77,7 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
                   Equipped
                 </Badge>
               )}
-              {item.quantity > 1 && (
+              {item.quantity !== undefined && item.quantity > 1 && (
                 <Badge variant="outline">
                   x{item.quantity}
                 </Badge>
@@ -81,15 +85,15 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
             </div>
           </div>
           <Badge className="font-mono">
-            Value: {formatCurrency(item.price)}
+            Value: {formatCurrency(item.price || 0)}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-2">
-        <p className="text-sm text-gray-400 mb-3">{item.description}</p>
+        <p className="text-sm text-gray-400 mb-3">{item.description || 'No description available'}</p>
         
         <div className="space-y-1 mb-3">
-          {item.strengthBonus !== 0 && (
+          {item.strengthBonus !== undefined && item.strengthBonus !== 0 && (
             <div className="flex justify-between text-xs">
               <span>Strength</span>
               <span className={item.strengthBonus > 0 ? "text-green-500" : "text-red-500"}>
@@ -97,7 +101,7 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
               </span>
             </div>
           )}
-          {item.stealthBonus !== 0 && (
+          {item.stealthBonus !== undefined && item.stealthBonus !== 0 && (
             <div className="flex justify-between text-xs">
               <span>Stealth</span>
               <span className={item.stealthBonus > 0 ? "text-green-500" : "text-red-500"}>
@@ -105,7 +109,7 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
               </span>
             </div>
           )}
-          {item.charismaBonus !== 0 && (
+          {item.charismaBonus !== undefined && item.charismaBonus !== 0 && (
             <div className="flex justify-between text-xs">
               <span>Charisma</span>
               <span className={item.charismaBonus > 0 ? "text-green-500" : "text-red-500"}>
@@ -113,7 +117,7 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
               </span>
             </div>
           )}
-          {item.intelligenceBonus !== 0 && (
+          {item.intelligenceBonus !== undefined && item.intelligenceBonus !== 0 && (
             <div className="flex justify-between text-xs">
               <span>Intelligence</span>
               <span className={item.intelligenceBonus > 0 ? "text-green-500" : "text-red-500"}>
@@ -121,19 +125,19 @@ export function InventoryItem({ item, onToggleEquip, isEquipping }: ItemProps) {
               </span>
             </div>
           )}
-          {item.crimeSuccessBonus > 0 && (
+          {item.crimeSuccessBonus !== undefined && item.crimeSuccessBonus > 0 && (
             <div className="flex justify-between text-xs">
               <span>Crime Success</span>
               <span className="text-green-500">+{item.crimeSuccessBonus}%</span>
             </div>
           )}
-          {item.jailTimeReduction > 0 && (
+          {item.jailTimeReduction !== undefined && item.jailTimeReduction > 0 && (
             <div className="flex justify-between text-xs">
               <span>Jail Time</span>
               <span className="text-green-500">-{item.jailTimeReduction}%</span>
             </div>
           )}
-          {item.escapeChanceBonus > 0 && (
+          {item.escapeChanceBonus !== undefined && item.escapeChanceBonus > 0 && (
             <div className="flex justify-between text-xs">
               <span>Escape Chance</span>
               <span className="text-green-500">+{item.escapeChanceBonus}%</span>
