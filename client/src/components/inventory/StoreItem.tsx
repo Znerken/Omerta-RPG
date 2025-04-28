@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getItemImagePath, getFallbackImageByType } from "@/lib/item-image-mapping";
+import { getItemIcon } from "./item-icons";
 import { 
   Loader2, 
   DollarSign, 
@@ -163,17 +163,7 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
     setImageError(true);
   };
 
-  // Get the appropriate image for the item
-  const getDefaultImage = () => {
-    // First try to find a specific mapping for this item
-    const specificImage = getItemImagePath(item.name, item.type);
-    if (specificImage) {
-      return specificImage;
-    }
-    
-    // Fall back to a type-based image
-    return getFallbackImageByType(item.type);
-  };
+  // Removed getDefaultImage as we're using SVG icons directly
 
   return (
     <motion.div 
@@ -187,15 +177,12 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
           <div className="h-48 overflow-hidden relative">
             {/* Use uploaded images for items */}
             <div className="flex items-center justify-center h-full bg-gradient-to-b from-gray-800 to-gray-900">
-              <img 
-                src={"/images/items/brass-knuckles.png"}
-                alt={item.name}
-                className="w-2/3 h-2/3 object-contain transition-transform duration-500 ease-in-out"
+              <div
+                className="w-2/3 h-2/3 transition-transform duration-500 ease-in-out" 
                 style={{ transform: isHovered ? 'scale(1.1)' : 'scale(1)' }}
-                onError={(e) => {
-                  console.error(`Failed to load image for item: ${item.name}`);
-                }}
-              />
+              >
+                {getItemIcon(item.name, "w-full h-full")}
+              </div>
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
           </div>
