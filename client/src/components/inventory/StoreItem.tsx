@@ -1,6 +1,7 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getItemImagePath, getFallbackImageByType } from "@/lib/item-image-mapping";
 import { 
   Loader2, 
   DollarSign, 
@@ -162,29 +163,16 @@ export function StoreItem({ item, onBuy, isBuying, canAfford }: StoreItemProps) 
     setImageError(true);
   };
 
-  // Generate a default image based on item type
+  // Get the appropriate image for the item
   const getDefaultImage = () => {
-    switch (item.type) {
-      case "weapon":
-        // Use one of the locally extracted weapon images
-        const weaponImages = [
-          "/images/items/weapons/Thompson.png",
-          "/images/items/weapons/BAR.png",
-          "/images/items/weapons/Colt M1911.png",
-          "/images/items/weapons/MP 40.png",
-          "/images/items/weapons/StG 44.png"
-        ];
-        return weaponImages[Math.floor(Math.random() * weaponImages.length)];
-      case "tool":
-        return "/images/items/tools/tool.png";
-      case "protection":
-        return "/images/items/protection/armor.png";
-      case "consumable":
-        return "/images/items/consumables/potion.png";
-      default:
-        // Use a mafia themed placeholder
-        return "/images/items/gen-mafia-gangster-organized-crime-suit-man-photoreali.webp";
+    // First try to find a specific mapping for this item
+    const specificImage = getItemImagePath(item.name, item.type);
+    if (specificImage) {
+      return specificImage;
     }
+    
+    // Fall back to a type-based image
+    return getFallbackImageByType(item.type);
   };
 
   return (
